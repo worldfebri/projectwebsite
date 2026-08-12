@@ -332,6 +332,7 @@
             color:#050608;
             transform:none;
         }
+        .btn-red:disabled{opacity:.65;cursor:wait;pointer-events:none;}
         .btn-group{display:flex;gap:7px;flex-wrap:wrap}
 
         .saas-grid{
@@ -396,13 +397,13 @@
 
         /* === AUTH / SOCIAL SYSTEM === */
         .auth-screen{
-            position:fixed; inset:0; z-index:20000; display:none;
+            position:fixed; inset:0; z-index:50000; display:none; pointer-events:auto;
             align-items:center; justify-content:center; padding:25px;
             background:rgba(5,6,8,.98);
         }
         .auth-screen.show{display:flex}
         .auth-box{
-            width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
+            position:relative; z-index:50001; pointer-events:auto; width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
             padding:32px; box-shadow:0 25px 80px rgba(0,0,0,.55);
         }
         .auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
@@ -410,7 +411,7 @@
         .auth-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 7px}
         .auth-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
         .auth-tabs{display:flex;border:1px solid var(--line);margin-bottom:18px}
-        .auth-tabs button{flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px}
+        .auth-tabs button{position:relative;z-index:50002;pointer-events:auto;flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px}
         .auth-tabs button.active{background:var(--red);color:#fff}
         .auth-tabs button.guest-auth-tab{background:#11161c;color:#c7ccd2;border-left:1px solid var(--line)}
         .auth-tabs button.guest-auth-tab:hover{background:#1a2028;color:#fff}
@@ -780,6 +781,7 @@
             password: "world132",
             adminPasswordMigratedWorld132: true,
             teritory: {
+                enabled: true,
                 image: "https://images.unsplash.com/photo-1547619292-240402b5ae5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
                 text: "Wilayah kekuasaan utama. Pelanggaran batas wilayah tanpa izin akan ditindak tegas."
             },
@@ -1062,11 +1064,15 @@
             const password=document.getElementById('auth-password')?.value || '';
             const password2=document.getElementById('auth-password2')?.value || '';
             const status=document.getElementById('auth-status');
-            if(!validUsername(username)){ if(status) status.textContent='Username 3-20 karakter: huruf, angka, atau _.'; return; }
-            if(password.length<6){ if(status) status.textContent='Password minimal 6 karakter.'; return; }
-            if(authMode==='register' && password!==password2){ if(status) status.textContent='Konfirmasi password tidak sama.'; return; }
-            if(status) status.textContent='Memproses...';
-            const hash=await sha256(password);
+            const submit=document.getElementById('auth-submit');
+            try{
+                normalizeDB();
+                if(!validUsername(username)){ if(status) status.textContent='Username 3-20 karakter: huruf, angka, atau _.'; return; }
+                if(password.length<6){ if(status) status.textContent='Password minimal 6 karakter.'; return; }
+                if(authMode==='register' && password!==password2){ if(status) status.textContent='Konfirmasi password tidak sama.'; return; }
+                if(status) status.textContent='Memproses...';
+                if(submit){ submit.disabled=true; submit.style.opacity='.65'; submit.style.cursor='wait'; }
+                const hash=await sha256(password);
             if(authMode==='register'){
                 if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
                 const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
@@ -1091,10 +1097,37 @@
             }
             const user=db.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
             if(!user || user.passwordHash!==hash){ if(status) status.textContent='Username atau password salah.'; return; }
-            currentUser={username:user.username,icName:user.icName||''};
-            sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
-            openApp();
+                currentUser={username:user.username,icName:user.icName||''};
+                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+                openApp();
+            }catch(error){
+                console.error('Auth error:', error);
+                if(status) status.textContent='Terjadi error saat login. Silakan coba lagi.';
+            }finally{
+                if(submit){ submit.disabled=false; submit.style.opacity=''; submit.style.cursor=''; }
+            }
         }
+
+        // AUTH BUTTON HARDENING: make Login / Register / Guest clickable even if another UI layer is present.
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('auth-tab-login');
+            const registerBtn = document.getElementById('auth-tab-register');
+            const guestBtn = document.getElementById('auth-tab-guest');
+            const authScreen = document.getElementById('auth-screen');
+            if(authScreen){ authScreen.style.pointerEvents='auto'; }
+            if(loginBtn){
+                loginBtn.type='button';
+                loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchAuth('login'); }, true);
+            }
+            if(registerBtn){
+                registerBtn.type='button';
+                registerBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchAuth('register'); }, true);
+            }
+            if(guestBtn){
+                guestBtn.type='button';
+                guestBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); enterGuestMode(); }, true);
+            }
+        });
 
         window.onload = async () => {
             const loaded = await fetchFromGitHub();
@@ -1296,6 +1329,71 @@
                     if(created) startAutoDatabaseSync();
                 }
             },15000);
+        }
+
+        // === AUTH HELPERS / DB NORMALIZATION ===
+        // Beberapa versi sebelumnya memanggil helper ini tetapi definisinya tidak ikut
+        // terbawa. Akibatnya klik LOGIN/BUAT AKUN masuk ke submitAuth(), lalu berhenti
+        // karena ReferenceError sebelum proses autentikasi berjalan.
+        function validUsername(username){
+            return /^[A-Za-z0-9_]{3,20}$/.test(String(username || ''));
+        }
+
+        async function sha256(value){
+            const data = new TextEncoder().encode(String(value ?? ''));
+            const buffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2,'0'))
+                .join('');
+        }
+
+        function normalizeDB(){
+            if(!db || typeof db !== 'object') db = {};
+            if(!Array.isArray(db.users)) db.users=[];
+            if(!Array.isArray(db.roles)) db.roles=[];
+            if(!db.notifications || typeof db.notifications !== 'object' || Array.isArray(db.notifications)) db.notifications={};
+            if(!Array.isArray(db.publicChat)) db.publicChat=[];
+            if(!Array.isArray(db.publicChatOOC)) db.publicChatOOC=[];
+            if(!Array.isArray(db.publicChatIC)) db.publicChatIC=[];
+            if(!db.privateChats || typeof db.privateChats !== 'object' || Array.isArray(db.privateChats)) db.privateChats={};
+            if(!Array.isArray(db.clubWebsiteRequests)) db.clubWebsiteRequests=[];
+            if(!Array.isArray(db.saasEventRequests)) db.saasEventRequests=[];
+            if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
+            if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
+            if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
+            if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
+            if(typeof db.teritory.image !== 'string') db.teritory.image='';
+            if(typeof db.teritory.text !== 'string') db.teritory.text='';
+            if(!db.race || typeof db.race !== 'object') db.race={top:[],bottom:{img:'',text:''}};
+            if(!Array.isArray(db.race.top)) db.race.top=[];
+            if(!db.race.bottom || typeof db.race.bottom !== 'object') db.race.bottom={img:'',text:''};
+            if(typeof db.race.bottom.img !== 'string') db.race.bottom.img='';
+            if(typeof db.race.bottom.text !== 'string') db.race.bottom.text='';
+            if(!Array.isArray(db.club)) db.club=[];
+            db.club.forEach(c=>{
+                if(!c || typeof c!=='object') return;
+                if(!c.info || typeof c.info!=='object') c.info={top:[],bottom:{img:'',text:''}};
+                if(!Array.isArray(c.info.top)) c.info.top=[];
+                if(!c.info.bottom || typeof c.info.bottom!=='object') c.info.bottom={img:'',text:''};
+                if(typeof c.info.bottom.img!=='string') c.info.bottom.img='';
+                if(typeof c.info.bottom.text!=='string') c.info.bottom.text='';
+            });
+            if(!db.saas || typeof db.saas !== 'object') db.saas={};
+            if(!Array.isArray(db.saas.top)) db.saas.top=[];
+            if(!Array.isArray(db.saas.bottomMembers)) db.saas.bottomMembers=[];
+            if(!db.saas.bottom || typeof db.saas.bottom !== 'object') db.saas.bottom={img:'',text:''};
+            if(typeof db.saas.bottom.img !== 'string') db.saas.bottom.img='';
+            if(typeof db.saas.bottom.text !== 'string') db.saas.bottom.text='';
+            if(!db.saas.discord || typeof db.saas.discord !== 'object') db.saas.discord={link:'https://discord.gg/MqeWH9rxZV',text:'DISCORD SAAS'};
+            if(typeof db.saas.discord.link !== 'string') db.saas.discord.link='https://discord.gg/MqeWH9rxZV';
+            if(typeof db.saas.discord.text !== 'string') db.saas.discord.text='DISCORD SAAS';
+            db.users.forEach(u=>{
+                if(!u || typeof u!=='object') return;
+                if(!Array.isArray(u.likes)) u.likes=[];
+                if(!Array.isArray(u.roleIds)) u.roleIds=[];
+                if(typeof u.icName!=='string') u.icName='';
+            });
+            return db;
         }
 
         function getUser(username){
@@ -1948,10 +2046,20 @@
         }
 
         function renderTeritory(container) {
+            if(!db.teritory.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">TERITORY BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Teritory saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
             container.innerHTML = `
                 <div class="card" style="width:100%;">
-                    <img src="${db.teritory.image}" alt="Teritory">
-                    <p>${db.teritory.text}</p>
+                    <img src="${escapeHTML(db.teritory.image)}" alt="Teritory">
+                    <p>${escapeHTML(db.teritory.text)}</p>
                 </div>
             `;
         }
@@ -2123,20 +2231,32 @@
         }
 
         function checkAdmin() {
-            const pw = document.getElementById('admin-pw').value;
-            if (pw === db.password) {
-                adminAuthenticated = true;
-                document.getElementById('admin-subnav').classList.add('show');
+            const input=document.getElementById('admin-pw');
+            const pw=String(input?.value||'');
+            const saved=String(db.password ?? '');
+            if(pw !== saved){
+                adminAuthenticated=false;
+                document.getElementById('admin-subnav')?.classList.remove('show');
+                alert('Akses Ditolak: Password Salah!');
+                return;
+            }
+            try{
+                normalizeDB();
+                adminAuthenticated=true;
+                document.getElementById('admin-subnav')?.classList.add('show');
                 document.querySelectorAll('.admin-subnav button').forEach(b=>b.classList.remove('active'));
                 renderAdminDashboard(document.getElementById('app-content'));
                 showAdminSection('dashboard');
                 updateAdminTotalUsers();
                 updateAdminClubRequestBadge();
                 updateAdminSaasEventBadge();
-            } else {
-                adminAuthenticated = false;
-                document.getElementById('admin-subnav').classList.remove('show');
-                alert("Akses Ditolak: Password Salah!");
+                if(input) input.value='';
+            }catch(err){
+                console.error('Admin dashboard error:',err);
+                adminAuthenticated=true;
+                document.getElementById('admin-subnav')?.classList.add('show');
+                const c=document.getElementById('app-content');
+                if(c) c.innerHTML='<div class="card" style="width:100%;"><h2 class="card-title">Admin Panel</h2><p style="color:#ff2938;">Admin berhasil login, tetapi dashboard mengalami error. Silakan refresh halaman.</p><pre style="white-space:pre-wrap;color:#aaa;font-size:11px;">'+escapeHTML(String(err?.message||err))+'</pre></div>';
             }
         }
 
@@ -2172,8 +2292,14 @@
                     <div class="admin-section" id="admin-section-teritory">
                         <div class="admin-form">
                             <h3>Edit Teritory</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Teritory. Jika ON, halaman Teritory akan menampilkan gambar dan informasi. Jika OFF, member akan melihat “TERITORY BELUM TERSEDIA”.</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="teritory-enabled" ${db.teritory.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF TERITORY</b><br><small style="color:#777;">ON = Teritory tersedia · OFF = Teritory belum tersedia</small></span>
+                            </label>
                             <input type="text" id="edit-teri-img" value="${escapeHTML(db.teritory.image)}" placeholder="Image URL">
                             <input type="text" id="edit-teri-txt" value="${escapeHTML(db.teritory.text)}" placeholder="Description">
+                            <button type="button" class="btn-red" onclick="saveTeritorySettings()">Simpan Pengaturan Teritory</button>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-race">
@@ -2483,6 +2609,20 @@
             renderAdminDashboard(document.getElementById('app-content')); showAdminSection('create-role');
         }
 
+        async function saveTeritorySettings(){
+            const enabled=document.getElementById('teritory-enabled');
+            const image=document.getElementById('edit-teri-img');
+            const text=document.getElementById('edit-teri-txt');
+            db.teritory.enabled=!!enabled?.checked;
+            db.teritory.image=(image?.value||'').trim();
+            db.teritory.text=(text?.value||'').trim();
+            const saved=await saveToGitHub(true);
+            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo) return alert('Pengaturan Teritory gagal disimpan ke GitHub. Coba lagi.');
+            alert(db.teritory.enabled?'Teritory sekarang ON / tersedia.':'Teritory sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('teritory');
+        }
+
         async function saveSaasEventSettings(){
             const enabled=document.getElementById('saas-event-enabled');
             const description=document.getElementById('saas-event-description');
@@ -2496,6 +2636,8 @@
 
         function saveAllEdits() {
             db.password = document.getElementById('new-pw').value;
+            const teritoryEnabled = document.getElementById('teritory-enabled');
+            db.teritory.enabled = teritoryEnabled ? !!teritoryEnabled.checked : !!db.teritory.enabled;
             db.teritory.image = document.getElementById('edit-teri-img').value;
             db.teritory.text = document.getElementById('edit-teri-txt').value;
             

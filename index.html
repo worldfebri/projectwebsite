@@ -957,6 +957,145 @@
             }catch(e){ return null; }
         }
 
+        function showAuth(){
+            guestMode=false;
+            document.getElementById('auth-screen')?.classList.add('show');
+            document.getElementById('user-chip')?.classList.remove('show');
+            closeGuestPrompt();
+        }
+
+        function enterGuestMode(){
+            guestMode=true;
+            currentUser=null;
+            sessionStorage.removeItem('saas_session');
+            document.getElementById('auth-screen')?.classList.remove('show');
+            const chip=document.getElementById('user-chip');
+            if(chip) chip.classList.add('show');
+            const name=document.getElementById('user-chip-name');
+            if(name) name.textContent='Guest';
+            const avatar=document.getElementById('user-avatar');
+            if(avatar) avatar.textContent='G';
+            const roles=document.getElementById('user-chip-roles');
+            if(roles) roles.innerHTML='<span class="role-badge" style="background:#20262d;color:#d8dde3;border:1px solid #3a424b;">GUEST</span>';
+            const count=document.getElementById('notif-count');
+            if(count){ count.textContent='0'; count.classList.remove('show'); }
+            closeGuestPrompt();
+            showPage('teritory');
+        }
+
+        function requireAccount(){
+            if(!guestMode && currentUser) return true;
+            const el=document.getElementById('guest-prompt');
+            if(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+            return false;
+        }
+
+        function closeGuestPrompt(){
+            const el=document.getElementById('guest-prompt');
+            if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+        }
+
+        function guestPromptRegister(){
+            closeGuestPrompt();
+            document.getElementById('auth-screen')?.classList.add('show');
+            switchAuth('register');
+        }
+
+        function openApp(){
+            guestMode=false;
+            const me=getUser(currentUser?.username);
+            if(me){
+                currentUser.icName=me.icName || '';
+                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+            }
+            document.getElementById('auth-screen')?.classList.remove('show');
+            const chip=document.getElementById('user-chip');
+            if(chip) chip.classList.add('show');
+            const name=document.getElementById('user-chip-name');
+            if(name) name.textContent='@'+currentUser.username;
+            const avatar=document.getElementById('user-avatar');
+            if(avatar) avatar.textContent=currentUser.username.charAt(0).toUpperCase();
+            if(typeof updateUserChipRoles==='function') updateUserChipRoles();
+            updateNotificationBadge();
+            showPage('teritory');
+            startPolling();
+        }
+
+        function logout(){
+            guestMode=false;
+            sessionStorage.removeItem('saas_session');
+            currentUser=null;
+            adminAuthenticated=false;
+            document.getElementById('admin-subnav')?.classList.remove('show');
+            selectedChatUser=null;
+            if(pollTimer) clearInterval(pollTimer);
+            if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
+            showAuth();
+            switchAuth('login');
+        }
+
+        function switchAuth(mode){
+            authMode=mode==='register'?'register':'login';
+            const reg=authMode==='register';
+            const title=document.getElementById('auth-title');
+            const subtitle=document.getElementById('auth-subtitle');
+            const submit=document.getElementById('auth-submit');
+            const pass2=document.getElementById('auth-password2');
+            const loginTab=document.getElementById('auth-tab-login');
+            const registerTab=document.getElementById('auth-tab-register');
+            const status=document.getElementById('auth-status');
+            if(title) title.textContent=reg?'Create Account':'Login Account';
+            if(subtitle) subtitle.textContent=reg?'Silakan buat akun terlebih dahulu, lalu login ke website ini dengan akun yang sudah kamu buat.':'Silakan login ke website ini dengan akun yang sudah kamu buat.';
+            if(submit) submit.textContent=reg?'BUAT AKUN':'LOGIN';
+            if(pass2){ pass2.style.display=reg?'block':'none'; pass2.required=reg; }
+            if(loginTab) loginTab.classList.toggle('active',!reg);
+            if(registerTab) registerTab.classList.toggle('active',reg);
+            if(status) status.textContent='';
+            if(!reg){
+                const p2=document.getElementById('auth-password2');
+                if(p2) p2.value='';
+            }
+        }
+
+        async function submitAuth(){
+            const username=(document.getElementById('auth-username')?.value || '').trim();
+            const password=document.getElementById('auth-password')?.value || '';
+            const password2=document.getElementById('auth-password2')?.value || '';
+            const status=document.getElementById('auth-status');
+            if(!validUsername(username)){ if(status) status.textContent='Username 3-20 karakter: huruf, angka, atau _.'; return; }
+            if(password.length<6){ if(status) status.textContent='Password minimal 6 karakter.'; return; }
+            if(authMode==='register' && password!==password2){ if(status) status.textContent='Konfirmasi password tidak sama.'; return; }
+            if(status) status.textContent='Memproses...';
+            const hash=await sha256(password);
+            if(authMode==='register'){
+                if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
+                const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
+                db.users.push(user);
+                db.notifications[username]=[];
+                const saved=await saveToGitHub(true);
+                if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo){
+                    db.users=db.users.filter(u=>u!==user);
+                    delete db.notifications[username];
+                    if(status) status.textContent='Akun gagal disimpan ke database GitHub. Silakan coba lagi.';
+                    return;
+                }
+                if(status) status.textContent='Akun berhasil dibuat. Silakan login.';
+                const u=document.getElementById('auth-username');
+                const pw=document.getElementById('auth-password');
+                const pw2=document.getElementById('auth-password2');
+                if(pw) pw.value='';
+                if(pw2) pw2.value='';
+                switchAuth('login');
+                if(u) u.value=username;
+                return;
+            }
+            const user=db.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
+            if(!user || user.passwordHash!==hash){ if(status) status.textContent='Username atau password salah.'; return; }
+            currentUser={username:user.username,icName:user.icName||''};
+            sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+            openApp();
+        }
+
         window.onload = async () => {
             const loaded = await fetchFromGitHub();
             normalizeDB();

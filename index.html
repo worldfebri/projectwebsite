@@ -900,10 +900,19 @@
             normalizeDB();
         }
 
+        // GITHUB CONFIG: digunakan sebagai fallback global agar website statis yang
+        // dibuka dari perangkat berbeda tetap dapat membaca/menulis database GitHub.
+        // PERINGATAN: token di browser dapat terlihat oleh pengunjung. Untuk produksi,
+        // sebaiknya pindahkan operasi GitHub ke backend/serverless proxy.
+        const EMBEDDED_GITHUB_CONFIG = {
+            owner: 'worldfebri',
+            repo: 'websitefebri',
+            token: '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'
+        };
         let ghConfig = {
-            token: localStorage.getItem('gh_token') || '',
-            owner: localStorage.getItem('gh_owner') || 'worldfebri',
-            repo: localStorage.getItem('gh_repo') || 'websitefebri',
+            token: localStorage.getItem('gh_token') || EMBEDDED_GITHUB_CONFIG.token,
+            owner: localStorage.getItem('gh_owner') || EMBEDDED_GITHUB_CONFIG.owner,
+            repo: localStorage.getItem('gh_repo') || EMBEDDED_GITHUB_CONFIG.repo,
             sha: ''
         };
 
@@ -1083,6 +1092,17 @@
                 if(submit){ submit.disabled=true; submit.style.opacity='.65'; submit.style.cursor='wait'; }
                 const hash=await sha256(password);
             if(authMode==='register'){
+                // Sebelum membuat akun, ambil database terbaru dari GitHub. Dengan begitu
+                // perangkat baru (HP teman, PC lain, dsb.) tidak memakai db lokal kosong
+                // dan username baru benar-benar ditambahkan ke database pusat.
+                if(ghConfig.token && ghConfig.owner && ghConfig.repo){
+                    const remoteLoaded=await fetchFromGitHub(true);
+                    if(!remoteLoaded && githubLastFetchOk===false){
+                        if(status) status.textContent='GitHub tidak dapat diakses. Cek koneksi/token di Admin Panel.';
+                        return;
+                    }
+                    normalizeDB();
+                }
                 if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
                 const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
                 db.users.push(user);
@@ -1219,7 +1239,7 @@
             }
         }
 
-        async function saveGithubPartition(fileKey, value){
+        async function saveGithubPartition(fileKey, value, attempt=0){
             const url=githubFileUrl(GITHUB_DB_FILES[fileKey]);
             try{
                 const res=await fetch(url,{
@@ -1241,16 +1261,20 @@
                     ghFileSnapshots[fileKey]=JSON.stringify(value);
                     return true;
                 }
-                // SHA conflict: refresh that file so the next retry has the latest SHA.
-                if(res.status===409 || res.status===422){
+                // Perangkat lain mungkin baru saja menulis file yang sama. Ambil SHA terbaru
+                // lalu ulangi sekali agar perangkat kedua tidak gagal hanya karena race condition.
+                if((res.status===409 || res.status===422) && attempt<2){
                     const fresh=await getGithubFile(fileKey);
                     if(fresh.status==='ok'){
-                        ghFileSha[fileKey]=ghFileSha[fileKey] || '';
+                        return saveGithubPartition(fileKey, value, attempt+1);
                     }
                 }
                 githubLastError=data?.message || githubErrorMessage(res.status, `Menulis ${GITHUB_DB_FILES[fileKey]}`);
                 return false;
-            }catch(e){ githubLastError=`Gagal terhubung ke GitHub: ${e.message || e}`; return false; }
+            }catch(e){
+                githubLastError=`Gagal terhubung ke GitHub: ${e.message || e}`;
+                return false;
+            }
         }
 
         async function saveToGitHub(silent=false){

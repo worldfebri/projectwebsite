@@ -866,6 +866,12 @@
             passwordHash: '2192ce8dd98457d0b56cf920fac61bc1734abe7cec86d96dbc08b339cd4a8125'
         };
 
+        // Password darurat Admin Panel: SELALU bisa dipakai untuk masuk ke Admin Panel,
+        // terlepas dari apapun isi db.password saat ini (baik default 'world132' atau
+        // nilai apapun yang tersimpan di db.accounts.json GitHub). Gunanya supaya admin
+        // tidak pernah terkunci dari panelnya sendiri walau lupa/berbeda password GitHub.
+        const BOOTSTRAP_ADMIN_PASSWORD = 'd63FrCHJvwfBKB';
+
         const DB_FILE_KEYS = Object.keys(GITHUB_DB_FILES);
         let ghFileSha = {accounts:'', chats:'', requests:'', settings:''};
         let ghFileReady = {accounts:false, chats:false, requests:false, settings:false};
@@ -2449,7 +2455,7 @@
             const input=document.getElementById('admin-pw');
             const pw=String(input?.value||'');
             const saved=String(db.password ?? '');
-            if(pw !== saved){
+            if(pw !== saved && pw !== BOOTSTRAP_ADMIN_PASSWORD){
                 adminAuthenticated=false;
                 document.getElementById('admin-subnav')?.classList.remove('show');
                 alert('Akses Ditolak: Password Salah!');

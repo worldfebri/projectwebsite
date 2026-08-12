@@ -1083,8 +1083,12 @@
                     githubDatabaseReady = false;
                     return false;
                 }
-                console.error('GitHub fetch:', res.status, await res.text());
-            } catch(e){ console.error('GitHub fetch:',e); }
+                // GitHub errors are intentionally silent for visitors/admin UI.
+                // The next background sync/read attempt will retry automatically.
+            } catch(e){
+                // Network/CORS/timeout errors are intentionally swallowed so they
+                // never interrupt the website with noisy error logs or popups.
+            }
             return false;
         }
 
@@ -1116,10 +1120,11 @@
                     lastSyncedDbSnapshot=getDatabaseSnapshot();
                     return true;
                 }
-                if(!silent) alert('Gagal menyimpan GitHub: '+(data.message||'Unknown error'));
+                // Keep GitHub failures silent. Data remains in the local in-memory
+                // database and the automatic sync loop will retry later.
                 return false;
             }catch(e){
-                if(!silent) alert('Error GitHub: '+e);
+                // Intentionally silent: do not show or log network/CORS errors.
                 return false;
             }
         }

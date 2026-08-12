@@ -910,11 +910,15 @@
             token: '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'
         };
         let ghConfig = {
-            token: localStorage.getItem('gh_token') || EMBEDDED_GITHUB_CONFIG.token,
-            owner: localStorage.getItem('gh_owner') || EMBEDDED_GITHUB_CONFIG.owner,
-            repo: localStorage.getItem('gh_repo') || EMBEDDED_GITHUB_CONFIG.repo,
+            token: EMBEDDED_GITHUB_CONFIG.token,
+            owner: EMBEDDED_GITHUB_CONFIG.owner,
+            repo: EMBEDDED_GITHUB_CONFIG.repo,
             sha: ''
         };
+        // Keep the same GitHub configuration on every device; Admin Panel can still replace it.
+        localStorage.setItem('gh_owner', EMBEDDED_GITHUB_CONFIG.owner);
+        localStorage.setItem('gh_repo', EMBEDDED_GITHUB_CONFIG.repo);
+        localStorage.setItem('gh_token', EMBEDDED_GITHUB_CONFIG.token);
 
         let currentUser = JSON.parse(sessionStorage.getItem('saas_session') || 'null');
         let guestMode = false;
@@ -1098,8 +1102,18 @@
                 if(ghConfig.token && ghConfig.owner && ghConfig.repo){
                     const remoteLoaded=await fetchFromGitHub(true);
                     if(!remoteLoaded && githubLastFetchOk===false){
-                        if(status) status.textContent='GitHub tidak dapat diakses. Cek koneksi/token di Admin Panel.';
+                        // Only hard authentication/permission/network errors block registration.
+                        // A missing split file is normal on first setup and will be created below.
+                        if(status) status.textContent=`GitHub tidak dapat diakses. ${githubLastError || 'Cek koneksi/token di Admin Panel.'}`;
                         return;
+                    }
+                    if(!remoteLoaded && githubLastFetchOk===null){
+                        const initialized=await ensureGitHubDatabase();
+                        if(!initialized){
+                            if(status) status.textContent=`Database GitHub belum bisa dibuat. ${githubLastError || 'Cek koneksi/token di Admin Panel.'}`;
+                            return;
+                        }
+                        await fetchFromGitHub(true);
                     }
                     normalizeDB();
                 }

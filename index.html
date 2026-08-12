@@ -900,8 +900,8 @@
 
         let ghConfig = {
             token: localStorage.getItem('gh_token') || '',
-            owner: localStorage.getItem('gh_owner') || '',
-            repo: localStorage.getItem('gh_repo') || '',
+            owner: localStorage.getItem('gh_owner') || 'worldfebri',
+            repo: localStorage.getItem('gh_repo') || 'websitefebri',
             sha: ''
         };
 
@@ -919,6 +919,12 @@
         let githubLastFetchOk = false;
         let githubWriteInProgress = false;
         let githubRetryTimer = null;
+        let githubLastError = '';
+
+        function githubErrorMessage(status, action='GitHub') {
+            const map={401:'Token GitHub tidak valid atau sudah dicabut.',403:'Token tidak memiliki izin Contents: Read and write pada repository.',404:'Repository atau file database tidak ditemukan.',409:'Konflik SHA file GitHub. Silakan tes koneksi lalu coba lagi.',422:'GitHub menolak perubahan. Periksa token, branch, atau SHA file.'};
+            return map[status] || `${action} gagal (HTTP ${status}).`;
+        }
 
         function githubFileUrl(fileName){
             return `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${encodeURIComponent(fileName)}`;
@@ -945,7 +951,8 @@
                 return {status:'ok', data:parsed};
             }
             if(res.status===404) return {status:'missing'};
-            return {status:'error', httpStatus:res.status};
+            githubLastError=githubErrorMessage(res.status,'Membaca database');
+            return {status:'error', httpStatus:res.status, message:githubLastError};
         }
 
         async function getLegacyDb(){
@@ -1236,8 +1243,9 @@
                         ghFileSha[fileKey]=ghFileSha[fileKey] || '';
                     }
                 }
+                githubLastError=data?.message || githubErrorMessage(res.status, `Menulis ${GITHUB_DB_FILES[fileKey]}`);
                 return false;
-            }catch(e){ return false; }
+            }catch(e){ githubLastError=`Gagal terhubung ke GitHub: ${e.message || e}`; return false; }
         }
 
         async function saveToGitHub(silent=false){
@@ -1246,7 +1254,19 @@
                 return false;
             }
             if(githubWriteInProgress) return false;
-            if(!githubDatabaseReady && githubLastFetchOk !== null) return false;
+            if(!githubDatabaseReady){
+                const refreshed=await fetchFromGitHub(true);
+                if(!refreshed && githubLastFetchOk===null){
+                    const initialized=await ensureGitHubDatabase();
+                    if(!initialized){
+                        if(!silent && githubLastError) alert(githubLastError);
+                        return false;
+                    }
+                } else if(!refreshed && githubLastFetchOk!==null){
+                    if(!silent && githubLastError) alert(githubLastError);
+                    return false;
+                }
+            }
             githubWriteInProgress=true;
             try{
                 normalizeDB();
@@ -2277,9 +2297,10 @@
                             <h3>GitHub Database Link</h3>
                             <input type="text" id="gh-owner" placeholder="GitHub Username" value="${escapeHTML(ghConfig.owner)}">
                             <input type="text" id="gh-repo" placeholder="Repository Name" value="${escapeHTML(ghConfig.repo)}">
-                            <input type="password" id="gh-token" placeholder="Personal Access Token" value="${escapeHTML(ghConfig.token)}">
+                            <input type="password" id="gh-token" placeholder="Personal Access Token (masukkan di sini)" value="${escapeHTML(ghConfig.token)}">
                             <button onclick="saveGhConfig()" class="btn-red" style="width:max-content;">Set Config</button>
-                            <p style="font-size:10px;color:#777;line-height:1.6;">Untuk website publik, sebaiknya token GitHub dipindahkan ke backend/serverless agar tidak terlihat di browser.</p>
+                            <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST GITHUB CONNECTION</button>
+                            <p style="font-size:10px;color:#777;line-height:1.6;">Owner dan Repository sudah diarahkan ke worldfebri / websitefebri. Token disimpan di browser dan digunakan untuk membuat/memperbarui database terpisah. Untuk website publik, backend/serverless tetap lebih aman.</p>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-security">
@@ -2449,20 +2470,58 @@
             updateAdminSaasEventBadge();
         }
 
-        function saveGhConfig() {
-            ghConfig.owner = document.getElementById('gh-owner').value;
-            ghConfig.repo = document.getElementById('gh-repo').value;
-            ghConfig.token = document.getElementById('gh-token').value;
+        async function testGithubConnection(showAlert=true){
+            const owner=(document.getElementById('gh-owner')?.value || ghConfig.owner || '').trim();
+            const repo=(document.getElementById('gh-repo')?.value || ghConfig.repo || '').trim();
+            const token=(document.getElementById('gh-token')?.value || ghConfig.token || '').trim();
+            if(!owner || !repo || !token){
+                if(showAlert) alert('Isi Owner, Repository, dan Personal Access Token terlebih dahulu.');
+                return false;
+            }
+            ghConfig.owner=owner; ghConfig.repo=repo; ghConfig.token=token;
+            githubLastError='';
+            try{
+                const res=await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,{headers:{'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json'}});
+                if(!res.ok){
+                    githubLastError=githubErrorMessage(res.status,'Koneksi repository');
+                    if(showAlert) alert('❌ '+githubLastError);
+                    return false;
+                }
+                const repoData=await res.json();
+                const permissions=repoData.permissions || {};
+                if(permissions.push===false){
+                    githubLastError='Token berhasil terhubung, tetapi tidak memiliki izin push/write ke repository.';
+                    if(showAlert) alert('❌ '+githubLastError);
+                    return false;
+                }
+                githubLastError='';
+                if(showAlert) alert('✅ Koneksi GitHub berhasil. Repository dapat ditulis.');
+                return true;
+            }catch(e){
+                githubLastError=`Gagal menghubungi GitHub: ${e.message || e}`;
+                if(showAlert) alert('❌ '+githubLastError);
+                return false;
+            }
+        }
+
+        async function saveGhConfig() {
+            ghConfig.owner = (document.getElementById('gh-owner')?.value || '').trim();
+            ghConfig.repo = (document.getElementById('gh-repo')?.value || '').trim();
+            ghConfig.token = (document.getElementById('gh-token')?.value || '').trim();
             localStorage.setItem('gh_owner', ghConfig.owner);
             localStorage.setItem('gh_repo', ghConfig.repo);
             localStorage.setItem('gh_token', ghConfig.token);
-            githubDatabaseReady = false;
-            lastSyncedDbSnapshot = '';
-            alert("Konfigurasi GitHub tersimpan. Memeriksa database GitHub terpisah...");
-            fetchFromGitHub(true).then(async found=>{
-                if(!found && githubLastFetchOk === null) await ensureGitHubDatabase();
+            githubDatabaseReady=false; githubLastFetchOk=null; lastSyncedDbSnapshot='';
+            const ok=await testGithubConnection(false);
+            if(!ok){ alert('❌ GitHub belum siap: '+(githubLastError || 'Periksa Owner, Repository, dan Token.')); return; }
+            const found=await fetchFromGitHub(true);
+            if(!found && githubLastFetchOk===null) await ensureGitHubDatabase();
+            if(githubDatabaseReady){
                 startAutoDatabaseSync();
-            });
+                alert('✅ GitHub tersambung dan 4 database terpisah siap digunakan.');
+            }else{
+                alert('❌ Database GitHub belum siap: '+(githubLastError || 'gagal membuat/membaca file database.'));
+            }
         }
 
         function addClub() {

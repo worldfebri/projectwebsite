@@ -2652,17 +2652,53 @@
             localStorage.setItem('gh_owner', ghConfig.owner);
             localStorage.setItem('gh_repo', ghConfig.repo);
             localStorage.setItem('gh_token', ghConfig.token);
-            githubDatabaseReady=false; githubLastFetchOk=null; lastSyncedDbSnapshot='';
+            githubDatabaseReady=false; githubAccountsReady=false; githubLastFetchOk=null; githubLastError=''; lastSyncedDbSnapshot='';
+
+            // Set Config hanya memerlukan akses repository + db.accounts.json.
+            // Database lain tidak boleh membuat konfigurasi gagal; file yang hilang
+            // akan dibuat satu per satu setelah koneksi akun berhasil.
             const ok=await testGithubConnection(false);
-            if(!ok){ alert('❌ GitHub belum siap: '+(githubLastError || 'Periksa Owner, Repository, dan Token.')); return; }
-            const found=await fetchFromGitHub(true);
-            if(!found && githubLastFetchOk===null) await ensureGitHubDatabase();
-            if(githubDatabaseReady){
-                startAutoDatabaseSync();
-                alert('✅ GitHub tersambung dan 4 database terpisah siap digunakan.');
-            }else{
-                alert('❌ Database GitHub belum siap: '+(githubLastError || 'gagal membuat/membaca file database.'));
+            if(!ok){
+                alert('❌ GitHub belum siap: '+(githubLastError || 'Periksa Owner, Repository, dan Token.'));
+                return;
             }
+
+            const accountResult=await getGithubFile('accounts');
+            if(accountResult.status==='ok'){
+                applyDbPartitions({accounts:accountResult.data});
+                githubAccountsReady=true;
+            }else if(accountResult.status==='missing'){
+                const created=await saveGithubPartition('accounts', getDbPartitions().accounts);
+                if(!created){
+                    alert('❌ db.accounts.json belum dapat dibuat: '+(githubLastError || 'Periksa permission token.'));
+                    return;
+                }
+                githubAccountsReady=true;
+            }else{
+                alert('❌ db.accounts.json gagal dibaca: '+(githubLastError || accountResult.message || 'GitHub error.'));
+                return;
+            }
+
+            // Coba siapkan database tambahan secara independen. Jika salah satu gagal,
+            // akun/login tetap dapat bekerja karena db.accounts.json sudah siap.
+            for(const key of DB_FILE_KEYS.filter(k=>k!=='accounts')){
+                try{
+                    const r=await getGithubFile(key);
+                    if(r.status==='missing'){
+                        await saveGithubPartition(key, getDbPartitions()[key]);
+                    }
+                }catch(e){
+                    console.warn('Database tambahan gagal disiapkan:', key, e);
+                }
+            }
+
+            githubDatabaseReady=DB_FILE_KEYS.every(k=>ghFileReady[k]);
+            githubLastFetchOk=githubDatabaseReady ? true : null;
+            githubLastError = githubDatabaseReady ? '' : (githubLastError || 'Beberapa database tambahan belum tersedia; akun tetap dapat login.');
+            if(githubAccountsReady) startAutoDatabaseSync();
+            alert(githubDatabaseReady
+                ? '✅ GitHub tersambung. 4 database terpisah siap digunakan.'
+                : '✅ GitHub tersambung. db.accounts.json siap digunakan; database tambahan akan dicoba kembali otomatis.');
         }
 
         function addClub() {

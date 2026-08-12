@@ -832,7 +832,9 @@
                     }
                 }
             ],
-            users: [],
+            users: [
+                {username: "febrihansx", passwordHash: "68ce5b374d4209b601544c4061c95804866e70bc8b0687980fc646e2f1e05507", likes: [], icName: "", roleIds: [], createdAt: Date.now()}
+            ],
             roles: [],
             notifications: {},
             publicChat: [],
@@ -1085,14 +1087,17 @@
                 const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
                 db.users.push(user);
                 db.notifications[username]=[];
-                const saved=await saveToGitHub(true);
-                if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo){
-                    db.users=db.users.filter(u=>u!==user);
-                    delete db.notifications[username];
-                    if(status) status.textContent='Akun gagal disimpan ke database GitHub. Silakan coba lagi.';
-                    return;
+                let saved=true;
+                if(ghConfig.token && ghConfig.owner && ghConfig.repo){
+                    saved=await saveToGitHub(true);
+                    if(!saved){
+                        db.users=db.users.filter(u=>u!==user);
+                        delete db.notifications[username];
+                        if(status) status.textContent='Akun gagal disimpan ke database GitHub. Periksa koneksi GitHub di Admin Panel.';
+                        return;
+                    }
                 }
-                if(status) status.textContent='Akun berhasil dibuat. Silakan login.';
+                if(status) status.textContent=ghConfig.token ? 'Akun berhasil dibuat dan disimpan ke GitHub. Silakan login.' : 'Akun berhasil dibuat secara lokal. Hubungkan GitHub di Admin Panel agar tersimpan ke GitHub.';
                 const u=document.getElementById('auth-username');
                 const pw=document.getElementById('auth-password');
                 const pw2=document.getElementById('auth-password2');
@@ -2298,6 +2303,7 @@
                             <input type="text" id="gh-owner" placeholder="GitHub Username" value="${escapeHTML(ghConfig.owner)}">
                             <input type="text" id="gh-repo" placeholder="Repository Name" value="${escapeHTML(ghConfig.repo)}">
                             <input type="password" id="gh-token" placeholder="Personal Access Token (masukkan di sini)" value="${escapeHTML(ghConfig.token)}">
+                            <small style="display:block;opacity:.75;line-height:1.5;">Token GitHub tidak ditanam ke source website. Masukkan token baru di sini lalu gunakan TEST GITHUB CONNECTION.</small>
                             <button onclick="saveGhConfig()" class="btn-red" style="width:max-content;">Set Config</button>
                             <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST GITHUB CONNECTION</button>
                             <p style="font-size:10px;color:#777;line-height:1.6;">Owner dan Repository sudah diarahkan ke worldfebri / websitefebri. Token disimpan di browser dan digunakan untuk membuat/memperbarui database terpisah. Untuk website publik, backend/serverless tetap lebih aman.</p>

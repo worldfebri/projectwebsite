@@ -863,6 +863,20 @@
         let ghFileSnapshots = {accounts:'', chats:'', requests:'', settings:''};
         let githubLegacyDb = null;
 
+        // LOG STATUS DATABASE: mencatat status baca/tulis tiap file db.*.json agar
+        // Admin Panel bisa menampilkan mana yang berhasil kebaca, hilang, atau error.
+        let ghDiagnostics = {
+            accounts:{status:'unknown', message:'Belum dicek', checkedAt:null},
+            chats:{status:'unknown', message:'Belum dicek', checkedAt:null},
+            requests:{status:'unknown', message:'Belum dicek', checkedAt:null},
+            settings:{status:'unknown', message:'Belum dicek', checkedAt:null}
+        };
+        function setGhDiagnostic(fileKey, status, message){
+            ghDiagnostics[fileKey] = {status, message: message||'', checkedAt: Date.now()};
+            const el = document.getElementById('gh-diagnostics-body');
+            if(el) el.innerHTML = renderGithubDiagnosticsRows();
+        }
+
         function getDbPartitions(){
             return {
                 accounts: {
@@ -911,16 +925,21 @@
             // Enter the current PAT in Admin Panel -> GitHub.
             token: ''
         };
+        // BUG FIX: sebelumnya ghConfig SELALU dibuat ulang dari EMBEDDED_GITHUB_CONFIG
+        // (yang tokennya sengaja kosong) setiap kali halaman dibuka/refresh, sehingga
+        // token yang sudah disimpan admin lewat "Set Config" (localStorage) TIDAK PERNAH
+        // dibaca kembali. Akibatnya koneksi GitHub "hilang" tiap reload dan akun kadang
+        // gagal terbaca. Sekarang localStorage dibaca lebih dulu, baru fallback ke default.
         let ghConfig = {
-            token: EMBEDDED_GITHUB_CONFIG.token,
-            owner: EMBEDDED_GITHUB_CONFIG.owner,
-            repo: EMBEDDED_GITHUB_CONFIG.repo,
+            token: localStorage.getItem('gh_token') || EMBEDDED_GITHUB_CONFIG.token,
+            owner: localStorage.getItem('gh_owner') || EMBEDDED_GITHUB_CONFIG.owner,
+            repo: localStorage.getItem('gh_repo') || EMBEDDED_GITHUB_CONFIG.repo,
             sha: ''
         };
-        // Keep the same GitHub configuration on every device; Admin Panel can still replace it.
-        localStorage.setItem('gh_owner', EMBEDDED_GITHUB_CONFIG.owner);
-        localStorage.setItem('gh_repo', EMBEDDED_GITHUB_CONFIG.repo);
-        if (EMBEDDED_GITHUB_CONFIG.token) localStorage.setItem('gh_token', EMBEDDED_GITHUB_CONFIG.token);
+        // Pin owner/repo ke default hanya jika localStorage belum pernah diisi sama sekali.
+        if (!localStorage.getItem('gh_owner')) localStorage.setItem('gh_owner', ghConfig.owner);
+        if (!localStorage.getItem('gh_repo')) localStorage.setItem('gh_repo', ghConfig.repo);
+        if (EMBEDDED_GITHUB_CONFIG.token && !localStorage.getItem('gh_token')) localStorage.setItem('gh_token', EMBEDDED_GITHUB_CONFIG.token);
 
         let currentUser = JSON.parse(sessionStorage.getItem('saas_session') || 'null');
         let guestMode = false;
@@ -957,20 +976,32 @@
         }
 
         async function getGithubFile(fileKey){
-            const res = await fetch(githubFileUrl(GITHUB_DB_FILES[fileKey]), {
-                headers:{'Authorization':`Bearer ${ghConfig.token}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-cache'}
-            });
-            if(res.ok){
-                const data=await res.json();
-                ghFileSha[fileKey]=data.sha || '';
-                ghFileReady[fileKey]=true;
-                const parsed=JSON.parse(decodeGithubContent(data.content));
-                ghFileSnapshots[fileKey]=JSON.stringify(parsed);
-                return {status:'ok', data:parsed};
+            try{
+                const res = await fetch(githubFileUrl(GITHUB_DB_FILES[fileKey]), {
+                    headers:{'Authorization':`Bearer ${ghConfig.token}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-cache'}
+                });
+                if(res.ok){
+                    const data=await res.json();
+                    ghFileSha[fileKey]=data.sha || '';
+                    ghFileReady[fileKey]=true;
+                    const parsed=JSON.parse(decodeGithubContent(data.content));
+                    ghFileSnapshots[fileKey]=JSON.stringify(parsed);
+                    setGhDiagnostic(fileKey,'ok',`Kebaca (${GITHUB_DB_FILES[fileKey]})`);
+                    return {status:'ok', data:parsed};
+                }
+                if(res.status===404){
+                    setGhDiagnostic(fileKey,'missing',`File ${GITHUB_DB_FILES[fileKey]} belum ada di repo`);
+                    return {status:'missing'};
+                }
+                githubLastError=githubErrorMessage(res.status,'Membaca database');
+                setGhDiagnostic(fileKey,'error',githubLastError);
+                return {status:'error', httpStatus:res.status, message:githubLastError};
+            }catch(e){
+                const msg=`Gagal terhubung ke GitHub: ${e.message||e}`;
+                githubLastError=msg;
+                setGhDiagnostic(fileKey,'error',msg);
+                return {status:'error', message:msg};
             }
-            if(res.status===404) return {status:'missing'};
-            githubLastError=githubErrorMessage(res.status,'Membaca database');
-            return {status:'error', httpStatus:res.status, message:githubLastError};
         }
 
         async function getLegacyDb(){
@@ -1322,6 +1353,7 @@
                     ghFileSha[fileKey]=data.content.sha || ghFileSha[fileKey];
                     ghFileReady[fileKey]=true;
                     ghFileSnapshots[fileKey]=JSON.stringify(value);
+                    setGhDiagnostic(fileKey,'ok',`Berhasil ditulis (${GITHUB_DB_FILES[fileKey]})`);
                     return true;
                 }
                 // Perangkat lain mungkin baru saja menulis file yang sama. Ambil SHA terbaru
@@ -1333,9 +1365,11 @@
                     }
                 }
                 githubLastError=data?.message || githubErrorMessage(res.status, `Menulis ${GITHUB_DB_FILES[fileKey]}`);
+                setGhDiagnostic(fileKey,'error',githubLastError);
                 return false;
             }catch(e){
                 githubLastError=`Gagal terhubung ke GitHub: ${e.message || e}`;
+                setGhDiagnostic(fileKey,'error',githubLastError);
                 return false;
             }
         }
@@ -2442,6 +2476,14 @@
                             <button onclick="saveGhConfig()" class="btn-red" style="width:max-content;">Set Config</button>
                             <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST GITHUB CONNECTION</button>
                             <p style="font-size:10px;color:#777;line-height:1.6;">Owner dan Repository sudah diarahkan ke worldfebri / websitefebri. Token disimpan di browser dan digunakan untuk membuat/memperbarui database terpisah. Untuk website publik, backend/serverless tetap lebih aman.</p>
+                            <div style="margin-top:16px;border-top:1px solid #2a3441;padding-top:14px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                    <h3 style="margin:0;">Status Database (Log)</h3>
+                                    <button type="button" onclick="refreshGithubStatus()" style="width:max-content;">Refresh Status</button>
+                                </div>
+                                <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-top:0;">Menampilkan apakah tiap file database berhasil dibaca dari GitHub, belum ada, atau error (beserta pesannya).</p>
+                                <div id="gh-diagnostics-body">${renderGithubDiagnosticsRows()}</div>
+                            </div>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-security">
@@ -2606,9 +2648,42 @@
             if(section==='saas-event') renderSaasEventRequests();
             if(section==='saas-event-clubs'){ renderSaasEventClubAdmin(); }
             if(section==='create-role') setTimeout(syncRoleColorInputs,0);
+            if(section==='github') refreshGithubStatus();
             updateAdminTotalUsers();
             updateAdminClubRequestBadge();
             updateAdminSaasEventBadge();
+        }
+
+        const GH_STATUS_LABEL = {ok:'✅ KEBACA', missing:'⚪ BELUM ADA', error:'❌ ERROR', unknown:'⏳ BELUM DICEK'};
+        const GH_STATUS_COLOR = {ok:'#2ecc71', missing:'#8b919a', error:'#ff2938', unknown:'#555c66'};
+
+        function renderGithubDiagnosticsRows(){
+            return DB_FILE_KEYS.map(key=>{
+                const d=ghDiagnostics[key] || {status:'unknown', message:'', checkedAt:null};
+                const time=d.checkedAt ? new Date(d.checkedAt).toLocaleTimeString('id-ID') : '-';
+                return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #2a3441;padding:10px 12px;margin-bottom:6px;background:#0b0f14;font-size:11px;">
+                    <div>
+                        <strong>${escapeHTML(GITHUB_DB_FILES[key])}</strong>
+                        <div style="color:#777;margin-top:3px;">${escapeHTML(d.message||'')}</div>
+                    </div>
+                    <div style="text-align:right;white-space:nowrap;">
+                        <div style="color:${GH_STATUS_COLOR[d.status]||'#8b919a'};font-weight:700;">${GH_STATUS_LABEL[d.status]||d.status}</div>
+                        <div style="color:#555;margin-top:3px;">${time}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function refreshGithubStatus(){
+            const body=document.getElementById('gh-diagnostics-body');
+            if(body) body.innerHTML='<div style="color:#777;font-size:11px;">Mengecek koneksi ke GitHub...</div>';
+            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo){
+                DB_FILE_KEYS.forEach(k=>setGhDiagnostic(k,'error','GitHub belum dikonfigurasi (Owner/Repo/Token kosong).'));
+                return;
+            }
+            for(const key of DB_FILE_KEYS){
+                await getGithubFile(key);
+            }
         }
 
         async function testGithubConnection(showAlert=true){

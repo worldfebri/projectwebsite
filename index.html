@@ -771,9 +771,14 @@
     </div>
 
     <script>
-        // Database utama. Users, chat, likes, dan notifications ikut tersimpan di db.json GitHub.
+        // Database utama di memori. Di GitHub, data dipisahkan menjadi beberapa file agar tidak menumpuk.
+        // db.accounts.json  -> akun, role, notifikasi, password admin
+        // db.chats.json     -> chat public IC/OOC dan private chat
+        // db.requests.json  -> pengajuan club dan acara SAAS
+        // db.settings.json  -> seluruh konten/pengaturan website
         let db = {
-            password: "world123",
+            password: "world132",
+            adminPasswordMigratedWorld132: true,
             teritory: {
                 image: "https://images.unsplash.com/photo-1547619292-240402b5ae5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
                 text: "Wilayah kekuasaan utama. Pelanggaran batas wilayah tanpa izin akan ditindak tegas."
@@ -826,11 +831,12 @@
                 }
             ],
             users: [],
+            roles: [],
+            notifications: {},
             publicChat: [],
             publicChatOOC: [],
             publicChatIC: [],
             privateChats: {},
-            notifications: {},
             clubWebsiteRequests: [],
             saasEvent: {
                 enabled: false,
@@ -839,6 +845,56 @@
             },
             saasEventRequests: []
         };
+
+        const GITHUB_DB_FILES = {
+            accounts: 'db.accounts.json',
+            chats: 'db.chats.json',
+            requests: 'db.requests.json',
+            settings: 'db.settings.json'
+        };
+
+        const DB_FILE_KEYS = Object.keys(GITHUB_DB_FILES);
+        let ghFileSha = {accounts:'', chats:'', requests:'', settings:''};
+        let ghFileReady = {accounts:false, chats:false, requests:false, settings:false};
+        let ghFileSnapshots = {accounts:'', chats:'', requests:'', settings:''};
+        let githubLegacyDb = null;
+
+        function getDbPartitions(){
+            return {
+                accounts: {
+                    password: db.password,
+                    adminPasswordMigratedWorld132: db.adminPasswordMigratedWorld132 === true,
+                    users: db.users,
+                    roles: db.roles,
+                    notifications: db.notifications
+                },
+                chats: {
+                    publicChat: db.publicChat,
+                    publicChatOOC: db.publicChatOOC,
+                    publicChatIC: db.publicChatIC,
+                    privateChats: db.privateChats
+                },
+                requests: {
+                    clubWebsiteRequests: db.clubWebsiteRequests,
+                    saasEventRequests: db.saasEventRequests
+                },
+                settings: {
+                    teritory: db.teritory,
+                    race: db.race,
+                    saas: db.saas,
+                    club: db.club,
+                    saasEvent: db.saasEvent
+                }
+            };
+        }
+
+        function applyDbPartitions(parts){
+            if(parts.accounts && typeof parts.accounts === 'object') Object.assign(db, parts.accounts);
+            if(parts.chats && typeof parts.chats === 'object') Object.assign(db, parts.chats);
+            if(parts.requests && typeof parts.requests === 'object') Object.assign(db, parts.requests);
+            if(parts.settings && typeof parts.settings === 'object') Object.assign(db, parts.settings);
+            normalizeDB();
+        }
 
         let ghConfig = {
             token: localStorage.getItem('gh_token') || '',
@@ -858,12 +914,63 @@
         let lastSyncedDbSnapshot = '';
         let autoDbSyncTimer = null;
         let githubDatabaseReady = false;
+        let githubLastFetchOk = false;
+        let githubWriteInProgress = false;
+        let githubRetryTimer = null;
+
+        function githubFileUrl(fileName){
+            return `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${encodeURIComponent(fileName)}`;
+        }
+
+        function decodeGithubContent(content){
+            return decodeURIComponent(escape(atob((content || '').replace(/\n/g,''))));
+        }
+
+        function encodeGithubContent(value){
+            return btoa(unescape(encodeURIComponent(JSON.stringify(value,null,2))));
+        }
+
+        async function getGithubFile(fileKey){
+            const res = await fetch(githubFileUrl(GITHUB_DB_FILES[fileKey]), {
+                headers:{'Authorization':`Bearer ${ghConfig.token}`}
+            });
+            if(res.ok){
+                const data=await res.json();
+                ghFileSha[fileKey]=data.sha || '';
+                ghFileReady[fileKey]=true;
+                const parsed=JSON.parse(decodeGithubContent(data.content));
+                ghFileSnapshots[fileKey]=JSON.stringify(parsed);
+                return {status:'ok', data:parsed};
+            }
+            if(res.status===404) return {status:'missing'};
+            return {status:'error', httpStatus:res.status};
+        }
+
+        async function getLegacyDb(){
+            try{
+                const res=await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/db.json`, {
+                    headers:{'Authorization':`Bearer ${ghConfig.token}`}
+                });
+                if(!res.ok) return null;
+                const data=await res.json();
+                return JSON.parse(decodeGithubContent(data.content));
+            }catch(e){ return null; }
+        }
 
         window.onload = async () => {
-            await fetchFromGitHub();
+            const loaded = await fetchFromGitHub();
             normalizeDB();
-            await ensureGitHubDatabase();
-            startAutoDatabaseSync();
+            if(!githubDatabaseReady && githubLastFetchOk === null){
+                await ensureGitHubDatabase();
+            }
+            if(githubDatabaseReady && db.adminPasswordMigratedWorld132 !== true){
+                db.password = 'world132';
+                db.adminPasswordMigratedWorld132 = true;
+                await saveToGitHub(true);
+            }
+            if(githubDatabaseReady) startAutoDatabaseSync();
+            startGitHubRetry();
+
             if(currentUser && db.users.some(u => u.username === currentUser.username)) {
                 openApp();
             } else {
@@ -873,223 +980,92 @@
             }
         };
 
-        function normalizeDB(){
-            db.users = Array.isArray(db.users) ? db.users : [];
-            db.publicChat = Array.isArray(db.publicChat) ? db.publicChat : [];
-            db.publicChatOOC = Array.isArray(db.publicChatOOC) ? db.publicChatOOC : [];
-            db.publicChatIC = Array.isArray(db.publicChatIC) ? db.publicChatIC : [];
-            db.privateChats = db.privateChats && typeof db.privateChats === 'object' ? db.privateChats : {};
-            db.notifications = db.notifications && typeof db.notifications === 'object' ? db.notifications : {};
-            db.clubWebsiteRequests = Array.isArray(db.clubWebsiteRequests) ? db.clubWebsiteRequests : [];
-            db.clubWebsiteRequests.forEach(r=>{ if(r && typeof r==='object'){ r.adminRead=r.adminRead===true; r.status=r.status||'pending'; } });
-            db.saasEvent = db.saasEvent && typeof db.saasEvent === 'object' ? db.saasEvent : {};
-            db.saasEvent.enabled = db.saasEvent.enabled === true;
-            db.saasEvent.description = String(db.saasEvent.description || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR');
-            db.saasEvent.clubs = Array.isArray(db.saasEvent.clubs) ? db.saasEvent.clubs : [];
-            db.saasEvent.clubs = db.saasEvent.clubs.filter(x=>x && typeof x==='object');
-            db.saasEvent.clubs.forEach(c=>{
-                c.id = String(c.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now()+Math.random()));
-                c.name = String(c.name || 'Unnamed Club');
-                c.logo = String(c.logo || '');
-            });
-            db.saasEventRequests = Array.isArray(db.saasEventRequests) ? db.saasEventRequests : [];
-            db.saasEventRequests.forEach(r=>{ if(r && typeof r==='object'){ r.adminRead = r.adminRead===true; r.status = r.status || 'pending'; } });
-            db.saas = db.saas && typeof db.saas === 'object' ? db.saas : {top:[], bottom:{}};
-            db.saas.top = Array.isArray(db.saas.top) ? db.saas.top : [];
-            db.saas.top.forEach((t,i)=>{ t.title = t.title || ('Division 0'+(i+1)); });
-            if(!Array.isArray(db.saas.bottomMembers)){
-                const legacy = db.saas.bottom && typeof db.saas.bottom === 'object' ? db.saas.bottom : {};
-                db.saas.bottomMembers = [
-                    {title:'ALL SYNDICATE MEMBER INTI', img:legacy.img || '', text:legacy.text || ''},
-                    {title:'ALL SYNDICATE MEMBER INTI 02', img:legacy.img || '', text:legacy.text || ''},
-                    {title:'ALL SYNDICATE MEMBER INTI 03', img:legacy.img || '', text:legacy.text || ''}
-                ];
-            }
-            db.saas.bottomMembers = db.saas.bottomMembers.filter(x=>x && typeof x==='object');
-            db.saas.bottomMembers.forEach((m,i)=>{
-                m.title = String(m.title || (i===0 ? 'ALL SYNDICATE MEMBER INTI' : `ALL SYNDICATE MEMBER INTI 0${i+1}`));
-                m.img = String(m.img || '');
-                m.text = String(m.text || '');
-            });
-            if(db.saas.bottomMembers.length < 3){
-                while(db.saas.bottomMembers.length < 3){
-                    const i=db.saas.bottomMembers.length;
-                    db.saas.bottomMembers.push({title:`ALL SYNDICATE MEMBER INTI 0${i+1}`,img:'',text:''});
-                }
-            }
-            db.saas.discord = db.saas.discord && typeof db.saas.discord === 'object' ? db.saas.discord : {link:'https://discord.gg/MqeWH9rxZV',text:'DISCORD SAAS'};
-            db.saas.discord.link = normalizeExternalUrl(db.saas.discord.link, 'https://discord.gg/MqeWH9rxZV');
-            db.saas.discord.text = String(db.saas.discord.text || 'DISCORD SAAS').trim() || 'DISCORD SAAS';
-            db.roles = Array.isArray(db.roles) ? db.roles : [];
-            db.roles = db.roles.filter(r => r && typeof r === 'object').map((r,i) => ({
-                id: r.id || ('role_'+Date.now()+'_'+i),
-                name: String(r.name || 'Role '+(i+1)),
-                color: /^#[0-9a-fA-F]{6}$/.test(r.color || '') ? r.color : '#ffffff'
-            }));
-            db.users.forEach(u => {
-                u.likes = Array.isArray(u.likes) ? u.likes : [];
-                u.icName = typeof u.icName === 'string' ? u.icName : '';
-                u.createdAt = u.createdAt || Date.now();
-                u.roleIds = Array.isArray(u.roleIds) ? u.roleIds : [];
-            });
-        }
-
-        function showAuth(){
-            guestMode=false;
-            document.getElementById('auth-screen').classList.add('show');
-            document.getElementById('user-chip').classList.remove('show');
-        }
-
-        function enterGuestMode(){
-            guestMode=true; currentUser=null;
-            document.getElementById('auth-screen').classList.remove('show');
-            const chip=document.getElementById('user-chip'); chip.classList.add('show');
-            document.getElementById('user-chip-name').textContent='Guest';
-            document.getElementById('user-avatar').textContent='G';
-            const roles=document.getElementById('user-chip-roles'); if(roles) roles.innerHTML='<span class="role-badge" style="background:#20262d;color:#d8dde3;border:1px solid #3a424b;">GUEST</span>';
-            const count=document.getElementById('notif-count'); if(count){count.textContent='0';count.classList.remove('show');}
-            showPage('teritory');
-        }
-        function requireAccount(){
-            if(!guestMode && currentUser) return true;
-            const el=document.getElementById('guest-prompt'); if(el){el.classList.add('show');el.setAttribute('aria-hidden','false');}
-            return false;
-        }
-        function closeGuestPrompt(){const el=document.getElementById('guest-prompt');if(el){el.classList.remove('show');el.setAttribute('aria-hidden','true');}}
-        function guestPromptRegister(){closeGuestPrompt();document.getElementById('auth-screen').classList.add('show');switchAuth('register');}
-
-        function openApp(){
-            guestMode=false;
-            const me = getUser(currentUser?.username);
-            if(me){
-                currentUser.icName = me.icName || '';
-                sessionStorage.setItem('saas_session', JSON.stringify(currentUser));
-            }
-            document.getElementById('auth-screen').classList.remove('show');
-            const chip = document.getElementById('user-chip');
-            chip.classList.add('show');
-            document.getElementById('user-chip-name').textContent = '@' + currentUser.username;
-            document.getElementById('user-avatar').textContent = currentUser.username.charAt(0).toUpperCase();
-            updateUserChipRoles();
-            updateNotificationBadge();
-            showPage('teritory');
-            startPolling();
-        }
-
-        function logout(){
-            guestMode=false;
-            sessionStorage.removeItem('saas_session');
-            currentUser = null;
-            adminAuthenticated = false;
-            document.getElementById('admin-subnav')?.classList.remove('show');
-            selectedChatUser = null;
-            if(pollTimer) clearInterval(pollTimer);
-            if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
-            showAuth();
-            switchAuth('login');
-        }
-
-        function switchAuth(mode){
-            authMode = mode;
-            const reg = mode === 'register';
-            document.getElementById('auth-title').textContent = reg ? 'Create Account' : 'Login Account';
-            document.getElementById('auth-subtitle').textContent = reg
-                ? 'Silakan buat akun terlebih dahulu, lalu login ke website ini dengan akun yang sudah kamu buat.'
-                : 'Silakan login ke website ini dengan akun yang sudah kamu buat.';
-            document.getElementById('auth-submit').textContent = reg ? 'BUAT AKUN' : 'LOGIN';
-            document.getElementById('auth-password2').style.display = reg ? 'block' : 'none';
-            document.getElementById('auth-password2').required = reg;
-            document.getElementById('auth-tab-login').classList.toggle('active', !reg);
-            document.getElementById('auth-tab-register').classList.toggle('active', reg);
-            document.getElementById('auth-status').textContent = '';
-        }
-
-        async function sha256(value){
-            const bytes = new TextEncoder().encode(value);
-            const hash = await crypto.subtle.digest('SHA-256', bytes);
-            return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
-        }
-
-        function validUsername(u){
-            return /^[a-zA-Z0-9_]{3,20}$/.test(u);
-        }
-
-        async function submitAuth(){
-            const username = document.getElementById('auth-username').value.trim();
-            const password = document.getElementById('auth-password').value;
-            const password2 = document.getElementById('auth-password2').value;
-            const status = document.getElementById('auth-status');
-
-            if(!validUsername(username)) return status.textContent = 'Username 3-20 karakter: huruf, angka, atau _.';
-            if(password.length < 6) return status.textContent = 'Password minimal 6 karakter.';
-            if(authMode === 'register' && password !== password2) return status.textContent = 'Konfirmasi password tidak sama.';
-
-            status.textContent = 'Memproses...';
-            const hash = await sha256(password);
-
-            if(authMode === 'register'){
-                if(db.users.some(u => u.username.toLowerCase() === username.toLowerCase()))
-                    return status.textContent = 'Username sudah digunakan.';
-                db.users.push({
-                    username,
-                    passwordHash: hash,
-                    likes: [],
-                    icName: '',
-                    createdAt: Date.now()
-                });
-                db.notifications[username] = [];
-                await saveToGitHub(true);
-                status.textContent = 'Akun berhasil dibuat. Silakan login.';
-                document.getElementById('auth-password').value = '';
-                document.getElementById('auth-password2').value = '';
-                switchAuth('login');
-                document.getElementById('auth-username').value = username;
-                return;
-            }
-
-            const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase());
-            if(!user || user.passwordHash !== hash)
-                return status.textContent = 'Username atau password salah.';
-
-            currentUser = {username:user.username, icName:user.icName || ''};
-            sessionStorage.setItem('saas_session', JSON.stringify(currentUser));
-            openApp();
-        }
-
-        function getDatabaseSnapshot(){
-            return JSON.stringify(db);
-        }
+        function getDatabaseSnapshot(){ return JSON.stringify(db); }
 
         async function fetchFromGitHub(silent=false) {
-            if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) {
-                if(!silent) normalizeDB();
+            githubLastFetchOk = false;
+            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo){
+                normalizeDB();
                 return false;
             }
-            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/db.json`;
-            try {
-                const res = await fetch(url, {headers:{'Authorization':`Bearer ${ghConfig.token}`}});
-                if(res.ok){
-                    const data = await res.json();
-                    ghConfig.sha = data.sha;
-                    const raw = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
-                    db = JSON.parse(raw);
-                    normalizeDB();
-                    githubDatabaseReady = true;
-                    lastSyncedDbSnapshot = getDatabaseSnapshot();
-                    updateAdminTotalUsers();
-                    return true;
+            try{
+                const results={};
+                let allReady=true;
+                let anySplitFile=false;
+                for(const key of DB_FILE_KEYS){
+                    const result=await getGithubFile(key);
+                    results[key]=result;
+                    if(result.status==='ok') anySplitFile=true;
+                    if(result.status==='error'){
+                        githubLastFetchOk=false;
+                        githubDatabaseReady=false;
+                        return false;
+                    }
+                    if(result.status!=='ok') allReady=false;
                 }
-                if(res.status === 404){
-                    githubDatabaseReady = false;
+
+                // Migrasi otomatis dari db.json lama jika database terpisah belum ada.
+                if(!anySplitFile){
+                    githubLegacyDb=await getLegacyDb();
+                    if(githubLegacyDb){
+                        db=githubLegacyDb;
+                        normalizeDB();
+                        githubLastFetchOk=null;
+                        githubDatabaseReady=false;
+                        return false;
+                    }
+                    githubLastFetchOk=null;
+                    githubDatabaseReady=false;
                     return false;
                 }
-                // GitHub errors are intentionally silent for visitors/admin UI.
-                // The next background sync/read attempt will retry automatically.
-            } catch(e){
-                // Network/CORS/timeout errors are intentionally swallowed so they
-                // never interrupt the website with noisy error logs or popups.
+
+                // Jika hanya sebagian file sudah ada, gabungkan yang tersedia dan buat sisanya otomatis.
+                const parts={};
+                for(const key of DB_FILE_KEYS){ if(results[key].status==='ok') parts[key]=results[key].data; }
+                applyDbPartitions(parts);
+                githubDatabaseReady=allReady;
+                githubLastFetchOk=allReady ? true : null;
+                lastSyncedDbSnapshot=getDatabaseSnapshot();
+                updateAdminTotalUsers();
+                return allReady;
+            }catch(e){
+                githubLastFetchOk=false;
+                githubDatabaseReady=false;
+                return false;
             }
-            return false;
+        }
+
+        async function saveGithubPartition(fileKey, value){
+            const url=githubFileUrl(GITHUB_DB_FILES[fileKey]);
+            try{
+                const res=await fetch(url,{
+                    method:'PUT',
+                    headers:{
+                        'Authorization':`Bearer ${ghConfig.token}`,
+                        'Content-Type':'application/json'
+                    },
+                    body:JSON.stringify({
+                        message:`Update ${GITHUB_DB_FILES[fileKey]}`,
+                        content:encodeGithubContent(value),
+                        ...(ghFileSha[fileKey] ? {sha:ghFileSha[fileKey]} : {})
+                    })
+                });
+                let data={}; try{data=await res.json();}catch(_){ }
+                if(res.ok && data.content){
+                    ghFileSha[fileKey]=data.content.sha || ghFileSha[fileKey];
+                    ghFileReady[fileKey]=true;
+                    ghFileSnapshots[fileKey]=JSON.stringify(value);
+                    return true;
+                }
+                // SHA conflict: refresh that file so the next retry has the latest SHA.
+                if(res.status===409 || res.status===422){
+                    const fresh=await getGithubFile(fileKey);
+                    if(fresh.status==='ok'){
+                        ghFileSha[fileKey]=ghFileSha[fileKey] || '';
+                    }
+                }
+                return false;
+            }catch(e){ return false; }
         }
 
         async function saveToGitHub(silent=false){
@@ -1097,54 +1073,90 @@
                 if(!silent) alert('GitHub belum dikonfigurasi. Isi Owner, Repository, dan Token sekali di Admin Panel.');
                 return false;
             }
-            normalizeDB();
-            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/db.json`;
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify(db,null,2))));
+            if(githubWriteInProgress) return false;
+            if(!githubDatabaseReady && githubLastFetchOk !== null) return false;
+            githubWriteInProgress=true;
             try{
-                const res = await fetch(url,{
-                    method:'PUT',
-                    headers:{
-                        'Authorization':`Bearer ${ghConfig.token}`,
-                        'Content-Type':'application/json'
-                    },
-                    body:JSON.stringify({
-                        message:'Update SAAS social database',
-                        content,
-                        sha:ghConfig.sha || undefined
-                    })
-                });
-                const data = await res.json();
-                if(data.content){
-                    ghConfig.sha=data.content.sha;
+                normalizeDB();
+                const parts=getDbPartitions();
+                let allOk=true;
+                let wroteAny=false;
+                for(const key of DB_FILE_KEYS){
+                    const snapshot=JSON.stringify(parts[key]);
+                    if(!ghFileReady[key] || ghFileSnapshots[key]!==snapshot){
+                        const ok=await saveGithubPartition(key, parts[key]);
+                        if(!ok) allOk=false; else wroteAny=true;
+                    }
+                }
+                if(allOk && DB_FILE_KEYS.every(k=>ghFileReady[k])){
                     githubDatabaseReady=true;
+                    githubLastFetchOk=true;
                     lastSyncedDbSnapshot=getDatabaseSnapshot();
+                    if(wroteAny) startAutoDatabaseSync();
                     return true;
                 }
-                // Keep GitHub failures silent. Data remains in the local in-memory
-                // database and the automatic sync loop will retry later.
                 return false;
-            }catch(e){
-                // Intentionally silent: do not show or log network/CORS errors.
-                return false;
+            }finally{
+                githubWriteInProgress=false;
             }
         }
 
         async function ensureGitHubDatabase(){
             if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return false;
             if(githubDatabaseReady) return true;
-            normalizeDB();
-            return await saveToGitHub(true);
+            if(githubLastFetchOk === false) return false;
+
+            // Se o db.json lama ditemukan, migrasikan isi lamanya ke 4 file terpisah.
+            if(githubLegacyDb){
+                db=githubLegacyDb;
+                normalizeDB();
+            }
+            const parts=getDbPartitions();
+            githubWriteInProgress=true;
+            try{
+                let allOk=true;
+                for(const key of DB_FILE_KEYS){
+                    if(!ghFileReady[key]){
+                        const ok=await saveGithubPartition(key, parts[key]);
+                        if(!ok) allOk=false;
+                    }
+                }
+                if(allOk){
+                    githubDatabaseReady=true;
+                    githubLastFetchOk=true;
+                    lastSyncedDbSnapshot=getDatabaseSnapshot();
+                    return true;
+                }
+                return false;
+            }finally{ githubWriteInProgress=false; }
         }
 
         function startAutoDatabaseSync(){
             if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return;
+            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo || !githubDatabaseReady) return;
             if(!lastSyncedDbSnapshot) lastSyncedDbSnapshot=getDatabaseSnapshot();
             autoDbSyncTimer=setInterval(async()=>{
-                if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return;
+                if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo || !githubDatabaseReady) return;
                 const snapshot=getDatabaseSnapshot();
                 if(snapshot!==lastSyncedDbSnapshot) await saveToGitHub(true);
-            },3000);
+            },5000);
+        }
+
+        function startGitHubRetry(){
+            if(githubRetryTimer) clearInterval(githubRetryTimer);
+            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return;
+            githubRetryTimer=setInterval(async()=>{
+                if(githubDatabaseReady) return;
+                const found=await fetchFromGitHub(true);
+                if(found){
+                    startAutoDatabaseSync();
+                    return;
+                }
+                if(githubLastFetchOk === null){
+                    const created=await ensureGitHubDatabase();
+                    if(created) startAutoDatabaseSync();
+                }
+            },15000);
         }
 
         function getUser(username){
@@ -1152,7 +1164,7 @@
         }
 
         // Nama IC adalah identitas karakter yang terikat ke akun, sehingga tetap ada
-        // walaupun user keluar/login lagi dan tersimpan bersama record user di db.json.
+        // walaupun user keluar/login lagi dan tersimpan bersama record user di database GitHub.
         function getSavedICName(username){
             const user=getUser(username);
             return user?.icName || '';
@@ -1299,7 +1311,7 @@
             activeChatCategory='ic';
             sessionStorage.setItem('saas_session', JSON.stringify(currentUser));
 
-            // Langsung sinkron ke db.json GitHub saat pertama kali dibuat / saat diganti.
+            // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
             const saved=await saveToGitHub(true);
             if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo){
                 return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke GitHub gagal. Coba lagi.');
@@ -2181,8 +2193,11 @@
             localStorage.setItem('gh_token', ghConfig.token);
             githubDatabaseReady = false;
             lastSyncedDbSnapshot = '';
-            alert("Konfigurasi GitHub tersimpan. db.json akan dibuat / diperbarui otomatis.");
-            ensureGitHubDatabase().then(()=>startAutoDatabaseSync());
+            alert("Konfigurasi GitHub tersimpan. Memeriksa database GitHub terpisah...");
+            fetchFromGitHub(true).then(async found=>{
+                if(!found && githubLastFetchOk === null) await ensureGitHubDatabase();
+                startAutoDatabaseSync();
+            });
         }
 
         function addClub() {
@@ -2399,8 +2414,14 @@
                 }
             });
 
-            saveToGitHub();
-            showPage('teritory');
+            saveToGitHub(true).then(saved=>{
+                if(saved){
+                    showPage('teritory');
+                    showToast('✅ Perubahan berhasil disimpan ke GitHub.');
+                }else{
+                    showToast('⚠️ GitHub sedang tidak terhubung. Sistem akan mencoba sinkronisasi lagi otomatis.');
+                }
+            });
         }
     </script>
 </body>

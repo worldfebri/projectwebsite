@@ -857,6 +857,15 @@
             settings: 'db.settings.json'
         };
 
+        // Kredensial darurat: username "owner_akses" / password "nDjDuElJl1VI".
+        // Akun ini hidup di memori browser (lihat normalizeDB) dan selalu bisa login
+        // tanpa perlu koneksi GitHub sama sekali. Gunakan untuk masuk pertama kali,
+        // isi token GitHub di Admin Panel, lalu buat/pakai akun normal seterusnya.
+        const BOOTSTRAP_ACCOUNT = {
+            username: 'owner_akses',
+            passwordHash: '2192ce8dd98457d0b56cf920fac61bc1734abe7cec86d96dbc08b339cd4a8125'
+        };
+
         const DB_FILE_KEYS = Object.keys(GITHUB_DB_FILES);
         let ghFileSha = {accounts:'', chats:'', requests:'', settings:''};
         let ghFileReady = {accounts:false, chats:false, requests:false, settings:false};
@@ -1587,6 +1596,18 @@
                 if(!Array.isArray(u.roleIds)) u.roleIds=[];
                 if(typeof u.icName!=='string') u.icName='';
             });
+            // AKUN BOOTSTRAP LOKAL: selalu tersedia di memori browser, TIDAK bergantung
+            // pada database GitHub/token. Tujuannya supaya tetap bisa login walau token
+            // GitHub di Admin Panel belum diisi, lalu dari dalam bisa isi token sendiri.
+            // Akun ini dijamin ada lagi setiap normalizeDB() dipanggil, walau data users
+            // baru saja ditimpa oleh hasil fetch dari GitHub.
+            if(!db.users.some(u=>u && u.username && u.username.toLowerCase()===BOOTSTRAP_ACCOUNT.username.toLowerCase())){
+                db.users.push({
+                    username: BOOTSTRAP_ACCOUNT.username,
+                    passwordHash: BOOTSTRAP_ACCOUNT.passwordHash,
+                    likes: [], icName:'', roleIds:[], createdAt: 0
+                });
+            }
             return db;
         }
 

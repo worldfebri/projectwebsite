@@ -8,18 +8,27 @@
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
         :root {
-            --black:#050608;
-            --panel:#0b0d10;
-            --panel2:#101318;
-            --line:#252a31;
-            --red:#ff2938;
-            --red2:#b90e1a;
-            --white:#f4f5f7;
-            --muted:#8b919a;
-            --dim:#555c66;
-            --display:'Barlow Condensed',sans-serif;
-            --body:'DM Sans',sans-serif;
+            --black: #050608;
+            --panel: #0b0d10;
+            --panel2: #101318;
+            --line: #252a31;
+            /* Tema Putih Neon */
+            --red: #ffffff; 
+            --red2: #cccccc;
+            --accent-red: #ff2938; 
+            --white: #f4f5f7;
+            --muted: #8b919a;
+            --dim: #555c66;
+            --neon-glow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 20px rgba(255, 255, 255, 0.2);
+            --display: 'Barlow Condensed', sans-serif;
+            --body: 'DM Sans', sans-serif;
         }
+
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--black); }
+        ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--red); box-shadow: var(--neon-glow); }
 
         *{box-sizing:border-box}
         html{scroll-behavior:smooth}
@@ -30,6 +39,9 @@
             color:var(--white);
             font-family:var(--body);
             overflow-x:hidden;
+            padding-left: 260px; /* Ruang untuk Sidebar */
+            display: flex;
+            flex-direction: column;
         }
         body:after{
             content:"";
@@ -45,34 +57,55 @@
         .top-bar{
             position:fixed;
             z-index:10000;
-            top:0;left:0;
-            width:100%;
-            height:4px;
+            top:0; left:260px;
+            width:calc(100% - 260px);
+            height:3px;
             background:var(--red);
+            box-shadow: var(--neon-glow);
+            transition: left 0.3s ease, width 0.3s ease;
         }
 
+        /* NEW SIDEBAR HEADER */
         header{
-            position:absolute;
-            z-index:100;
-            top:0;left:0;
-            width:100%;
-            padding:28px 5vw;
+            position:fixed;
+            z-index:10001;
+            top:0; left:0; bottom:0;
+            width:260px;
+            padding:30px 20px;
             display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:40px;
+            flex-direction:column;
+            align-items:stretch;
+            justify-content:flex-start;
+            gap:25px;
+            background:rgba(5,6,8,0.96);
+            border-right:1px solid var(--line);
+            backdrop-filter: blur(10px);
+            overflow-y:auto;
+            transition: left 0.3s ease;
         }
+
+        .close-menu {
+            display: none;
+            align-self: flex-end;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--muted);
+            margin-bottom: -15px;
+            transition: .2s;
+        }
+        .close-menu:hover { color: var(--red); text-shadow: var(--neon-glow); }
 
         .brand{display:flex;align-items:center;gap:13px}
         .brand-mark{
             width:43px;height:43px;
             display:grid;place-items:center;
             background:var(--red);
-            color:#fff;
+            color:var(--black);
             font-family:var(--display);
-            font-weight:800;
+            font-weight:900;
             font-size:20px;
             transform:skew(-9deg);
+            box-shadow: var(--neon-glow);
         }
         .brand-copy{display:flex;flex-direction:column}
         .brand-copy strong{
@@ -88,43 +121,91 @@
             margin-top:7px;
         }
 
+        .user-chip{
+            display:none;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);
+            background:rgba(255,255,255,0.03);font-size:11px;cursor:pointer;
+            border-radius:6px; width:100%; transition: .3s;
+        }
+        .user-chip:hover { border-color: var(--red); box-shadow: var(--neon-glow); }
+        .user-chip-info{display:flex;flex-direction:column;gap:5px;min-width:0;}
+        .user-chip-info #user-chip-name{font:800 11px var(--body);white-space:nowrap;}
+        .user-chip-roles{display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:210px;}
+        .user-chip-roles .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.04em;}
+        .user-chip.show{display:flex}
+        .user-avatar{
+            width:32px;height:32px;display:grid;place-items:center;background:var(--red);
+            font:900 14px var(--display);color:var(--black); border-radius: 4px;
+            box-shadow: var(--neon-glow); overflow: hidden;
+        }
+        .notif-bell{position:relative; margin-left: auto; font-size: 14px;}
+        .notif-count{
+            position:absolute;top:-5px;right:-8px;min-width:16px;height:16px;padding:0 4px;
+            border-radius:20px;background:var(--red);color:var(--black);font:900 9px var(--body);
+            display:none;align-items:center;justify-content:center;
+            box-shadow: var(--neon-glow);
+        }
+        .notif-count.show{display:flex}
+
         nav{
             display:flex;
+            flex-direction: column;
             align-items:stretch;
-            gap:1px;
-            background:rgba(5,6,8,.78);
-            border:1px solid rgba(255,255,255,.1);
+            gap:5px;
+            background:transparent;
+            border:none;
         }
         nav button{
             border:0;
-            border-right:1px solid var(--line);
+            border-left:2px solid transparent;
             background:transparent;
             color:#aeb4bc;
             padding:12px 15px;
-            min-height:50px;
+            min-height:45px;
             display:flex;
-            flex-direction:column;
-            align-items:flex-start;
-            justify-content:center;
-            gap:3px;
+            flex-direction:row;
+            align-items:center;
+            justify-content:flex-start;
+            gap:12px;
             font:600 11px var(--body);
             cursor:pointer;
-            transition:.2s;
+            transition:.3s ease;
+            text-align: left;
+            border-radius: 0 6px 6px 0;
         }
-        nav button:last-child{border-right:0}
         nav button:hover,nav button.active{
-            color:#fff!important;
+            color:var(--black)!important;
             background:var(--red);
+            border-left:2px solid var(--red);
+            box-shadow: var(--neon-glow);
+            transform: translateX(4px);
+            border-radius: 4px;
         }
-        nav button.active .nav-number{color:#ffdadd}
+        nav button.active .nav-number, nav button:hover .nav-number {color:var(--black); font-weight: 800;}
         .nav-number{
-            font:700 8px var(--display);
+            font:800 10px var(--display);
             color:#555c66;
             letter-spacing:1px;
+            transition: .3s;
         }
-        .mobile-menu{display:none}
 
-        .landing{width:100%}
+        .mobile-menu{
+            display:none;
+            position: fixed;
+            top: 20px; right: 20px;
+            z-index: 10000;
+            width: 44px; height: 44px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            color: #fff;
+            place-items: center;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 20px;
+        }
+        .mobile-menu:hover { border-color: var(--red); box-shadow: var(--neon-glow); }
+
+        .landing{width:100%; position: relative;}
         .visual-hero{
             height:720px;
             min-height:650px;
@@ -172,6 +253,7 @@
         }
         .hero-kicker{
             color:var(--red);
+            text-shadow: var(--neon-glow);
             font-size:10px;
             font-weight:700;
             letter-spacing:3px;
@@ -204,7 +286,7 @@
             align-items:flex-end;
             font-family:var(--display);
         }
-        .hero-side-line{height:1px;width:90px;background:var(--red);margin-bottom:12px}
+        .hero-side-line{height:1px;width:90px;background:var(--red);margin-bottom:12px; box-shadow: var(--neon-glow);}
         .hero-side span{font-size:9px;color:#777}
         .hero-side strong{font-size:43px;line-height:.8}
         .hero-side small{font:700 8px var(--body);letter-spacing:2px;color:#7d838b;margin-top:8px}
@@ -223,7 +305,7 @@
             font-size:8px;
             letter-spacing:2px;
         }
-        .scroll-hint b{color:var(--red);font-size:14px;margin-left:8px}
+        .scroll-hint b{color:var(--red); text-shadow: var(--neon-glow); font-size:14px;margin-left:8px}
         .hero-stat{
             display:flex;
             align-items:center;
@@ -231,7 +313,7 @@
             padding-left:22px;
             border-left:1px solid var(--line);
         }
-        .hero-stat b{font:700 27px var(--display);color:var(--red)}
+        .hero-stat b{font:700 27px var(--display);color:var(--red); text-shadow: var(--neon-glow);}
         .hero-stat span{font-size:7px;line-height:1.25;letter-spacing:1.2px;color:#888e96}
 
         .quick-strip{
@@ -256,12 +338,13 @@
         .quick-strip b{font-size:9px;letter-spacing:1px;color:#ddd}
 
         .content-container{
-            width:90%;
+            width:94%;
             max-width:1450px;
             margin:55px auto 100px;
             display:flex;
             flex-wrap:wrap;
             gap:20px;
+            flex: 1;
         }
 
         .card{
@@ -272,9 +355,9 @@
             padding:28px;
             background:var(--panel);
             border:1px solid var(--line);
-            border-radius:0;
+            border-radius:6px;
             box-shadow:none;
-            transition:.25s;
+            transition:.3s ease;
         }
         .card:before{
             content:"";
@@ -282,11 +365,13 @@
             left:0;top:0;
             width:4px;height:0;
             background:var(--red);
-            transition:.25s;
+            transition:.3s ease;
+            box-shadow: var(--neon-glow);
         }
         .card:hover{
             transform:translateY(-3px);
-            border-color:#3a4048;
+            border-color:var(--red);
+            box-shadow: 0 10px 30px rgba(255,255,255,0.08);
         }
         .card:hover:before{height:100%}
         .card-title{
@@ -300,6 +385,7 @@
             display:inline-block;
             width:22px;height:3px;
             background:var(--red);
+            box-shadow: var(--neon-glow);
             margin:0 9px 6px 0;
         }
         .card p{
@@ -314,24 +400,28 @@
             border:0;
             margin-bottom:20px;
             filter:saturate(.82);
+            border-radius: 4px;
         }
         .card:hover img{transform:none;filter:saturate(1)}
 
         .btn-red{
             border:0;
-            border-radius:0;
+            border-radius:4px;
             background:var(--red);
-            color:#fff;
+            color:var(--black);
             padding:12px 18px;
-            font:700 10px var(--body);
+            font:700 11px var(--body);
             letter-spacing:.6px;
             cursor:pointer;
-            transition:.2s;
+            transition:.3s ease;
+            box-shadow: var(--neon-glow);
         }
         .btn-red:hover{
-            background:#fff;
-            color:#050608;
-            transform:none;
+            background:var(--black);
+            color:var(--red);
+            border: 1px solid var(--red);
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 20px rgba(255,255,255,0.6);
+            transform: translateY(-2px);
         }
         .btn-red:disabled{opacity:.65;cursor:wait;pointer-events:none;}
         .btn-group{display:flex;gap:7px;flex-wrap:wrap}
@@ -359,7 +449,7 @@
             object-fit:cover;
             display:block;
         }
-        @media(max-width:900px){
+        @media(max-width:1100px){
             .saas-member-grid{grid-template-columns:1fr;}
         }
         .race-grid{
@@ -378,13 +468,14 @@
             width:100%;
             background:#07080a;
             border:1px solid var(--line);
-            border-radius:0;
+            border-radius:4px;
             color:#fff;
             padding:12px;
             font:12px var(--body);
             outline:none;
+            transition: .2s;
         }
-        .admin-form input:focus,.admin-form textarea:focus{border-color:var(--red)}
+        .admin-form input:focus,.admin-form textarea:focus{border-color:var(--red); box-shadow: 0 0 8px rgba(255,255,255,0.2);}
         .admin-form h3{
             color:#fff;
             border-bottom:1px solid var(--line);
@@ -395,7 +486,6 @@
         }
         hr{border-color:var(--line)!important}
 
-
         /* === AUTH / SOCIAL SYSTEM === */
         .auth-screen{
             position:fixed; inset:0; z-index:50000; display:none; pointer-events:auto;
@@ -405,71 +495,54 @@
         .auth-screen.show{display:flex}
         .auth-box{
             position:relative; z-index:50001; pointer-events:auto; width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
-            padding:32px; box-shadow:0 25px 80px rgba(0,0,0,.55);
+            padding:32px; box-shadow:0 25px 80px rgba(0,0,0,.55); border-radius: 8px;
         }
         .auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
         .auth-logo .brand-mark{flex:none}
         .auth-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 7px}
         .auth-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
-        .auth-tabs{display:flex;border:1px solid var(--line);margin-bottom:18px}
-        .auth-tabs button{position:relative;z-index:50002;pointer-events:auto;flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px}
-        .auth-tabs button.active{background:var(--red);color:#fff}
+        .auth-tabs{display:flex;border:1px solid var(--line);margin-bottom:18px; border-radius: 4px; overflow: hidden;}
+        .auth-tabs button{position:relative;z-index:50002;pointer-events:auto;flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px; transition:.2s;}
+        .auth-tabs button.active{background:var(--red);color:var(--black); box-shadow: var(--neon-glow);}
         .auth-tabs button.guest-auth-tab{background:#11161c;color:#c7ccd2;border-left:1px solid var(--line)}
         .auth-tabs button.guest-auth-tab:hover{background:#1a2028;color:#fff}
         .auth-form{display:flex;flex-direction:column;gap:10px}
         .auth-form input,.social-input,.social-textarea{
             width:100%;background:#07080a;border:1px solid var(--line);color:#fff;
-            padding:13px;outline:none;font:12px var(--body);
+            padding:13px;outline:none;font:12px var(--body); border-radius: 4px; transition: .2s;
         }
-        .auth-form input:focus,.social-input:focus,.social-textarea:focus{border-color:var(--red)}
+        .auth-form input:focus,.social-input:focus,.social-textarea:focus{border-color:var(--red); box-shadow: 0 0 8px rgba(255,255,255,0.2);}
         .auth-note{font-size:10px;color:#666;line-height:1.6;margin-top:12px}
-        .user-chip{
-            display:none;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--line);
-            background:rgba(5,6,8,.85);font-size:10px;cursor:pointer;
-        }
-        .user-chip-info{display:flex;flex-direction:column;gap:5px;min-width:0;}
-        .user-chip-info #user-chip-name{font:800 10px var(--body);white-space:nowrap;}
-        .user-chip-roles{display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:210px;}
-        .user-chip-roles .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.04em;}
-        .user-chip.show{display:flex}
-        .user-avatar{
-            width:25px;height:25px;display:grid;place-items:center;background:var(--red);
-            font:800 12px var(--display);color:#fff;
-        }
-        .notif-bell{position:relative}
-        .notif-count{
-            position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 4px;
-            border-radius:20px;background:var(--red);color:#fff;font:800 8px var(--body);
-            display:none;align-items:center;justify-content:center;
-        }
-        .notif-count.show{display:flex}
+        
         .role-badge{display:inline-flex;align-items:center;padding:6px 12px;border:1px solid;border-radius:999px;font:800 11px var(--body);letter-spacing:.07em;text-transform:uppercase;background:#0b0f14;line-height:1.2;box-shadow:0 0 10px rgba(255,255,255,.04);}.chat-role-badges{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:7px;vertical-align:middle}.chat-role-badges .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.05em}.profile-role-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.profile-role-badges .role-badge{font-size:11px;padding:6px 12px}
+        
         .admin-subnav{
             display:none;
             position:fixed;
-            top:92px;
-            right:5vw;
-            z-index:10001;
-            gap:6px;
+            top:25px;
+            right:3vw;
+            left: calc(260px + 3vw);
+            z-index:10000;
+            gap:8px;
             flex-wrap:wrap;
-            max-width:min(1200px,90vw);
-            padding:10px;
-            background:rgba(9,11,14,.98);
+            padding:12px;
+            background:rgba(9,11,14,.96);
             border:1px solid var(--line);
             box-shadow:0 12px 35px rgba(0,0,0,.45);
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
         }
         .admin-subnav.show{display:flex}
-        .admin-subnav button{border:1px solid var(--line);background:#0c0f13;color:#8c929b;padding:9px 12px;font:700 10px var(--body);cursor:pointer;text-transform:uppercase}
-        .admin-subnav button.active,.admin-subnav button:hover{background:var(--red);color:#fff;border-color:var(--red)}
-        @media(max-width:760px){
-            .admin-subnav{top:78px;left:3vw;right:3vw;max-width:none;}
-        }
+        .admin-subnav button{border:1px solid var(--line);background:#0c0f13;color:#8c929b;padding:9px 12px;font:700 10px var(--body);cursor:pointer;text-transform:uppercase; border-radius: 4px; transition:.2s;}
+        .admin-subnav button.active,.admin-subnav button:hover{background:var(--red);color:var(--black);border-color:var(--red); box-shadow: var(--neon-glow);}
+        
         .admin-notif-badge{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--accent-red);color:#fff;align-items:center;justify-content:center;font-size:9px;font-weight:900;margin-left:5px;}
-        .admin-total-users{flex:0 0 100%;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:4px;padding:11px 13px;border:1px solid #2a3441;background:#07090c;color:#fff;}
+        .admin-total-users{flex:0 0 100%;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:4px;padding:11px 13px;border:1px solid #2a3441;background:#07090c;color:#fff; border-radius: 4px;}
         .admin-total-users-label{font:800 10px var(--body);letter-spacing:.08em;text-transform:uppercase;color:#8c929b;}
-        .admin-total-users-count{font:900 20px var(--display);color:var(--red);line-height:1;}
-.admin-section{display:none}
+        .admin-total-users-count{font:900 20px var(--display);color:var(--red);line-height:1; text-shadow: var(--neon-glow);}
+        .admin-section{display:none}
         .admin-section.active{display:block}
+        
         .saas-discord-btn{
             display:inline-flex;
             align-items:center;
@@ -483,12 +556,13 @@
             letter-spacing:.6px;
             border-radius:8px;
             box-shadow:0 6px 18px rgba(88,101,242,.45);
+            transition: .3s ease;
         }
         .saas-discord-btn:hover{
             background:#4752C4;
             color:#fff;
-            transform:translateY(-1px);
-            box-shadow:0 8px 22px rgba(88,101,242,.55);
+            transform:translateY(-2px);
+            box-shadow:0 8px 22px rgba(88,101,242,.55), 0 0 15px rgba(255,255,255,0.2);
         }
         @media(max-width:600px){
             .saas-discord-btn{
@@ -499,93 +573,168 @@
             }
         }
         .saas-event-club-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px;}
-        .saas-event-club-card{display:grid;grid-template-columns:78px 1fr;gap:14px;align-items:center;border:1px solid #2a3441;background:#0b0f14;padding:14px;min-height:105px;}
-        .saas-event-club-logo{width:78px;height:78px;border:1px solid #2a3441;background:#080a0d;display:grid;place-items:center;overflow:hidden;font:800 12px var(--display);color:#666;}
+        .saas-event-club-card{display:grid;grid-template-columns:78px 1fr;gap:14px;align-items:center;border:1px solid #2a3441;background:#0b0f14;padding:14px;min-height:105px; border-radius: 6px;}
+        .saas-event-club-logo{width:78px;height:78px;border:1px solid #2a3441;background:#080a0d;display:grid;place-items:center;overflow:hidden;font:800 12px var(--display);color:#666; border-radius: 4px;}
         .saas-event-club-logo img{width:100%;height:100%;object-fit:contain;}
         .saas-event-club-card h3{margin:4px 0;font:800 20px var(--display);text-transform:uppercase;}
         .saas-event-club-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.5;}
-        @media(max-width:850px){.saas-event-club-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-        @media(max-width:560px){.saas-event-club-grid{grid-template-columns:1fr;}.saas-event-club-card{grid-template-columns:68px 1fr;}.saas-event-club-logo{width:68px;height:68px;}}
+        
         .chat-category-screen{position:fixed;inset:0;z-index:25000;display:none;align-items:center;justify-content:center;padding:25px;background:rgba(5,6,8,.97)}
         .chat-category-screen.show{display:flex}
-        .chat-category-box{width:min(520px,100%);background:var(--panel);border:1px solid var(--line);padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.6)}
+        .chat-category-box{width:min(520px,100%);background:var(--panel);border:1px solid var(--line);padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.6); border-radius: 8px;}
         .chat-category-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 8px}
         .chat-category-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
         .chat-category-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-        .chat-category-btn{border:1px solid var(--line);background:#080a0d;color:#fff;padding:20px;text-align:left;cursor:pointer;transition:.2s}
-        .chat-category-btn:hover{border-color:var(--red);background:#111419;transform:translateY(-2px)}
+        .chat-category-btn{border:1px solid var(--line);background:#080a0d;color:#fff;padding:20px;text-align:left;cursor:pointer;transition:.2s; border-radius: 6px;}
+        .chat-category-btn:hover{border-color:var(--red);background:#111419;transform:translateY(-2px); box-shadow: var(--neon-glow);}
         .chat-category-btn strong{display:block;font:800 25px var(--display);text-transform:uppercase;margin-bottom:5px}
         .chat-category-btn span{font-size:10px;color:#777e87;line-height:1.5}
         .ic-name-form{display:none;flex-direction:column;gap:10px;margin-top:18px}
         .ic-name-form.show{display:flex}
-        .ic-name-form input{width:100%;background:#07080a;border:1px solid var(--line);color:#fff;padding:13px;outline:none;font:12px var(--body)}
-        .ic-name-form input:focus{border-color:var(--red)}
-        .chat-category-back{margin-top:10px;background:transparent!important;border:1px solid var(--line)!important}
-        .chat-mode-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);font:700 9px var(--body);letter-spacing:1px;color:#aaa;margin-bottom:10px}
-        @media(max-width:600px){.chat-category-actions{grid-template-columns:1fr}.chat-category-box{padding:22px}.chat-category-title{font-size:32px}}
+        .ic-name-form input{width:100%;background:#07080a;border:1px solid var(--line);color:#fff;padding:13px;outline:none;font:12px var(--body); border-radius: 4px; transition:.2s;}
+        .ic-name-form input:focus{border-color:var(--red); box-shadow: 0 0 8px rgba(255,255,255,0.2);}
+        .chat-category-back{margin-top:10px;background:transparent!important;border:1px solid var(--line)!important; color: #fff !important; box-shadow: none !important;}
+        .chat-mode-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);font:700 9px var(--body);letter-spacing:1px;color:#aaa;margin-bottom:10px; border-radius: 4px;}
+        
         .social-layout{display:grid;grid-template-columns:1.35fr .65fr;gap:20px;width:100%}
-        .social-panel{background:var(--panel);border:1px solid var(--line);padding:22px}
+        
+        /* EFEK GRID TITIK UNTUK CHAT PANEL SUPAYA MAKIN REALISTIS */
+        .chat-panel-bg {
+            background-color: var(--panel);
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 15px 15px;
+            border: 1px solid var(--line);
+            padding: 22px;
+            border-radius: 6px;
+        }
+        .social-panel{background:var(--panel);border:1px solid var(--line);padding:22px; border-radius: 6px;}
         .social-panel h2{margin:0 0 16px;font:700 28px var(--display);text-transform:uppercase}
-        .chat-list{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto}
-        .chat-msg{padding:12px;background:#080a0d;border:1px solid #1b2026}
-        .chat-msg.mine{border-left:3px solid var(--red)}
-        .chat-meta{font-size:9px;color:#707780;margin-bottom:5px;display:flex;justify-content:space-between;gap:10px}
-        .chat-body{font-size:12px;line-height:1.55;color:#ddd;word-break:break-word}
-        .chat-compose{display:flex;gap:8px;margin-top:12px}
-        .chat-compose input{flex:1}
+        
+        /* =============== REALISTIC BUBBLE CHAT SYSTEM =============== */
+        .chat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            max-height: 480px;
+            overflow-y: auto;
+            padding: 10px 15px 10px 5px;
+        }
+        .chat-msg-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            max-width: 85%;
+            animation: popIn .3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .chat-msg-container.other { align-self: flex-start; }
+        .chat-msg-container.mine { align-self: flex-end; flex-direction: row-reverse; }
+        
+        .chat-msg-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #1f252e;
+            color: #fff;
+            display: grid; place-items: center;
+            font: 800 13px var(--display);
+            cursor: pointer;
+            flex-shrink: 0;
+            border: 1px solid var(--line);
+            overflow: hidden;
+        }
+        .chat-msg-container.mine .chat-msg-avatar {
+            background: var(--red);
+            color: var(--black);
+            border: none;
+            box-shadow: var(--neon-glow);
+        }
+        
+        .chat-msg-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .chat-msg-container.mine .chat-msg-body { align-items: flex-end; }
+        .chat-msg-container.other .chat-msg-body { align-items: flex-start; }
+        
+        .chat-msg-header {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 11px; color: var(--muted);
+            margin: 0 4px;
+        }
+        .chat-msg-header strong { color: #cdd3da; cursor: pointer; font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; }
+        .chat-msg-header strong:hover { color: var(--red); text-shadow: var(--neon-glow); }
+        
+        .chat-msg-bubble {
+            padding: 12px 16px;
+            border-radius: 16px 16px 16px 4px;
+            background: #161b22;
+            color: #e4e7eb;
+            font-size: 12.5px;
+            line-height: 1.5;
+            border: 1px solid #2a3441;
+            word-break: break-word;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .chat-msg-container.mine .chat-msg-bubble {
+            background: var(--red);
+            color: var(--black);
+            border-radius: 16px 16px 4px 16px;
+            border: none;
+            box-shadow: inset 0 -2px 10px rgba(0,0,0,0.1), var(--neon-glow);
+            font-weight: 500;
+        }
+        
+        .chat-compose-wrapper {
+            display: flex; align-items: center; gap: 10px;
+            background: #0d1116; padding: 6px 6px 6px 15px;
+            border-radius: 30px; border: 1px solid var(--line);
+            margin-top: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .chat-compose-wrapper input {
+            flex: 1; background: transparent; border: 0;
+            color: #fff; padding: 8px 0; font: 13px var(--body); outline: none;
+        }
+        .chat-compose-wrapper button {
+            background: var(--red); color: var(--black);
+            border: none; border-radius: 20px; padding: 10px 20px;
+            font: 700 12px var(--body); cursor: pointer;
+            box-shadow: var(--neon-glow); transition: .2s;
+        }
+        .chat-compose-wrapper button:hover { transform: scale(1.05); }
+        /* ============================================================ */
+        
         .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px}
-        .profile-card{background:#080a0d;border:1px solid var(--line);padding:18px}
+        .profile-card{background:#080a0d;border:1px solid var(--line);padding:18px; border-radius: 6px;}
         .profile-head{display:flex;align-items:center;gap:12px}
-        .profile-avatar{width:50px;height:50px;background:var(--red);display:grid;place-items:center;font:800 22px var(--display)}
+        .profile-avatar{width:50px;height:50px;background:var(--red);display:grid;place-items:center;font:900 22px var(--display); color:var(--black); border-radius: 6px; box-shadow: var(--neon-glow); overflow: hidden;}
         .profile-name{font:700 22px var(--display);text-transform:uppercase}
         .profile-stats{font-size:9px;color:#777;margin-top:3px}
         .profile-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}
-        .like-btn.liked{background:#fff;color:#050608}
-        .notification-item{padding:13px;border-bottom:1px solid var(--line);cursor:pointer}
+        .like-btn.liked{background:var(--red);color:var(--black); box-shadow: var(--neon-glow);}
+        .notification-item{padding:13px;border-bottom:1px solid var(--line);cursor:pointer; transition:.2s;}
         .notification-item:hover{background:#101318}
-        .notification-item.unread{border-left:3px solid var(--red)}
+        .notification-item.unread{border-left:3px solid var(--red); background: rgba(255,255,255,0.02);}
         .notification-item strong{font-size:11px}
         .notification-item p{margin:5px 0 0;color:#8b919a;font-size:10px}
         .empty-state{padding:30px;text-align:center;color:#666;font-size:12px}
         .back-btn{margin-bottom:15px}
-        @media(max-width:800px){
-            .social-layout{grid-template-columns:1fr}
-            .user-chip{position:absolute;right:58px;top:22px}
-        }
-
-        @media(max-width:1050px){
-            header{padding:22px 3vw}
-            nav button{padding:10px 10px}
-            .hero-main{left:3vw}
-            .hero-topline,.hero-bottom{left:3vw;right:3vw}
-            .hero-side{right:3vw}
-            .quick-strip,.content-container{width:94%}
-            .race-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-        }
-        @media(max-width:760px){
-            header{position:absolute;align-items:flex-start}
-            .mobile-menu{
-                display:grid;
-                place-items:center;
-                width:43px;height:43px;
-                border:1px solid var(--line);
-                background:#090a0c;
-                cursor:pointer;
+        
+        /* RESPONSIF KHUSUS UNTUK SIDEBAR */
+        @media(max-width: 900px) {
+            body { padding-left: 0; }
+            .top-bar { left: 0; width: 100%; }
+            header {
+                left: -280px; 
+                width: 280px;
+                padding-top: 80px;
             }
-            nav{
-                display:none;
-                position:absolute;
-                top:78px;
-                right:3vw;
-                left:3vw;
-                flex-direction:column;
+            header.open {
+                left: 0;
+                box-shadow: 20px 0 50px rgba(0,0,0,0.8);
             }
-            nav.open{display:flex}
-            nav button{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;gap:10px}
-            .visual-hero{height:650px}
-            .hero-image{background-position:60% center}
-            .hero-topline{top:105px}
-            .hero-topline > span:last-child{display:none}
+            .mobile-menu { display: grid; }
+            .close-menu { display: block; }
+            .admin-subnav { left: 3vw !important; top: 75px; }
             .hero-main{top:48%;width:90vw}
             .hero-title{font-size:62px}
             .hero-side{display:none}
@@ -594,9 +743,10 @@
             .quick-strip{grid-template-columns:repeat(2,1fr)}
             .quick-strip div:nth-child(2){border-right:0}
             .quick-strip div:nth-child(-n+2){border-bottom:1px solid var(--line)}
-            .content-container{margin-top:35px}
+            .content-container{margin-top:35px; width: 92%;}
             .card{min-width:100%;padding:22px}
             .race-grid{grid-template-columns:1fr}
+            .social-layout{grid-template-columns:1fr}
         }
     
         .hero-brand-stack{display:flex;flex-direction:column;align-items:flex-start;gap:7px;}
@@ -604,11 +754,11 @@
         .saas-hero-discord{
             display:inline-flex;align-items:center;gap:10px;color:#fff;
             text-decoration:none;font:800 13px var(--body);letter-spacing:1.6px;
-            line-height:1;transition:.2s ease;
+            line-height:1;transition:.3s ease;
             background:#5865F2;padding:11px 18px;border-radius:8px;
             box-shadow:0 5px 16px rgba(88,101,242,.5);
         }
-        .saas-hero-discord:hover{background:#4752C4;color:#fff;transform:translateX(2px);}
+        .saas-hero-discord:hover{background:#4752C4;color:#fff;transform:translateY(-2px); box-shadow: 0 5px 20px rgba(255,255,255,0.2);}
         .saas-discord-icon{
             display:inline-grid;place-items:center;width:26px;height:26px;
             border:1px solid rgba(255,255,255,.5);border-radius:6px;color:#fff;font-size:13px;line-height:1;
@@ -620,6 +770,13 @@
                 width:100%;justify-content:center;
             }
             .saas-discord-icon{width:28px;height:28px;font-size:14px;}
+            .saas-event-club-grid{grid-template-columns:1fr;}
+            .saas-event-club-card{grid-template-columns:68px 1fr;}
+            .saas-event-club-logo{width:68px;height:68px;}
+            .chat-category-actions{grid-template-columns:1fr}
+            .chat-category-box{padding:22px}
+            .chat-category-title{font-size:32px}
+            .chat-msg-container { max-width: 95%; }
         }
 
         .saas-discord-disclaimer{
@@ -638,19 +795,18 @@
 
         .guest-prompt{position:fixed;inset:0;z-index:30000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,7,.88);backdrop-filter:blur(5px)}
         .guest-prompt.show{display:flex}
-        .guest-prompt-box{width:min(430px,100%);background:#0b0e12;border:1px solid #303943;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.65);text-align:center}
+        .guest-prompt-box{width:min(430px,100%);background:#0b0e12;border:1px solid #303943;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.65);text-align:center; border-radius: 8px;}
         .guest-prompt-icon{font-size:34px;margin-bottom:10px}
         .guest-prompt-box h2{font:800 24px var(--display);margin:0 0 10px}
         .guest-prompt-box p{font-size:11px;color:var(--muted);line-height:1.8;margin:0 0 22px}
         .guest-prompt-actions{display:flex;gap:10px}.guest-prompt-actions button{flex:1}
-        .guest-later{background:#11161c!important;border-color:#303943!important;color:#c7ccd2!important}
+        .guest-later{background:#11161c!important;border-color:#303943!important;color:#c7ccd2!important; box-shadow: none !important;}
 
         .announce-modal-check{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
         .announce-modal-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--red);}
     </style>
 </head>
 <body>
-
 
     <div class="guest-prompt" id="user-profile-modal" aria-hidden="true">
         <div class="guest-prompt-box" style="max-width:360px;">
@@ -742,8 +898,14 @@
     </div>
 
     <div class="top-bar"></div>
+    
+    <!-- Mobile Menu Toggle Button -->
+    <div class="mobile-menu" onclick="document.querySelector('header').classList.add('open')">☰</div>
 
+    <!-- NEW SIDEBAR HEADER -->
     <header>
+        <div class="close-menu" onclick="document.querySelector('header').classList.remove('open')">✕</div>
+        
         <div class="brand">
             <div class="brand-mark">SA</div>
             <div class="brand-copy">
@@ -760,17 +922,16 @@
             </div>
             <span class="notif-bell">🔔<i class="notif-count" id="notif-count">0</i></span>
         </div>
-        <div class="mobile-menu" onclick="document.querySelector('nav').classList.toggle('open')">☰</div>
-
+        
         <nav>
             <button id="nav-teritory" onclick="showPage('teritory')">
                 <span class="nav-number">01</span><span>Teritory</span>
             </button>
             <button id="nav-saas-event" onclick="showPage('saas-event')">
-                <span class="nav-number">02</span><span>DAFTARKAN CLUB KE ACARA SAAS</span>
+                <span class="nav-number">02</span><span>Daftar Acara</span>
             </button>
             <button id="nav-club-request" onclick="showPage('club-request')">
-                <span class="nav-number">03</span><span>AJUKAN MASUKAN NAMA CLUB KE WEBSITE</span>
+                <span class="nav-number">03</span><span>Ajukan Club</span>
             </button>
             <button id="nav-public-chat" onclick="showPage('public-chat')">
                 <span class="nav-number">04</span><span>Chat Public</span>
@@ -779,13 +940,13 @@
                 <span class="nav-number">05</span><span>Cari Pengguna</span>
             </button>
             <button id="nav-race" onclick="showPage('race')">
-                <span class="nav-number">06</span><span>Information Race</span>
+                <span class="nav-number">06</span><span>Informasi Race</span>
             </button>
             <button id="nav-club" onclick="showPage('club')">
                 <span class="nav-number">07</span><span>Official Club</span>
             </button>
             <button id="nav-saas" onclick="showPage('saas')">
-                <span class="nav-number">08</span><span>Information SAAS</span>
+                <span class="nav-number">08</span><span>Informasi SAAS</span>
             </button>
             <button id="nav-profile" onclick="showPage('profile')">
                 <span class="nav-number">09</span><span>Profile Account</span>
@@ -794,29 +955,30 @@
                 <span class="nav-number">10</span><span>Lihat Chat Saya</span>
             </button>
             <button id="nav-admin" class="btn-admin" onclick="showPage('admin')">
-                <span class="nav-number">••</span><span>Admin</span>
+                <span class="nav-number">••</span><span>Admin Control</span>
             </button>
         </nav>
-        <div class="admin-subnav" id="admin-subnav">
-            <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
-            <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
-            <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
-            <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
-            <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
-            <button data-admin-section="saas" onclick="showAdminSection('saas')">Information SAAS</button>
-            <button data-admin-section="announcement" onclick="showAdminSection('announcement')">Pengumuman</button>
-            <button data-admin-section="clubs" onclick="showAdminSection('clubs')">Official Clubs</button>
-            <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
-            <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
-            <button data-admin-section="saas-event-clubs" onclick="showAdminSection('saas-event-clubs')">CLUB ACARA SAAS</button>
-            <button data-admin-section="create-role" onclick="showAdminSection('create-role')">Create Role</button>
-            <button data-admin-section="assign-role" onclick="showAdminSection('assign-role')">Tambah Role ke Pengguna</button>
-            <div class="admin-total-users" id="admin-total-users">
-                <span class="admin-total-users-label">Total User / Akun Terdaftar</span>
-                <span class="admin-total-users-count" id="admin-total-users-count">0</span>
-            </div>
-        </div>
     </header>
+
+    <div class="admin-subnav" id="admin-subnav">
+        <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
+        <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
+        <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
+        <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
+        <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
+        <button data-admin-section="saas" onclick="showAdminSection('saas')">Information SAAS</button>
+        <button data-admin-section="announcement" onclick="showAdminSection('announcement')">Pengumuman</button>
+        <button data-admin-section="clubs" onclick="showAdminSection('clubs')">Official Clubs</button>
+        <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
+        <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
+        <button data-admin-section="saas-event-clubs" onclick="showAdminSection('saas-event-clubs')">CLUB ACARA SAAS</button>
+        <button data-admin-section="create-role" onclick="showAdminSection('create-role')">Create Role</button>
+        <button data-admin-section="assign-role" onclick="showAdminSection('assign-role')">Tambah Role</button>
+        <div class="admin-total-users" id="admin-total-users">
+            <span class="admin-total-users-label">Total Akun Terdaftar</span>
+            <span class="admin-total-users-count" id="admin-total-users-count">0</span>
+        </div>
+    </div>
 
     <main class="landing">
         <section class="visual-hero">
@@ -862,19 +1024,15 @@
             <div><span>NETWORK</span><b>SAAS CLUB</b></div>
             <div><span>MODE</span><b>STREET / RACE</b></div>
         </section>
+        
+        <!-- Container Utama Render JavaScript -->
+        <div class="content-container" id="app-content">
+            <!-- JS Injects HTML Here -->
+        </div>
     </main>
-
-    <!-- Container Utama Render JavaScript -->
-    <div class="content-container" id="app-content">
-        <!-- JS Injects HTML Here -->
-    </div>
 
     <script>
         // Database utama di memori. Di GitHub, data dipisahkan menjadi beberapa file agar tidak menumpuk.
-        // db.accounts.json  -> akun, role, notifikasi, password admin
-        // db.chats.json     -> chat public IC/OOC dan private chat
-        // db.requests.json  -> pengajuan club dan acara SAAS
-        // db.settings.json  -> seluruh konten/pengaturan website
         let db = {
             password: "world132",
             adminPasswordMigratedWorld132: true,
@@ -898,9 +1056,9 @@
             },
             saas: {
                 top: [
-                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+1", text: "Divisi Keamanan Internal" },
-                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+2", text: "Intelijen & Pengawasan" },
-                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+3", text: "Operasi Lapangan Khusus" }
+                    { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Divisi+1", text: "Divisi Keamanan Internal" },
+                    { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Divisi+2", text: "Intelijen & Pengawasan" },
+                    { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Divisi+3", text: "Operasi Lapangan Khusus" }
                 ],
                 bottom: {
                     img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
@@ -920,9 +1078,9 @@
                     join_msg: "Silakan datang ke titik GPS Los Santos Midnight. Hubungi perwakilan kami saat tiba.",
                     info: {
                         top: [
-                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+1", text: "Divisi Rekrutmen Club" },
-                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+2", text: "Divisi Modifikasi Kendaraan" },
-                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+3", text: "Jadwal Balap Liar" }
+                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+1", text: "Divisi Rekrutmen Club" },
+                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+2", text: "Divisi Modifikasi Kendaraan" },
+                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+3", text: "Jadwal Balap Liar" }
                         ],
                         bottom: {
                             img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
@@ -1002,12 +1160,6 @@
             normalizeDB();
         }
 
-        // SUPABASE CONFIG: database global agar website statis yang dibuka dari
-        // perangkat berbeda tetap membaca/menulis database pusat yang sama.
-        // Supabase "anon key" AMAN untuk ditaruh di frontend (berbeda dari token
-        // GitHub) karena hak aksesnya dibatasi oleh Row Level Security (RLS) yang
-        // diatur di dashboard Supabase, bukan oleh kerahasiaan key itu sendiri.
-        // Isi 2 nilai ini setelah kamu membuat project di supabase.com:
         const EMBEDDED_SUPABASE_CONFIG = {
             url: 'https://mifcjgdvycxbgoumtqsf.supabase.co',
             key: 'sb_publishable_q6lFfiwIPiSlL1h76LHdrA__eaPoIQK'
@@ -1017,10 +1169,6 @@
             key: localStorage.getItem('sb_key') || EMBEDDED_SUPABASE_CONFIG.key
         };
 
-        // AKUN OWNER: login khusus yang tidak tersimpan di database Supabase sama
-        // sekali. Selalu bisa dipakai login dari perangkat manapun, bahkan kalau
-        // Supabase belum di-setting atau sedang bermasalah. GANTI password di
-        // bawah ini sebelum website kamu dipakai publik.
         const OWNER_ACCOUNT = {
             username: 'owner',
             password: 'Owner#SAAS2026'
@@ -1042,9 +1190,6 @@
         let githubRetryTimer = null;
         let githubLastError = '';
 
-
-        // Semua partisi database (accounts/chats/requests/settings) disimpan sebagai
-        // satu baris masing-masing di tabel `kv_store` (key text primary key, value jsonb).
         function supaHeaders(extra){
             return Object.assign({
                 'apikey': sbConfig.key,
@@ -1099,7 +1244,10 @@
             const name=document.getElementById('user-chip-name');
             if(name) name.textContent='Guest';
             const avatar=document.getElementById('user-avatar');
-            if(avatar) avatar.textContent='G';
+            if(avatar) {
+                avatar.innerHTML = '';
+                avatar.textContent='G';
+            }
             const roles=document.getElementById('user-chip-roles');
             if(roles) roles.innerHTML='<span class="role-badge" style="background:#20262d;color:#d8dde3;border:1px solid #3a424b;">GUEST</span>';
             const count=document.getElementById('notif-count');
@@ -1127,8 +1275,6 @@
             switchAuth('register');
         }
 
-        // Modal peringatan "join Discord" sebelum form dikirim. Dipakai untuk form
-        // DAFTARKAN CLUB KE ACARA SAAS dan AJUKAN MASUKAN NAMA CLUB KE WEBSITE.
         let pendingDiscordNoticeAction = null;
 
         function showDiscordNotice(actionFn){
@@ -1145,6 +1291,13 @@
             if(confirmed && typeof action==='function') action();
         }
 
+        // --- HELPER UNTUK MENDAPATKAN KONTEN AVATAR ---
+        function getAvatarContent(username){
+            const u = getUser(username);
+            if(u && u.profilePic) return `<img src="${escapeHTML(u.profilePic)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+            return escapeHTML((username||'?').charAt(0).toUpperCase());
+        }
+
         function openApp(){
             guestMode=false;
             const me=getUser(currentUser?.username);
@@ -1158,7 +1311,7 @@
             const name=document.getElementById('user-chip-name');
             if(name) name.textContent='@'+currentUser.username;
             const avatar=document.getElementById('user-avatar');
-            if(avatar) avatar.textContent=currentUser.username.charAt(0).toUpperCase();
+            if(avatar) avatar.innerHTML=getAvatarContent(currentUser.username);
             if(typeof updateUserChipRoles==='function') updateUserChipRoles();
             updateNotificationBadge();
             showPage('teritory');
@@ -1224,9 +1377,6 @@
                 return;
             }
             if(authMode==='register'){
-                // Sebelum membuat akun, ambil database terbaru dari GitHub. Dengan begitu
-                // perangkat baru (HP teman, PC lain, dsb.) tidak memakai db lokal kosong
-                // dan username baru benar-benar ditambahkan ke database pusat.
                 if(sbConfig.url && sbConfig.key){
                     const remoteLoaded=await fetchFromDB(true);
                     if(!remoteLoaded && githubLastFetchOk===false){
@@ -1237,7 +1387,7 @@
                 }
                 if(username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){ if(status) status.textContent='Username ini tidak dapat digunakan.'; return; }
                 if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
-                const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
+                const user={username,passwordHash:hash,likes:[],icName:'',profilePic:'',roleIds:[],createdAt:Date.now()};
                 db.users.push(user);
                 db.notifications[username]=[];
                 let saved=true;
@@ -1273,7 +1423,6 @@
             }
         }
 
-        // AUTH BUTTON HARDENING: make Login / Register / Guest clickable even if another UI layer is present.
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('auth-tab-login');
             const registerBtn = document.getElementById('auth-tab-register');
@@ -1341,7 +1490,6 @@
                     if(result.status!=='ok') allReady=false;
                 }
 
-                // Migrasi otomatis dari db.json lama jika database terpisah belum ada.
                 if(!anySplitFile){
                     githubLegacyDb=await getLegacyDb();
                     if(githubLegacyDb){
@@ -1356,7 +1504,6 @@
                     return false;
                 }
 
-                // Jika hanya sebagian file sudah ada, gabungkan yang tersedia dan buat sisanya otomatis.
                 const parts={};
                 for(const key of DB_FILE_KEYS){ if(results[key].status==='ok') parts[key]=results[key].data; }
                 applyDbPartitions(parts);
@@ -1443,7 +1590,6 @@
             if(githubDatabaseReady) return true;
             if(githubLastFetchOk === false) return false;
 
-            // Se o db.json lama ditemukan, migrasikan isi lamanya ke 4 file terpisah.
             if(githubLegacyDb){
                 db=githubLegacyDb;
                 normalizeDB();
@@ -1496,10 +1642,6 @@
             },15000);
         }
 
-        // === AUTH HELPERS / DB NORMALIZATION ===
-        // Beberapa versi sebelumnya memanggil helper ini tetapi definisinya tidak ikut
-        // terbawa. Akibatnya klik LOGIN/BUAT AKUN masuk ke submitAuth(), lalu berhenti
-        // karena ReferenceError sebelum proses autentikasi berjalan.
         function validUsername(username){
             return /^[A-Za-z0-9_]{3,20}$/.test(String(username || ''));
         }
@@ -1526,7 +1668,6 @@
             if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
             if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
             if(!Array.isArray(db.announcements)) db.announcements=[];
-            // Migrasi dari struktur lama (satu pengumuman/db.announcement) ke daftar array baru.
             if(db.announcement && typeof db.announcement === 'object' && String(db.announcement.message||'').trim()){
                 db.announcements.push({
                     id: db.announcement.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
@@ -1578,6 +1719,7 @@
                 if(!Array.isArray(u.likes)) u.likes=[];
                 if(!Array.isArray(u.roleIds)) u.roleIds=[];
                 if(typeof u.icName!=='string') u.icName='';
+                if(typeof u.profilePic!=='string') u.profilePic=''; // Support Foto Profil
             });
             return db;
         }
@@ -1586,8 +1728,6 @@
             return db.users.find(u => u.username === username);
         }
 
-        // Nama IC adalah identitas karakter yang terikat ke akun, sehingga tetap ada
-        // walaupun user keluar/login lagi dan tersimpan bersama record user di database GitHub.
         function getSavedICName(username){
             const user=getUser(username);
             return user?.icName || '';
@@ -1611,13 +1751,6 @@
             badge.classList.toggle('show', unread > 0);
         }
 
-        // === PENGUMUMAN ADMIN ===
-        // Admin bisa membuat beberapa pesan pengumuman sekaligus (daftar), yang tampil
-        // sebagai popup ke semua pengguna (termasuk guest) sampai tanggal tertentu.
-        // Membuat pengumuman baru TIDAK menimpa pengumuman lama — semua tetap ada di
-        // daftar sampai admin menghapusnya sendiri. Popup ditampilkan satu per satu
-        // (antrian) untuk setiap pengumuman yang belum pernah dicentang "jangan
-        // tampilkan lagi" oleh pengguna tersebut.
         function getActiveAnnouncements(){
             const todayStr = new Date().toISOString().slice(0,10);
             return (db.announcements||[]).filter(a=>{
@@ -1644,7 +1777,7 @@
                 if(!next) return;
                 const modal = document.getElementById('announce-modal');
                 if(!modal) return;
-                if(modal.classList.contains('show')) return; // sudah ada popup tampil, jangan tumpuk
+                if(modal.classList.contains('show')) return; 
                 const textEl = document.getElementById('announce-modal-text');
                 if(textEl) textEl.textContent = next.message;
                 const checkbox = document.getElementById('announce-modal-dontshow');
@@ -1671,7 +1804,6 @@
             }
             modal.classList.remove('show');
             modal.setAttribute('aria-hidden','true');
-            // Jika masih ada pengumuman lain yang belum dicentang, tampilkan berikutnya.
             setTimeout(checkAndShowAnnouncement, 300);
         }
 
@@ -1730,7 +1862,7 @@
 
         function showToast(message, openProfile=false){
             let t=document.getElementById('saas-toast');
-            if(!t){ t=document.createElement('div'); t.id='saas-toast'; t.style.cssText='position:fixed;right:20px;bottom:20px;z-index:30000;background:#ff2938;color:#fff;padding:13px 17px;font:700 11px DM Sans,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18);'; document.body.appendChild(t); }
+            if(!t){ t=document.createElement('div'); t.id='saas-toast'; t.style.cssText='position:fixed;right:20px;bottom:20px;z-index:30000;background:var(--red);color:var(--black);padding:13px 17px;font:700 11px DM Sans,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 15px rgba(255,255,255,0.4);border:1px solid #fff;border-radius:4px;'; document.body.appendChild(t); }
             t.textContent=message;
             t.style.cursor=openProfile?'pointer':'default';
             t.onclick=openProfile?()=>showPage('profile'):null;
@@ -1744,8 +1876,6 @@
 
         function fmtTime(ts){ return new Date(ts).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}); }
 
-        // Key unik & konsisten untuk sepasang akun, dipakai sebagai nama percakapan
-        // di db.privateChats — urutan username tidak berpengaruh (A→B sama dengan B→A).
         function privateKey(a,b){
             return [String(a||''),String(b||'')].sort().join('::');
         }
@@ -1755,7 +1885,7 @@
             const liked = user.likes.includes(currentUser.username);
             return `<div class="profile-card">
                 <div class="profile-head">
-                    <div class="profile-avatar">${escapeHTML(user.username.charAt(0).toUpperCase())}</div>
+                    <div class="profile-avatar">${getAvatarContent(user.username)}</div>
                     <div><div class="profile-name">@${escapeHTML(user.username)}</div>
                     <div class="profile-stats">❤️ ${user.likes.length} like · Bergabung ${new Date(user.createdAt).toLocaleDateString('id-ID')}</div>
                     <div class="profile-role-badges">${renderUserRoleBadges(user)}</div></div>
@@ -1809,8 +1939,8 @@
                 .filter(u=>!q || u.username.toLowerCase().includes(q))
                 .sort((a,b)=>a.username.localeCompare(b.username));
             if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
-            return users.map(u=>`<div class="find-user-row" onclick="openUserProfileModal('${encodeURIComponent(u.username)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
-                <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${escapeHTML(u.username.charAt(0).toUpperCase())}</div>
+            return users.map(u=>`<div class="find-user-row" onclick="openUserProfileModal('${encodeURIComponent(u.username)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s; border-radius: 4px;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
+                <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${getAvatarContent(u.username)}</div>
                 <div style="flex:1;">
                     <div><strong>@${escapeHTML(u.username)}</strong></div>
                     <div style="margin-top:4px;">${renderUserRoles(u)}</div>
@@ -1829,36 +1959,58 @@
             return db.publicChatOOC.slice(-80);
         }
         function getChatDisplayName(message){ return message.displayName || message.username || 'Unknown'; }
+        
+        // FUNGSI RENDER PUBLIC CHAT YANG BARU (BUBBLE UI)
         function renderPublicChat(container, category = activeChatCategory || 'ooc'){
             activeChatCategory=category;
             const messages=getChatMessages(category), isIC=category==='ic';
             const displayName=isIC ? activeICName : currentUser.username;
             container.innerHTML=`<div class="social-layout">
-                <div class="social-panel">
-                    <div class="chat-mode-badge">${isIC?'🎭 IN CHARACTER (IC)':'💬 OUT OF CHARACTER (OOC)'}</div>
-                    <h2>Chat Public — ${isIC?'IC':'OOC'}</h2>
-                    <p style="color:var(--muted);font-size:11px;">${isIC?'Chat khusus karakter. Nama yang tampil adalah nama IC kamu.':'Chat khusus OOC. Nama yang tampil adalah username akun kamu.'}</p>
-                    <div class="chat-list" id="public-chat-list">${messages.length?messages.map(m=>`
-                        <div class="chat-msg ${m.displayName===displayName?'mine':''}">
-                            <div class="chat-meta"><strong class="chat-username-link" onclick="openUserProfileModal('${encodeURIComponent(m.username)}')" style="cursor:pointer;text-decoration:underline dotted;">${escapeHTML(getChatDisplayName(m))}</strong>${renderChatMessageRoles(m)}<span>${fmtTime(m.createdAt)}</span></div>
-                            <div class="chat-body">${escapeHTML(m.text)}</div>
-                        </div>`).join(''):'<div class="empty-state">Belum ada pesan di kategori ini.</div>'}</div>
-                    <form class="chat-compose" onsubmit="event.preventDefault();sendPublicMessage();">
-                        <input class="social-input" id="public-message" maxlength="500" placeholder="Tulis pesan ${isIC?'IC':'OOC'}..." required>
-                        <button class="btn-red">Kirim</button>
+                <div class="chat-panel-bg" style="display:flex; flex-direction:column; max-height:85vh;">
+                    <div style="flex-shrink:0;">
+                        <div class="chat-mode-badge">${isIC?'🎭 IN CHARACTER (IC)':'💬 OUT OF CHARACTER (OOC)'}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2>Chat Public — ${isIC?'IC':'OOC'}</h2>
+                            <button class="btn-red" style="padding:6px 12px; font-size:10px;" onclick="openChatCategoryChooser()">Ganti Kategori</button>
+                        </div>
+                        <p style="color:var(--muted);font-size:11px; margin-bottom:15px;">${isIC?'Chat khusus karakter. Nama yang tampil adalah nama IC kamu.':'Chat khusus OOC. Nama yang tampil adalah username akun kamu.'}</p>
+                    </div>
+                    
+                    <div class="chat-list" id="public-chat-list" style="flex:1;">
+                        ${messages.length ? messages.map(m=>{
+                            const isMine = m.displayName === displayName;
+                            return `
+                            <div class="chat-msg-container ${isMine ? 'mine' : 'other'}">
+                                <div class="chat-msg-avatar" onclick="openUserProfileModal('${encodeURIComponent(m.username)}')">${getAvatarContent(m.username)}</div>
+                                <div class="chat-msg-body">
+                                    <div class="chat-msg-header">
+                                        <strong onclick="openUserProfileModal('${encodeURIComponent(m.username)}')">${escapeHTML(getChatDisplayName(m))}</strong>
+                                        ${renderChatMessageRoles(m)}
+                                        <span style="font-size:9px;opacity:0.6;">${fmtTime(m.createdAt)}</span>
+                                    </div>
+                                    <div class="chat-msg-bubble">${escapeHTML(m.text)}</div>
+                                </div>
+                            </div>`;
+                        }).join('') : '<div class="empty-state" style="margin:auto;">Belum ada pesan di kategori ini.</div>'}
+                    </div>
+                    
+                    <form class="chat-compose-wrapper" style="flex-shrink:0;" onsubmit="event.preventDefault();sendPublicMessage();">
+                        <input id="public-message" maxlength="500" placeholder="Tulis pesan ${isIC?'IC':'OOC'}..." required autocomplete="off">
+                        <button type="submit">Kirim</button>
                     </form>
-                    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button class="btn-red" onclick="openChatCategoryChooser()">Ganti Kategori</button></div>
                 </div>
+                
                 <div class="social-panel">
                     <h2>${isIC?'IC Identity':'OOC Account'}</h2>
                     <div class="profile-card"><div class="profile-head">
-                        <div class="profile-avatar">${escapeHTML(displayName.charAt(0).toUpperCase())}</div>
+                        <div class="profile-avatar">${getAvatarContent(currentUser.username)}</div>
                         <div><div class="profile-name">${escapeHTML(displayName)}</div><div class="profile-stats">${isIC?'Nama karakter IC kamu':'@'+escapeHTML(currentUser.username)+' · Nama akun OOC'}</div><div class="profile-role-badges">${renderUserRoleBadges(getUser(currentUser.username))}</div></div>
                     </div></div>
                 </div>
             </div>`;
             const list=document.getElementById('public-chat-list'); if(list) list.scrollTop=list.scrollHeight;
         }
+
         function openChatCategoryChooser(){
             const screen=document.getElementById('chat-category-screen'), actions=document.getElementById('chat-category-actions'), form=document.getElementById('ic-name-form'), input=document.getElementById('ic-name-input');
             if(actions) actions.style.display='grid'; if(form) form.classList.remove('show');
@@ -1888,14 +2040,12 @@
             if(name.length>40) return alert('Nama IC maksimal 40 karakter.');
             const me=getUser(currentUser.username); if(!me) return;
 
-            // Nama IC disimpan di record akun yang sama dan tidak mengubah username akun.
             me.icName=name;
             currentUser.icName=name;
             activeICName=name;
             activeChatCategory='ic';
             localStorage.setItem('saas_session', JSON.stringify(currentUser));
 
-            // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
             const saved=await saveToDB(true);
             if(!saved && sbConfig.url && sbConfig.key){
                 return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke database gagal. Coba lagi.');
@@ -1927,9 +2077,6 @@
             renderPrivateChat(document.getElementById('app-content'),other);
         }
 
-        // Membuka halaman chat pribadi dengan pengguna tertentu. Dipanggil dari
-        // tombol "Chat Pribadi" di profil pengguna lain, dari notifikasi pesan
-        // baru, dan dari daftar "Lihat Chat Saya".
         async function openPrivateChat(encoded){
             if(!requireAccount()) return;
             const other=decodeURIComponent(encoded);
@@ -1945,6 +2092,7 @@
             showPage('private-chat');
         }
 
+        // FUNGSI RENDER PRIVATE CHAT YANG BARU (BUBBLE UI)
         function renderPrivateChat(container, otherUsername){
             if(!requireAccount()) return;
             if(!otherUsername){
@@ -1969,30 +2117,49 @@
             const key=privateKey(currentUser.username,otherUsername);
             const messages=(db.privateChats[key]||[]).slice(-200);
             container.innerHTML=`<div class="social-layout" id="private-chat-view">
-                <div class="social-panel">
-                    <div style="margin-bottom:10px;"><button class="btn-red" style="padding:6px 12px;font-size:10px;" onclick="showPage('my-chats')">← Lihat Chat Saya</button></div>
-                    <h2>💬 Chat dengan <span style="cursor:pointer;text-decoration:underline dotted;" onclick="openUserProfileModal('${encodeURIComponent(otherUsername)}')">@${escapeHTML(otherUsername)}</span></h2>
-                    <p style="color:var(--muted);font-size:11px;">Pesan pribadi ini hanya bisa dilihat oleh kamu dan @${escapeHTML(otherUsername)}.</p>
-                    <div class="chat-list" id="private-chat-list">${messages.length?messages.map(m=>`
-                        <div class="chat-msg ${m.from===currentUser.username?'mine':''}">
-                            <div class="chat-meta"><strong>${m.from===currentUser.username?'Kamu':'@'+escapeHTML(m.from)}</strong><span>${fmtTime(m.createdAt)}</span></div>
-                            <div class="chat-body">${escapeHTML(m.text)}</div>
-                        </div>`).join(''):'<div class="empty-state">Belum ada pesan. Mulai chat sekarang.</div>'}</div>
-                    <form class="chat-compose" onsubmit="event.preventDefault();sendPrivateMessage('${encodeURIComponent(otherUsername)}');">
-                        <input class="social-input" id="private-message" maxlength="500" placeholder="Tulis pesan untuk @${escapeHTML(otherUsername)}..." required>
-                        <button class="btn-red">Kirim</button>
+                <div class="chat-panel-bg" style="display:flex; flex-direction:column; max-height:85vh;">
+                    <div style="flex-shrink:0;">
+                        <div style="margin-bottom:10px;"><button class="btn-red" style="padding:6px 12px;font-size:10px;background:transparent;color:var(--white);border:1px solid var(--line);box-shadow:none;" onclick="showPage('my-chats')">← Kembali</button></div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                            <div class="chat-msg-avatar" style="width:40px; height:40px; font-size:16px;">${getAvatarContent(otherUsername)}</div>
+                            <div>
+                                <h2 style="margin:0;">💬 <span style="cursor:pointer;text-decoration:underline dotted;" onclick="openUserProfileModal('${encodeURIComponent(otherUsername)}')">@${escapeHTML(otherUsername)}</span></h2>
+                                <p style="color:var(--muted);font-size:11px; margin:4px 0 0 0;">Pesan ini dienkripsi dan bersifat rahasia.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-list" id="private-chat-list" style="flex:1; border-top:1px solid var(--line); margin-top:10px; padding-top:20px;">
+                        ${messages.length ? messages.map(m=>{
+                            const isMine = m.from === currentUser.username;
+                            return `
+                            <div class="chat-msg-container ${isMine ? 'mine' : 'other'}">
+                                <div class="chat-msg-avatar">${getAvatarContent(m.from)}</div>
+                                <div class="chat-msg-body">
+                                    <div class="chat-msg-header">
+                                        <strong>${isMine ? 'Kamu' : '@'+escapeHTML(m.from)}</strong>
+                                        <span style="font-size:9px;opacity:0.6;">${fmtTime(m.createdAt)}</span>
+                                    </div>
+                                    <div class="chat-msg-bubble">${escapeHTML(m.text)}</div>
+                                </div>
+                            </div>`;
+                        }).join('') : '<div class="empty-state" style="margin:auto;">Belum ada pesan. Mulai sapa sekarang.</div>'}
+                    </div>
+                    
+                    <form class="chat-compose-wrapper" style="flex-shrink:0;" onsubmit="event.preventDefault();sendPrivateMessage('${encodeURIComponent(otherUsername)}');">
+                        <input id="private-message" maxlength="500" placeholder="Ketik pesan untuk @${escapeHTML(otherUsername)}..." required autocomplete="off">
+                        <button type="submit">Kirim</button>
                     </form>
                 </div>
+                
                 <div class="social-panel">
-                    <h2>Profil</h2>
+                    <h2>Profil Lawan Bicara</h2>
                     ${userProfileCard(otherUser)}
                 </div>
             </div>`;
             const list=document.getElementById('private-chat-list'); if(list) list.scrollTop=list.scrollHeight;
         }
 
-        // Daftar semua percakapan pribadi milik akun yang sedang login, diurutkan
-        // dari pesan terbaru. Diakses lewat navigasi "Lihat Chat Saya".
         function renderMyChats(container){
             const me=currentUser.username;
             const conversations=Object.keys(db.privateChats||{})
@@ -2014,10 +2181,10 @@
                     <h2>Lihat Chat Saya</h2>
                     <p style="color:var(--muted);font-size:11px;margin-top:-8px;">Semua percakapan pribadi kamu. Klik salah satu untuk membuka chat-nya.</p>
                     <div style="margin-top:14px;">${conversations.length?conversations.map(c=>`
-                        <div class="find-user-row" onclick="openPrivateChat('${encodeURIComponent(c.other)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
-                            <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${escapeHTML(c.other.charAt(0).toUpperCase())}</div>
+                        <div class="find-user-row" onclick="openPrivateChat('${encodeURIComponent(c.other)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s; border-radius: 4px;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
+                            <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${getAvatarContent(c.other)}</div>
                             <div style="flex:1;min-width:0;">
-                                <div><strong>@${escapeHTML(c.other)}</strong>${c.unread?` <span style="color:var(--red);font-size:10px;">● ${c.unread} baru</span>`:''}</div>
+                                <div><strong>@${escapeHTML(c.other)}</strong>${c.unread?` <span style="color:var(--accent-red);font-size:10px;">● ${c.unread} baru</span>`:''}</div>
                                 <div style="margin-top:4px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.last.from===currentUser.username?'Kamu: ':''}${escapeHTML(c.last.text)}</div>
                             </div>
                             <span style="color:var(--muted);font-size:10px;white-space:nowrap;">${fmtTime(c.last.createdAt)}</span>
@@ -2037,6 +2204,17 @@
             renderPublicChat(document.getElementById('app-content'));
         }
 
+        // --- TAMBAHAN UPDATE FOTO PROFIL ---
+        async function changeProfilePic(){
+            const url = document.getElementById('change-profile-pic').value.trim();
+            const me = getUser(currentUser.username);
+            me.profilePic = url;
+            await saveToDB();
+            openApp(); // Refresh sidebar user chip
+            showPage('profile'); // Refresh halaman profile
+            showToast('✅ Foto profil berhasil disimpan!');
+        }
+
         function renderProfile(container){
             const me=getUser(currentUser.username);
             const notes=(db.notifications[currentUser.username]||[]).slice(0,50);
@@ -2046,20 +2224,27 @@
                     <h2>Profile Account</h2>
                     <div class="profile-card">
                         <div class="profile-head">
-                            <div class="profile-avatar">${escapeHTML(me.username.charAt(0).toUpperCase())}</div>
+                            <div class="profile-avatar">${getAvatarContent(me.username)}</div>
                             <div><div class="profile-name">@${escapeHTML(me.username)}</div>
                             <div class="profile-stats">❤️ ${me.likes.length} like</div>
                             <div class="profile-role-badges">${renderUserRoles(me)}</div></div>
                         </div>
                         <hr style="border-color:var(--line);margin:20px 0">
                         <div class="admin-form">
+                            <h3>Ganti Foto Profil</h3>
+                            <p style="color:var(--muted);font-size:11px;margin-top:-5px;margin-bottom:5px;">Masukkan URL (Link) gambar yang berakhiran .jpg atau .png.</p>
+                            <input class="social-input" id="change-profile-pic" placeholder="Contoh: https://i.imgur.com/foto.jpg" value="${escapeHTML(me.profilePic || '')}">
+                            <button class="btn-red" onclick="changeProfilePic()">Simpan Foto Profil</button>
+                            
                             <h3>Ganti Username</h3>
                             <input class="social-input" id="change-username" maxlength="20" placeholder="Username baru">
                             <button class="btn-red" onclick="changeUsername()">Simpan Username</button>
+                            
                             <h3>Ganti Password</h3>
                             <input class="social-input" id="old-password" type="password" placeholder="Password lama">
                             <input class="social-input" id="new-password" type="password" minlength="6" placeholder="Password baru">
                             <button class="btn-red" onclick="changePassword()">Simpan Password</button>
+                            
                             <h3>Akun</h3>
                             <button class="btn-red" onclick="logout()">Logout</button>
                         </div>
@@ -2106,7 +2291,6 @@
             Object.keys(db.privateChats).forEach(key=>{
                 if(key.includes(old)){}
             });
-            // Chat OOC/IC display names remain independent from account username.
             Object.values(db.notifications).flat().forEach(n=>{if(n.from===old)n.from=next});
             currentUser={username:next};
             localStorage.setItem('saas_session',JSON.stringify(currentUser));
@@ -2136,13 +2320,17 @@
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
             if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
         }
+
         function showPage(pageId) {
             if(!currentUser && !guestMode) return showAuth();
+            
+            // Tutup mobile header saat pindah halaman
+            document.querySelector('header')?.classList.remove('open');
+            
             const adminSubnav=document.getElementById('admin-subnav');
             if(adminSubnav && pageId!=='admin') adminSubnav.classList.remove('show');
             const container=document.getElementById('app-content');
             container.innerHTML='';
-            document.querySelector('nav')?.classList.remove('open');
 
             if(pageId==='teritory'){
                 updateHero("Our Territory","teritory official club in <span style='color:#39ff14;'>JG-RP</span>");
@@ -2364,7 +2552,7 @@
             const box=document.getElementById('saas-event-club-admin-list');
             if(!box) return;
             const clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
-            box.innerHTML=clubs.length?clubs.map((c,i)=>`<div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;">
+            box.innerHTML=clubs.length?clubs.map((c,i)=>`<div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;border-radius:4px;">
                 <div style="width:60px;height:60px;border:1px solid #2a3441;display:grid;place-items:center;overflow:hidden;background:#080a0d;">${c.logo?`<img src="${escapeHTML(c.logo)}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">`:'<span style="font-size:9px;color:#777;">NO LOGO</span>'}</div>
                 <div><input id="saas-event-club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club"><input id="saas-event-club-logo-${i}" value="${escapeHTML(c.logo)}" placeholder="URL Logo" style="margin-top:7px;"></div>
                 <button type="button" class="btn-red" onclick="removeSaasEventClub(${i})">Hapus</button>
@@ -2408,7 +2596,7 @@
                     <button class="btn-red" onclick="markAllSaasEventRead()">Tandai Semua Dibaca</button>
                 </div>
                 <div style="margin-top:20px;display:grid;gap:14px;">
-                    ${requests.length?requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;">
+                    ${requests.length?requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;border-radius:4px;">
                         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                             <strong style="color:var(--accent-red);">${escapeHTML(r.icUsername)}</strong>
                             <span style="font-size:10px;color:var(--muted);">${fmtTime(r.createdAt)}</span>
@@ -2470,7 +2658,7 @@
                         <button class="btn-red" onclick="markAllClubWebsiteRequestsRead()">Tandai Semua Dibaca</button>
                     </div>
                     <div style="margin-top:20px;display:grid;gap:14px;">
-                        ${requests.length ? requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;">
+                        ${requests.length ? requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;border-radius:4px;">
                             <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                                 <strong style="color:var(--accent-red);">${escapeHTML(r.club)}</strong>
                                 <span style="font-size:10px;color:var(--muted);">${fmtTime(r.createdAt)}</span>
@@ -2643,7 +2831,6 @@
             container.innerHTML = html;
         }
 
-
         function normalizeExternalUrl(value, fallback){
             const raw = String(value || '').trim();
             if(!raw) return fallback;
@@ -2759,11 +2946,11 @@
             container.innerHTML = `
                 <div class="card" style="width:100%;">
                     <h2 class="card-title">Dashboard Management</h2>
-                    <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:18px;">Pilih menu admin di bawah navigasi utama untuk membuka pengaturan tertentu. Role khusus dapat dibuat dengan warna berbeda dan diberikan ke setiap pengguna.</p>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:18px;">Pilih menu admin di atas untuk membuka pengaturan tertentu. Role khusus dapat dibuat dengan warna berbeda dan diberikan ke setiap pengguna.</p>
                     <div class="admin-section active" id="admin-section-dashboard">
                         <div class="profile-card">
                             <h3>Admin Control Center</h3>
-                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Gunakan navigasi admin di bawah menu utama untuk mengedit Database, Security, Teritory, Race, Information SAAS, Official Clubs, Create Role, atau Tambah Role ke Pengguna.</p>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Gunakan navigasi admin di bagian atas untuk mengedit Database, Security, Teritory, Race, Information SAAS, Official Clubs, Create Role, atau Tambah Role ke Pengguna.</p>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-github">
@@ -2780,7 +2967,7 @@
                     <div class="admin-section" id="admin-section-security">
                         <div class="admin-form">
                             <h3>Sistem Keamanan</h3>
-                            <label style="color:var(--text-muted);font-size:12px;">Ubah Password Admin Utama:</label>
+                            <label style="color:var(--dim);font-size:12px;">Ubah Password Admin Utama:</label>
                             <input type="text" id="new-pw" value="${escapeHTML(db.password)}">
                         </div>
                     </div>
@@ -2788,7 +2975,7 @@
                         <div class="admin-form">
                             <h3>Edit Teritory</h3>
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Teritory. Jika ON, halaman Teritory akan menampilkan gambar dan informasi. Jika OFF, member akan melihat “TERITORY BELUM TERSEDIA”.</p>
-                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;border-radius:4px;">
                                 <input type="checkbox" id="teritory-enabled" ${db.teritory.enabled?'checked':''} style="width:20px;height:20px;">
                                 <span><b>ON / OFF TERITORY</b><br><small style="color:#777;">ON = Teritory tersedia · OFF = Teritory belum tersedia</small></span>
                             </label>
@@ -2801,18 +2988,18 @@
                         <div class="admin-form">
                             <h3>Edit Information Race</h3>
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Information Race. Jika ON, halaman Race akan menampilkan informasi. Jika OFF, member akan melihat "INFORMATION RACE BELUM TERSEDIA".</p>
-                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;border-radius:4px;">
                                 <input type="checkbox" id="race-system-enabled" ${db.race.enabled?'checked':''} style="width:20px;height:20px;">
                                 <span><b>ON / OFF INFORMATION RACE</b><br><small style="color:#777;">ON = Race tersedia · OFF = Race belum tersedia</small></span>
                             </label>
                             <button type="button" class="btn-red" onclick="saveRaceSystemSettings()" style="width:max-content;">Simpan Status Race</button>
                             <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
-                            ${db.race.top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;">
-                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Race 0${i+1}</label>
+                            ${db.race.top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;border-radius:4px;">
+                                <label style="color:var(--red);font-weight:bold;font-size:13px;">Kotak Race 0${i+1}</label>
                                 <input type="text" id="race-top-title-${i}" value="${escapeHTML(t.title)}" placeholder="Judul Kotak ${i+1}" style="margin-top:8px;">
                                 <textarea id="race-top-txt-${i}" rows="4" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
                             </div>`).join('')}
-                            <label style="font-size:12px;color:var(--text-muted);">Foto Race Bagian Bawah:</label>
+                            <label style="font-size:12px;color:var(--dim);">Foto Race Bagian Bawah:</label>
                             <input type="text" id="race-bot-img" value="${escapeHTML(db.race.bottom.img)}">
                             <textarea id="race-bot-txt" rows="3">${escapeHTML(db.race.bottom.text)}</textarea>
                         </div>
@@ -2820,8 +3007,8 @@
                     <div class="admin-section" id="admin-section-saas">
                         <div class="admin-form">
                             <h3>Edit Information SAAS</h3>
-                            ${top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;">
-                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Bagian SAAS ${i+1}</label>
+                            ${top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;border-radius:4px;">
+                                <label style="color:var(--red);font-weight:bold;font-size:13px;">Bagian SAAS ${i+1}</label>
                                 <input type="text" id="saas-top-title-${i}" value="${escapeHTML(t.title || ('Division 0'+(i+1)))}" placeholder="Nama / Judul SAAS ${i+1}" style="margin-top:8px;">
                                 <input type="text" id="saas-top-img-${i}" value="${escapeHTML(t.img)}" placeholder="URL Foto SAAS ${i+1}" style="margin-top:8px;">
                                 <textarea id="saas-top-txt-${i}" rows="3" placeholder="Deskripsi SAAS ${i+1}" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
@@ -2829,9 +3016,9 @@
                             <h3>ALL SYNDICATE MEMBER INTI</h3>
                             <p style="font-size:11px;color:#777;">Bagian ini tampil sebagai kartu terpisah dengan jarak antar kartu. Kamu bisa menambah kartu/member inti kapan saja dari Admin Panel.</p>
                             <div id="saas-bottom-members-editor">
-                                ${db.saas.bottomMembers.map((m,i)=>`<div class="saas-bottom-editor" data-index="${i}" style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;">
+                                ${db.saas.bottomMembers.map((m,i)=>`<div class="saas-bottom-editor" data-index="${i}" style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;border-radius:4px;">
                                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                                        <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Member Inti ${i+1}</label>
+                                        <label style="color:var(--red);font-weight:bold;font-size:13px;">Member Inti ${i+1}</label>
                                         <button type="button" class="btn-red" onclick="removeSaasBottomMember(${i})">Hapus</button>
                                     </div>
                                     <input type="text" id="saas-bottom-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul Member Inti" style="margin-top:8px;">
@@ -2841,9 +3028,9 @@
                             </div>
                             <button type="button" class="btn-red" onclick="addSaasBottomMember()">+ Tambah Member Inti</button>
                             <h3>Button Discord SAAS</h3>
-                            <label style="font-size:12px;color:var(--text-muted);">Link Discord:</label>
+                            <label style="font-size:12px;color:var(--dim);">Link Discord:</label>
                             <input type="url" id="saas-discord-link" value="${escapeHTML(db.saas.discord.link)}" placeholder="https://discord.gg/...">
-                            <label style="font-size:12px;color:var(--text-muted);">Tulisan Button:</label>
+                            <label style="font-size:12px;color:var(--dim);">Tulisan Button:</label>
                             <input type="text" id="saas-discord-text" value="${escapeHTML(db.saas.discord.text)}" placeholder="DISCORD SAAS">
                             <p style="font-size:10px;color:#777;">Link ini mengatur tombol DISCORD SAAS di bagian atas website dan tombol Discord pada Information SAAS. Gunakan link lengkap seperti https://discord.gg/MqeWH9rxZV.</p>
                         </div>
@@ -2852,15 +3039,15 @@
                         <div class="admin-form">
                             <h3>Buat Pengumuman Baru</h3>
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Pesan ini akan tampil sebagai popup notifikasi dengan tombol OKE ke semua pengguna (termasuk Guest). Setiap pengumuman baru yang kamu tambahkan TIDAK akan menimpa pengumuman lama — semuanya tetap ada di daftar sampai kamu hapus sendiri. Pengguna yang sebelumnya mencentang "jangan tampilkan lagi" hanya tidak melihat pengumuman lama itu saja, pengumuman baru tetap akan muncul ke mereka.</p>
-                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Isi Pesan Pengumuman:</label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Isi Pesan Pengumuman:</label>
                             <textarea id="announce-message" rows="6" maxlength="1000" placeholder="Tulis pesan pengumuman di sini..."></textarea>
-                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Tampilkan Sampai Tanggal (kosongkan jika tanpa batas waktu):</label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Tampilkan Sampai Tanggal (kosongkan jika tanpa batas waktu):</label>
                             <input type="date" id="announce-expires">
                             <button type="button" class="btn-red" onclick="addAnnouncement()" style="width:max-content;margin-top:10px;">+ Tambah Pengumuman</button>
                             <hr style="border:1px solid #2a3441;margin:22px 0;width:100%;">
                             <h3>Daftar Pengumuman Aktif</h3>
                             ${(db.announcements||[]).length ? db.announcements.slice().reverse().map(a=>`
-                                <div style="border:1px solid #2a3441;padding:14px;margin-bottom:10px;background:#0b0f14;">
+                                <div style="border:1px solid #2a3441;padding:14px;margin-bottom:10px;background:#0b0f14;border-radius:4px;">
                                     <p style="white-space:pre-wrap;word-break:break-word;font-size:12px;color:#e4e7eb;margin:0 0 8px;">${escapeHTML(a.message)}</p>
                                     <small style="color:#777;display:block;margin-bottom:10px;">${a.expiresAt ? 'Tampil sampai: '+escapeHTML(a.expiresAt) : 'Tanpa batas waktu'}</small>
                                     <button type="button" class="btn-red" onclick="deleteAnnouncement('${a.id}')">🗑 Hapus Pengumuman</button>
@@ -2872,11 +3059,11 @@
                         <div class="admin-form">
                             <h3>ACARA SAAS — PENGATURAN & NOTIFIKASI</h3>
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Aktifkan pendaftaran acara SAAS. Jika OFF, member akan melihat “TIDAK ADA ACARA TERSEDIA DAHULU”.</p>
-                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;border-radius:4px;">
                                 <input type="checkbox" id="saas-event-enabled" ${db.saasEvent.enabled?'checked':''} style="width:20px;height:20px;">
                                 <span><b>ON / OFF PENDAFTARAN ACARA SAAS</b><br><small style="color:#777;">ON = form pendaftaran tersedia · OFF = acara tidak tersedia</small></span>
                             </label>
-                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Deskripsi Acara:</label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Deskripsi Acara:</label>
                             <textarea id="saas-event-description" rows="4" maxlength="500">${escapeHTML(db.saasEvent.description)}</textarea>
                             <button type="button" class="btn-red" onclick="saveSaasEventSettings()">Simpan Pengaturan Acara</button>
                             <hr style="border:1px solid #2a3441;margin:25px 0;">
@@ -2898,20 +3085,20 @@
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-club-requests">
-                <div class="admin-form"></div>
-            </div>
-            <div class="admin-section" id="admin-section-create-role">
+                        <div class="admin-form"></div>
+                    </div>
+                    <div class="admin-section" id="admin-section-create-role">
                         <div class="admin-form">
                             <h3>Create Role</h3>
                             <p style="font-size:11px;color:#777;line-height:1.6;">Buat role khusus dengan warna masing-masing. Role akan tersimpan ke database Supabase saat Save & Sync.</p>
                             <input type="text" id="new-role-name" maxlength="40" placeholder="Nama Role, contoh: Founder">
-                            <label style="font-size:12px;color:var(--text-muted);">Warna Role:</label>
+                            <label style="font-size:12px;color:var(--dim);">Warna Role:</label>
                             <div style="display:flex;gap:10px;align-items:center;">
-                                <input type="color" id="new-role-color" value="#ff2938" style="width:70px;height:42px;padding:2px;">
-                                <input type="text" id="new-role-color-text" value="#ff2938" placeholder="#RRGGBB" maxlength="7" style="flex:1;">
+                                <input type="color" id="new-role-color" value="#ffffff" style="width:70px;height:42px;padding:2px;">
+                                <input type="text" id="new-role-color-text" value="#ffffff" placeholder="#RRGGBB" maxlength="7" style="flex:1;">
                             </div>
                             <button type="button" class="btn-red" onclick="createCustomRole()">+ Buat Role</button>
-                            <div style="margin-top:20px;">${db.roles.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #2a3441;padding:10px;margin-bottom:8px;background:#0b0f14;">
+                            <div style="margin-top:20px;">${db.roles.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #2a3441;padding:10px;margin-bottom:8px;background:#0b0f14;border-radius:4px;">
                                 <span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span>
                                 <button type="button" class="btn-red" onclick="deleteCustomRole('${encodeURIComponent(r.id)}')">Hapus</button>
                             </div>`).join('') || '<div class="empty-state">Belum ada role khusus.</div>'}</div>
@@ -2929,29 +3116,29 @@
                         <div class="admin-form">
                             <h3>Manage Official Clubs</h3>
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Official Club. Jika ON, halaman Official Club akan menampilkan daftar club. Jika OFF, member akan melihat "OFFICIAL CLUB BELUM TERSEDIA".</p>
-                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;border-radius:4px;">
                                 <input type="checkbox" id="club-system-enabled" ${db.clubSystem.enabled?'checked':''} style="width:20px;height:20px;">
                                 <span><b>ON / OFF OFFICIAL CLUB</b><br><small style="color:#777;">ON = Official Club tersedia · OFF = Official Club belum tersedia</small></span>
                             </label>
                             <button type="button" class="btn-red" onclick="saveClubSystemSettings()" style="width:max-content;">Simpan Status Official Club</button>
                             <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
-                            ${db.club.map((c,i)=>`<div style="border:1px solid #2a3441;padding:15px;margin-bottom:20px;background:#0b0f14;">
-                                <label style="color:var(--accent-red);font-weight:bold;font-size:16px;">Club: ${escapeHTML(c.name)}</label>
-                                <input type="text" id="club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club">
-                                <input type="text" id="club-img-${i}" value="${escapeHTML(c.img)}" placeholder="URL Foto Markas">
-                                <textarea id="club-txt-${i}" rows="2">${escapeHTML(c.text)}</textarea>
-                                <label style="font-size:12px;color:var(--text-muted);">Link Discord:</label>
+                            ${db.club.map((c,i)=>`<div style="border:1px solid #2a3441;padding:15px;margin-bottom:20px;background:#0b0f14;border-radius:4px;">
+                                <label style="color:var(--red);font-weight:bold;font-size:16px;">Club: ${escapeHTML(c.name)}</label>
+                                <input type="text" id="club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club" style="margin-top:8px;">
+                                <input type="text" id="club-img-${i}" value="${escapeHTML(c.img)}" placeholder="URL Foto Markas" style="margin-top:8px;">
+                                <textarea id="club-txt-${i}" rows="2" style="margin-top:8px;">${escapeHTML(c.text)}</textarea>
+                                <label style="font-size:12px;color:var(--dim);margin-top:8px;display:block;">Link Discord:</label>
                                 <input type="text" id="club-discord-${i}" value="${escapeHTML(c.discord_link)}">
-                                <label style="font-size:12px;color:var(--text-muted);">Pesan Join Location:</label>
+                                <label style="font-size:12px;color:var(--dim);margin-top:8px;display:block;">Pesan Join Location:</label>
                                 <input type="text" id="club-join-${i}" value="${escapeHTML(c.join_msg)}">
-                                <h4 style="color:#a07855;margin-top:15px;">Information Club</h4>
-                                ${c.info.top.map((inf,j)=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
-                                    <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                                <h4 style="color:var(--red);margin-top:15px;">Information Club</h4>
+                                ${c.info.top.map((inf,j)=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;border-radius:4px;">
+                                    <label style="color:var(--red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
                                     <input type="text" id="club-info-top-title-${i}-${j}" value="${escapeHTML(inf.title || ('Bagian 0'+(j+1)))}" placeholder="Nama / Judul Info Club ${j+1}" style="margin-top:8px;">
                                     <input type="text" id="club-info-top-img-${i}-${j}" value="${escapeHTML(inf.img)}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
                                     <textarea id="club-info-top-txt-${i}-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;">${escapeHTML(inf.text)}</textarea>
                                 </div>`).join('')}
-                                <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
+                                <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
                                 <input type="text" id="club-info-bot-img-${i}" value="${escapeHTML(c.info.bottom.img)}" style="margin-top:8px;">
                                 <textarea id="club-info-bot-txt-${i}" rows="2" style="margin-top:8px;">${escapeHTML(c.info.bottom.text)}</textarea>
                             </div>`).join('')}
@@ -2961,14 +3148,14 @@
                             <textarea id="new-club-txt" rows="2" placeholder="Deskripsi Markas"></textarea>
                             <input type="text" id="new-club-discord" placeholder="Link Invite Discord">
                             <input type="text" id="new-club-join" placeholder="Pesan Teks Join Location">
-                            <h4 style="color:#a07855;margin-top:15px;">Information Club (Baru)</h4>
-                            ${[0,1,2].map(j=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
-                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                            <h4 style="color:var(--red);margin-top:15px;">Information Club (Baru)</h4>
+                            ${[0,1,2].map(j=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;border-radius:4px;">
+                                <label style="color:var(--red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
                                 <input type="text" id="new-info-top-title-${j}" placeholder="Nama / Judul Info Club ${j+1}" style="margin-top:8px;">
                                 <input type="text" id="new-info-top-img-${j}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
                                 <textarea id="new-info-top-txt-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;"></textarea>
                             </div>`).join('')}
-                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
                             <input type="text" id="new-info-bot-img" placeholder="URL Foto Info Club Bagian Bawah" style="margin-top:8px;">
                             <textarea id="new-info-bot-txt" rows="2" placeholder="Deskripsi Info Club Bagian Bawah" style="margin-top:8px;"></textarea>
                             <button onclick="addClub()" class="btn-red" style="width:max-content;margin-top:14px;">+ Tambah Club</button>
@@ -3049,7 +3236,7 @@
             for(let j=0; j<3; j++) {
                 infoTop.push({
                     title: document.getElementById(`new-info-top-title-${j}`).value || ("Bagian 0"+(j+1)),
-                    img: document.getElementById(`new-info-top-img-${j}`).value || "https://via.placeholder.com/400x250/141b22/e62429?text=Info",
+                    img: document.getElementById(`new-info-top-img-${j}`).value || "https://via.placeholder.com/400x250/141b22/ffffff?text=Info",
                     text: document.getElementById(`new-info-top-txt-${j}`).value || "Informasi Club"
                 });
             }
@@ -3124,7 +3311,7 @@
             const q=String(filter||'').trim().toLowerCase();
             const users=db.users.filter(u=>!q || u.username.toLowerCase().includes(q));
             if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
-            return users.map(u=>`<div class="role-user-row" style="border:1px solid #2a3441;padding:12px;margin:8px 0;background:#0b0f14;">
+            return users.map(u=>`<div class="role-user-row" style="border:1px solid #2a3441;padding:12px;margin:8px 0;background:#0b0f14;border-radius:4px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
                     <div><strong>@${escapeHTML(u.username)}</strong><div style="margin-top:6px;">${renderUserRoles(u)}</div></div>
                     <button type="button" class="btn-red" onclick="openRoleAssignment('${encodeURIComponent(u.username)}')">Atur Role</button>
@@ -3157,7 +3344,7 @@
             document.getElementById('app-content').innerHTML=`<div class="card" style="width:100%;">
                 <h2 class="card-title">Atur Role @${escapeHTML(username)}</h2>
                 <div class="admin-form">
-                    ${(db.roles||[]).map(r=>`<label style="display:flex;align-items:center;gap:10px;border:1px solid #2a3441;padding:12px;margin:7px 0;background:#0b0f14;cursor:pointer;">
+                    ${(db.roles||[]).map(r=>`<label style="display:flex;align-items:center;gap:10px;border:1px solid #2a3441;padding:12px;margin:7px 0;background:#0b0f14;cursor:pointer;border-radius:4px;">
                         <input type="checkbox" class="assign-role-check" value="${escapeHTML(r.id)}" ${(Array.isArray(user.roleIds)?user.roleIds:[]).includes(r.id)?'checked':''}>
                         <span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span>
                     </label>`).join('') || '<div class="empty-state">Buat role terlebih dahulu.</div>'}

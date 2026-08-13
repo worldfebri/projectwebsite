@@ -630,7 +630,7 @@
                 <input id="auth-password2" type="password" minlength="6" maxlength="72" autocomplete="new-password" placeholder="Ulangi Password" style="display:none">
                 <button class="btn-red" type="submit" id="auth-submit">LOGIN</button>
             </form>
-            <div class="auth-note">Akun disimpan pada database JSON yang disinkronkan ke repository GitHub yang dikonfigurasi Admin. Password tidak disimpan sebagai teks biasa.</div>
+            <div class="auth-note">Akun disimpan pada database Supabase yang dikonfigurasi Admin. Password tidak disimpan sebagai teks biasa.</div>
             <div class="auth-note" id="auth-status"></div>
         </div>
     </div>
@@ -703,7 +703,7 @@
         </nav>
         <div class="admin-subnav" id="admin-subnav">
             <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
-            <button data-admin-section="github" onclick="showAdminSection('github')">GitHub</button>
+            <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
             <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
             <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
             <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
@@ -907,12 +907,21 @@
         // diatur di dashboard Supabase, bukan oleh kerahasiaan key itu sendiri.
         // Isi 2 nilai ini setelah kamu membuat project di supabase.com:
         const EMBEDDED_SUPABASE_CONFIG = {
-            url: 'https://GANTI-DENGAN-PROJECT-ID.supabase.co',
-            key: 'GANTI-DENGAN-ANON-PUBLIC-KEY'
+            url: '',
+            key: ''
         };
         let sbConfig = {
             url: localStorage.getItem('sb_url') || EMBEDDED_SUPABASE_CONFIG.url,
             key: localStorage.getItem('sb_key') || EMBEDDED_SUPABASE_CONFIG.key
+        };
+
+        // AKUN OWNER: login khusus yang tidak tersimpan di database Supabase sama
+        // sekali. Selalu bisa dipakai login dari perangkat manapun, bahkan kalau
+        // Supabase belum di-setting atau sedang bermasalah. GANTI password di
+        // bawah ini sebelum website kamu dipakai publik.
+        const OWNER_ACCOUNT = {
+            username: 'owner',
+            password: 'Owner#SAAS2026'
         };
 
         let currentUser = JSON.parse(sessionStorage.getItem('saas_session') || 'null');
@@ -931,10 +940,6 @@
         let githubRetryTimer = null;
         let githubLastError = '';
 
-        function githubErrorMessage(status, action='GitHub') {
-            const map={401:'Token GitHub tidak valid atau sudah dicabut.',403:'Token tidak memiliki izin Contents: Read and write pada repository.',404:'Repository atau file database tidak ditemukan.',409:'Konflik SHA file GitHub. Silakan tes koneksi lalu coba lagi.',422:'GitHub menolak perubahan. Periksa token, branch, atau SHA file.'};
-            return map[status] || `${action} gagal (HTTP ${status}).`;
-        }
 
         // Semua partisi database (accounts/chats/requests/settings) disimpan sebagai
         // satu baris masing-masing di tabel `kv_store` (key text primary key, value jsonb).
@@ -1089,29 +1094,37 @@
                 if(status) status.textContent='Memproses...';
                 if(submit){ submit.disabled=true; submit.style.opacity='.65'; submit.style.cursor='wait'; }
                 const hash=await sha256(password);
+            if(authMode==='login' && username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){
+                if(password!==OWNER_ACCOUNT.password){ if(status) status.textContent='Username atau password salah.'; return; }
+                currentUser={username:OWNER_ACCOUNT.username, icName:'', isOwner:true};
+                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+                openApp();
+                return;
+            }
             if(authMode==='register'){
                 // Sebelum membuat akun, ambil database terbaru dari GitHub. Dengan begitu
                 // perangkat baru (HP teman, PC lain, dsb.) tidak memakai db lokal kosong
                 // dan username baru benar-benar ditambahkan ke database pusat.
                 if(sbConfig.url && sbConfig.key){
-                    const remoteLoaded=await fetchFromGitHub(true);
+                    const remoteLoaded=await fetchFromDB(true);
                     if(!remoteLoaded && githubLastFetchOk===false){
-                        if(status) status.textContent='GitHub tidak dapat diakses. Cek koneksi/token di Admin Panel.';
+                        if(status) status.textContent='Database Supabase tidak dapat diakses. Cek koneksi di Admin Panel.';
                         return;
                     }
                     normalizeDB();
                 }
+                if(username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){ if(status) status.textContent='Username ini tidak dapat digunakan.'; return; }
                 if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
                 const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
                 db.users.push(user);
                 db.notifications[username]=[];
                 let saved=true;
                 if(sbConfig.url && sbConfig.key){
-                    saved=await saveToGitHub(true);
+                    saved=await saveToDB(true);
                     if(!saved){
                         db.users=db.users.filter(u=>u!==user);
                         delete db.notifications[username];
-                        if(status) status.textContent='Akun gagal disimpan ke database GitHub. Periksa koneksi GitHub di Admin Panel.';
+                        if(status) status.textContent='Akun gagal disimpan ke database Supabase. Periksa koneksi di Admin Panel.';
                         return;
                     }
                 }
@@ -1160,18 +1173,18 @@
         });
 
         window.onload = async () => {
-            const loaded = await fetchFromGitHub();
+            const loaded = await fetchFromDB();
             normalizeDB();
             if(!githubDatabaseReady && githubLastFetchOk === null){
-                await ensureGitHubDatabase();
+                await ensureDatabaseReady();
             }
             if(githubDatabaseReady && db.adminPasswordMigratedWorld132 !== true){
                 db.password = 'world132';
                 db.adminPasswordMigratedWorld132 = true;
-                await saveToGitHub(true);
+                await saveToDB(true);
             }
             if(githubDatabaseReady) startAutoDatabaseSync();
-            startGitHubRetry();
+            startDbRetry();
 
             if(currentUser && db.users.some(u => u.username === currentUser.username)) {
                 openApp();
@@ -1184,7 +1197,7 @@
 
         function getDatabaseSnapshot(){ return JSON.stringify(db); }
 
-        async function fetchFromGitHub(silent=false) {
+        async function fetchFromDB(silent=false) {
             githubLastFetchOk = false;
             if(!sbConfig.url || !sbConfig.key){
                 normalizeDB();
@@ -1258,16 +1271,16 @@
             }
         }
 
-        async function saveToGitHub(silent=false){
+        async function saveToDB(silent=false){
             if(!sbConfig.url || !sbConfig.key){
-                if(!silent) alert('GitHub belum dikonfigurasi. Isi Owner, Repository, dan Token sekali di Admin Panel.');
+                if(!silent) alert('Supabase belum dikonfigurasi. Isi Project URL dan Anon Key di Admin Panel.');
                 return false;
             }
             if(githubWriteInProgress) return false;
             if(!githubDatabaseReady){
-                const refreshed=await fetchFromGitHub(true);
+                const refreshed=await fetchFromDB(true);
                 if(!refreshed && githubLastFetchOk===null){
-                    const initialized=await ensureGitHubDatabase();
+                    const initialized=await ensureDatabaseReady();
                     if(!initialized){
                         if(!silent && githubLastError) alert(githubLastError);
                         return false;
@@ -1303,7 +1316,7 @@
             }
         }
 
-        async function ensureGitHubDatabase(){
+        async function ensureDatabaseReady(){
             if(!sbConfig.url || !sbConfig.key) return false;
             if(githubDatabaseReady) return true;
             if(githubLastFetchOk === false) return false;
@@ -1340,22 +1353,22 @@
             autoDbSyncTimer=setInterval(async()=>{
                 if(!sbConfig.url || !sbConfig.key || !githubDatabaseReady) return;
                 const snapshot=getDatabaseSnapshot();
-                if(snapshot!==lastSyncedDbSnapshot) await saveToGitHub(true);
+                if(snapshot!==lastSyncedDbSnapshot) await saveToDB(true);
             },5000);
         }
 
-        function startGitHubRetry(){
+        function startDbRetry(){
             if(githubRetryTimer) clearInterval(githubRetryTimer);
             if(!sbConfig.url || !sbConfig.key) return;
             githubRetryTimer=setInterval(async()=>{
                 if(githubDatabaseReady) return;
-                const found=await fetchFromGitHub(true);
+                const found=await fetchFromDB(true);
                 if(found){
                     startAutoDatabaseSync();
                     return;
                 }
                 if(githubLastFetchOk === null){
-                    const created=await ensureGitHubDatabase();
+                    const created=await ensureDatabaseReady();
                     if(created) startAutoDatabaseSync();
                 }
             },15000);
@@ -1459,7 +1472,7 @@
             if(pollTimer) clearInterval(pollTimer);
             pollTimer = setInterval(async()=>{
                 const oldCount = (db.notifications[currentUser?.username]||[]).filter(n=>!n.read).length;
-                await fetchFromGitHub(true);
+                await fetchFromDB(true);
                 updateNotificationBadge();
                 updateAdminClubRequestBadge();
                 updateAdminSaasEventBadge();
@@ -1579,9 +1592,9 @@
             sessionStorage.setItem('saas_session', JSON.stringify(currentUser));
 
             // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
-            const saved=await saveToGitHub(true);
+            const saved=await saveToDB(true);
             if(!saved && sbConfig.url && sbConfig.key){
-                return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke GitHub gagal. Coba lagi.');
+                return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke database gagal. Coba lagi.');
             }
 
             document.getElementById('chat-category-screen').classList.remove('show');
@@ -1594,7 +1607,7 @@
             const message={username:currentUser.username,displayName,text,category,createdAt:Date.now()};
             if(isIC){db.publicChatIC.push(message);db.publicChatIC=db.publicChatIC.slice(-300)}
             else{db.publicChatOOC.push(message);db.publicChatOOC=db.publicChatOOC.slice(-300)}
-            input.value=''; await saveToGitHub(); renderPublicChat(document.getElementById('app-content'),category);
+            input.value=''; await saveToDB(); renderPublicChat(document.getElementById('app-content'),category);
         }
 
         async function sendPrivateMessage(encoded){
@@ -1606,7 +1619,7 @@
             db.privateChats[key]=db.privateChats[key].slice(-500);
             addNotification(other,'message',currentUser.username,`Pesan baru dari @${currentUser.username}`,other);
             input.value='';
-            await saveToGitHub();
+            await saveToDB();
             renderPrivateChat(document.getElementById('app-content'),other);
         }
 
@@ -1617,7 +1630,7 @@
             const idx=user.likes.indexOf(currentUser.username);
             if(idx>=0) user.likes.splice(idx,1);
             else { user.likes.push(currentUser.username); addNotification(username,'like',currentUser.username,`@${currentUser.username} menyukai akun kamu`,username); }
-            await saveToGitHub();
+            await saveToDB();
             renderPublicChat(document.getElementById('app-content'));
         }
 
@@ -1665,7 +1678,7 @@
             const id=decodeURIComponent(encodedId), arr=db.notifications[currentUser.username]||[];
             const n=arr.find(x=>x.id===id); if(!n) return;
             n.read=true;
-            await saveToGitHub(true);
+            await saveToDB(true);
             updateNotificationBadge();
             if(n.type==='message') openPrivateChat(encodeURIComponent(n.from));
             else showPage('profile');
@@ -1673,7 +1686,7 @@
 
         async function markAllNotificationsRead(){
             (db.notifications[currentUser.username]||[]).forEach(n=>n.read=true);
-            await saveToGitHub();
+            await saveToDB();
             updateNotificationBadge();
             renderProfile(document.getElementById('app-content'));
         }
@@ -1694,7 +1707,7 @@
             Object.values(db.notifications).flat().forEach(n=>{if(n.from===old)n.from=next});
             currentUser={username:next};
             sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
-            await saveToGitHub();
+            await saveToDB();
             openApp();
             showPage('profile');
         }
@@ -1705,7 +1718,7 @@
             const me=getUser(currentUser.username);
             if(me.passwordHash!==await sha256(oldPw)) return alert('Password lama salah.');
             me.passwordHash=await sha256(newPw);
-            await saveToGitHub();
+            await saveToDB();
             alert('Password berhasil diubah.');
             document.getElementById('old-password').value='';
             document.getElementById('new-password').value='';
@@ -1823,8 +1836,8 @@
             };
             db.clubWebsiteRequests.unshift(req);
             db.clubWebsiteRequests=db.clubWebsiteRequests.slice(0,300);
-            const saved=await saveToGitHub(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengajuan gagal disimpan ke GitHub. Coba lagi.');
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengajuan gagal disimpan ke database. Coba lagi.');
             alert('Pengajuan nama club berhasil dikirim dan menunggu pemeriksaan Admin.');
             showPage('teritory');
         }
@@ -1891,8 +1904,8 @@
             };
             db.saasEventRequests.unshift(req);
             db.saasEventRequests=db.saasEventRequests.slice(0,300);
-            const saved=await saveToGitHub(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pendaftaran gagal disimpan ke GitHub. Coba lagi.');
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pendaftaran gagal disimpan ke database. Coba lagi.');
             alert('Pendaftaran Acara SAAS berhasil dikirim dan menunggu pemeriksaan Admin.');
             showPage('teritory');
         }
@@ -1983,12 +1996,12 @@
 
         async function markSaasEventRead(encodedId){
             const id=decodeURIComponent(encodedId),r=(db.saasEventRequests||[]).find(x=>x.id===id);
-            if(!r)return; r.adminRead=true; await saveToGitHub(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
+            if(!r)return; r.adminRead=true; await saveToDB(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
         }
 
         async function markAllSaasEventRead(){
             (db.saasEventRequests||[]).forEach(r=>r.adminRead=true);
-            await saveToGitHub(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
+            await saveToDB(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
         }
 
         async function setSaasEventStatus(encodedId,status){
@@ -1997,7 +2010,7 @@
             r.status=status; r.adminRead=true; r.reviewedAt=Date.now();
             const label=status==='approved'?'DISETUJUI':'DITOLAK';
             addNotification(r.accountUsername,'saas-event', 'admin', `Pendaftaran Acara SAAS kamu ${label}. Club: ${r.club}`, r.accountUsername);
-            await saveToGitHub(true);
+            await saveToDB(true);
             updateAdminSaasEventBadge(); renderSaasEventRequests();
         }
 
@@ -2050,14 +2063,14 @@
             const id=decodeURIComponent(encodedId), r=(db.clubWebsiteRequests||[]).find(x=>x.id===id);
             if(!r) return;
             r.adminRead=true;
-            await saveToGitHub(true);
+            await saveToDB(true);
             updateAdminClubRequestBadge();
             renderClubWebsiteRequests();
         }
 
         async function markAllClubWebsiteRequestsRead(){
             (db.clubWebsiteRequests||[]).forEach(r=>r.adminRead=true);
-            await saveToGitHub(true);
+            await saveToDB(true);
             updateAdminClubRequestBadge();
             renderClubWebsiteRequests();
         }
@@ -2070,7 +2083,7 @@
             r.reviewedAt=Date.now();
             const label=status==='approved'?'DISETUJUI':'DITOLAK';
             addNotification(r.accountUsername,'club-request','admin',`Pengajuan nama club "${r.club}" ${label}.`,r.accountUsername);
-            await saveToGitHub(true);
+            await saveToDB(true);
             updateAdminClubRequestBadge();
             renderClubWebsiteRequests();
         }
@@ -2299,7 +2312,7 @@
                     <div class="admin-section active" id="admin-section-dashboard">
                         <div class="profile-card">
                             <h3>Admin Control Center</h3>
-                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Gunakan navigasi admin di bawah menu utama untuk mengedit GitHub, Security, Teritory, Race, Information SAAS, Official Clubs, Create Role, atau Tambah Role ke Pengguna.</p>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Gunakan navigasi admin di bawah menu utama untuk mengedit Database, Security, Teritory, Race, Information SAAS, Official Clubs, Create Role, atau Tambah Role ke Pengguna.</p>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-github">
@@ -2396,14 +2409,14 @@
                     <div class="admin-section" id="admin-section-saas-event-clubs">
                         <div class="admin-form">
                             <h3>CLUB YANG TERDAFTAR DI ACARA SAAS</h3>
-                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Tambahkan nama dan logo club yang ingin ditampilkan di bagian bawah halaman DAFTARKAN CLUB KE ACARA SAAS. Data tersimpan ke database GitHub saat disimpan.</p>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Tambahkan nama dan logo club yang ingin ditampilkan di bagian bawah halaman DAFTARKAN CLUB KE ACARA SAAS. Data tersimpan ke database Supabase saat disimpan.</p>
                             <div id="saas-event-club-admin-list"></div>
                             <hr style="border:1px solid #2a3441;margin:25px 0;">
                             <h4>Tambah Club Baru</h4>
                             <input type="text" id="new-saas-event-club-name" maxlength="80" placeholder="Nama Club">
                             <input type="url" id="new-saas-event-club-logo" placeholder="URL Logo Club (https://...)" style="margin-top:8px;">
                             <button type="button" class="btn-red" onclick="addSaasEventClub()" style="margin-top:10px;">+ TAMBAH CLUB KE ACARA</button>
-                            <button type="button" class="btn-red" onclick="saveSaasEventClubs(); saveToGitHub(true).then(()=>alert('Daftar club acara SAAS berhasil disimpan ke GitHub.'))" style="margin-top:10px;">💾 SIMPAN CLUB KE GITHUB</button>
+                            <button type="button" class="btn-red" onclick="saveSaasEventClubs(); saveToDB(true).then(()=>alert('Daftar club acara SAAS berhasil disimpan ke database.'))" style="margin-top:10px;">💾 SIMPAN CLUB KE DATABASE</button>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-club-requests">
@@ -2412,7 +2425,7 @@
             <div class="admin-section" id="admin-section-create-role">
                         <div class="admin-form">
                             <h3>Create Role</h3>
-                            <p style="font-size:11px;color:#777;line-height:1.6;">Buat role khusus dengan warna masing-masing. Role akan tersimpan ke database GitHub saat Save & Sync.</p>
+                            <p style="font-size:11px;color:#777;line-height:1.6;">Buat role khusus dengan warna masing-masing. Role akan tersimpan ke database Supabase saat Save & Sync.</p>
                             <input type="text" id="new-role-name" maxlength="40" placeholder="Nama Role, contoh: Founder">
                             <label style="font-size:12px;color:var(--text-muted);">Warna Role:</label>
                             <div style="display:flex;gap:10px;align-items:center;">
@@ -2513,14 +2526,14 @@
             localStorage.setItem('sb_key', sbConfig.key);
             githubDatabaseReady=false; githubLastFetchOk=null; lastSyncedDbSnapshot='';
             const ok=await testGithubConnection(false);
-            if(!ok){ alert('❌ GitHub belum siap: '+(githubLastError || 'Periksa Owner, Repository, dan Token.')); return; }
-            const found=await fetchFromGitHub(true);
-            if(!found && githubLastFetchOk===null) await ensureGitHubDatabase();
+            if(!ok){ alert('❌ Database belum siap: '+(githubLastError || 'Periksa Project URL dan Anon Key.')); return; }
+            const found=await fetchFromDB(true);
+            if(!found && githubLastFetchOk===null) await ensureDatabaseReady();
             if(githubDatabaseReady){
                 startAutoDatabaseSync();
-                alert('✅ GitHub tersambung dan 4 database terpisah siap digunakan.');
+                alert('✅ Supabase tersambung dan 4 partisi database siap digunakan.');
             }else{
-                alert('❌ Database GitHub belum siap: '+(githubLastError || 'gagal membuat/membaca file database.'));
+                alert('❌ Database Supabase belum siap: '+(githubLastError || 'gagal membuat/membaca file database.'));
             }
         }
 
@@ -2655,7 +2668,7 @@
         async function saveUserRoles(encodedUser){
             const username=decodeURIComponent(encodedUser), user=getUser(username); if(!user) return;
             user.roleIds=[...document.querySelectorAll('.assign-role-check:checked')].map(x=>x.value);
-            await saveToGitHub();
+            await saveToDB();
             alert('Role pengguna berhasil disimpan.');
             renderAdminDashboard(document.getElementById('app-content')); showAdminSection('assign-role');
         }
@@ -2675,8 +2688,8 @@
             db.teritory.enabled=!!enabled?.checked;
             db.teritory.image=(image?.value||'').trim();
             db.teritory.text=(text?.value||'').trim();
-            const saved=await saveToGitHub(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan Teritory gagal disimpan ke GitHub. Coba lagi.');
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan Teritory gagal disimpan ke database. Coba lagi.');
             alert(db.teritory.enabled?'Teritory sekarang ON / tersedia.':'Teritory sekarang OFF / belum tersedia.');
             renderAdminDashboard(document.getElementById('app-content'));
             showAdminSection('teritory');
@@ -2687,8 +2700,8 @@
             const description=document.getElementById('saas-event-description');
             db.saasEvent.enabled=!!enabled?.checked;
             db.saasEvent.description=(description?.value||'').trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
-            const saved=await saveToGitHub(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke GitHub. Coba lagi.');
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke database. Coba lagi.');
             alert(db.saasEvent.enabled?'Pendaftaran Acara SAAS sekarang ON.':'Pendaftaran Acara SAAS sekarang OFF.');
             renderAdminDashboard(document.getElementById('app-content')); showAdminSection('saas-event');
         }
@@ -2754,12 +2767,12 @@
                 }
             });
 
-            saveToGitHub(true).then(saved=>{
+            saveToDB(true).then(saved=>{
                 if(saved){
                     showPage('teritory');
-                    showToast('✅ Perubahan berhasil disimpan ke GitHub.');
+                    showToast('✅ Perubahan berhasil disimpan ke database.');
                 }else{
-                    showToast('⚠️ GitHub sedang tidak terhubung. Sistem akan mencoba sinkronisasi lagi otomatis.');
+                    showToast('⚠️ Database sedang tidak terhubung. Sistem akan mencoba sinkronisasi lagi otomatis.');
                 }
             });
         }

@@ -601,14 +601,24 @@
         .hero-brand-stack{display:flex;flex-direction:column;align-items:flex-start;gap:7px;}
         .saas-year-label{color:#fff !important;}
         .saas-hero-discord{
-            display:inline-flex;align-items:center;gap:10px;color:#b1a79f;
-            text-decoration:none;font:700 11px var(--body);letter-spacing:2.2px;
+            display:inline-flex;align-items:center;gap:10px;color:#fff;
+            text-decoration:none;font:800 13px var(--body);letter-spacing:1.6px;
             line-height:1;transition:.2s ease;
+            background:#5865F2;padding:11px 18px;border-radius:8px;
+            box-shadow:0 5px 16px rgba(88,101,242,.5);
         }
-        .saas-hero-discord:hover{color:#fff;transform:translateX(2px);}
+        .saas-hero-discord:hover{background:#4752C4;color:#fff;transform:translateX(2px);}
         .saas-discord-icon{
-            display:inline-grid;place-items:center;width:22px;height:22px;
-            border:1px solid #8f857c;border-radius:5px;color:#b1a79f;font-size:11px;line-height:1;
+            display:inline-grid;place-items:center;width:26px;height:26px;
+            border:1px solid rgba(255,255,255,.5);border-radius:6px;color:#fff;font-size:13px;line-height:1;
+            background:rgba(255,255,255,.12);
+        }
+        @media(max-width:600px){
+            .saas-hero-discord{
+                font-size:14px;padding:13px 20px;letter-spacing:1.2px;
+                width:100%;justify-content:center;
+            }
+            .saas-discord-icon{width:28px;height:28px;font-size:14px;}
         }
 
         .guest-prompt{position:fixed;inset:0;z-index:30000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,7,.88);backdrop-filter:blur(5px)}

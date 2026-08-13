@@ -629,6 +629,9 @@
         .guest-prompt-box p{font-size:11px;color:var(--muted);line-height:1.8;margin:0 0 22px}
         .guest-prompt-actions{display:flex;gap:10px}.guest-prompt-actions button{flex:1}
         .guest-later{background:#11161c!important;border-color:#303943!important;color:#c7ccd2!important}
+
+        .announce-modal-check{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
+        .announce-modal-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--red);}
     </style>
 </head>
 <body>
@@ -662,6 +665,21 @@
             <p>UNTUK INFO LEBIH LANJUT SILAKAN JOIN DISCORD KAMI KARNA PENTING UNTUK MEMASUKAN KALIAN KE DISCORD JUGA</p>
             <div class="guest-prompt-actions">
                 <button class="btn-red" onclick="closeDiscordNotice(true)">OKE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="guest-prompt" id="announce-modal" aria-hidden="true">
+        <div class="guest-prompt-box">
+            <div class="guest-prompt-icon">📢</div>
+            <h2>PENGUMUMAN</h2>
+            <p id="announce-modal-text"></p>
+            <label class="announce-modal-check">
+                <input type="checkbox" id="announce-modal-dontshow">
+                Jangan tampilkan notifikasi ini lagi
+            </label>
+            <div class="guest-prompt-actions" style="margin-top:16px;">
+                <button class="btn-red" onclick="closeAnnouncementModal()">OKE</button>
             </div>
         </div>
     </div>
@@ -771,6 +789,7 @@
             <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
             <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
             <button data-admin-section="saas" onclick="showAdminSection('saas')">Information SAAS</button>
+            <button data-admin-section="announcement" onclick="showAdminSection('announcement')">Pengumuman</button>
             <button data-admin-section="clubs" onclick="showAdminSection('clubs')">Official Clubs</button>
             <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
             <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
@@ -911,7 +930,8 @@
                 description: "ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR",
                 clubs: []
             },
-            saasEventRequests: []
+            saasEventRequests: [],
+            announcements: []
         };
 
         const GITHUB_DB_FILES = {
@@ -952,7 +972,8 @@
                     saas: db.saas,
                     club: db.club,
                     clubSystem: db.clubSystem,
-                    saasEvent: db.saasEvent
+                    saasEvent: db.saasEvent,
+                    announcements: db.announcements
                 }
             };
         }
@@ -1069,6 +1090,7 @@
             if(count){ count.textContent='0'; count.classList.remove('show'); }
             closeGuestPrompt();
             showPage('teritory');
+            checkAndShowAnnouncement();
         }
 
         function requireAccount(){
@@ -1125,6 +1147,7 @@
             updateNotificationBadge();
             showPage('teritory');
             startPolling();
+            checkAndShowAnnouncement();
         }
 
         function logout(){
@@ -1486,6 +1509,23 @@
             if(!Array.isArray(db.saasEventRequests)) db.saasEventRequests=[];
             if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
             if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
+            if(!Array.isArray(db.announcements)) db.announcements=[];
+            // Migrasi dari struktur lama (satu pengumuman/db.announcement) ke daftar array baru.
+            if(db.announcement && typeof db.announcement === 'object' && String(db.announcement.message||'').trim()){
+                db.announcements.push({
+                    id: db.announcement.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+                    message: db.announcement.message,
+                    expiresAt: db.announcement.expiresAt || '',
+                    createdAt: Date.now()
+                });
+                delete db.announcement;
+            }
+            db.announcements = db.announcements.filter(a=>a && typeof a==='object').map(a=>({
+                id: typeof a.id==='string' && a.id ? a.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())),
+                message: typeof a.message==='string' ? a.message : '',
+                expiresAt: typeof a.expiresAt==='string' ? a.expiresAt : '',
+                createdAt: typeof a.createdAt==='number' ? a.createdAt : Date.now()
+            }));
             if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
             if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
             if(typeof db.teritory.image !== 'string') db.teritory.image='';
@@ -1554,6 +1594,101 @@
             badge.classList.toggle('show', unread > 0);
         }
 
+        // === PENGUMUMAN ADMIN ===
+        // Admin bisa membuat beberapa pesan pengumuman sekaligus (daftar), yang tampil
+        // sebagai popup ke semua pengguna (termasuk guest) sampai tanggal tertentu.
+        // Membuat pengumuman baru TIDAK menimpa pengumuman lama — semua tetap ada di
+        // daftar sampai admin menghapusnya sendiri. Popup ditampilkan satu per satu
+        // (antrian) untuk setiap pengumuman yang belum pernah dicentang "jangan
+        // tampilkan lagi" oleh pengguna tersebut.
+        function getActiveAnnouncements(){
+            const todayStr = new Date().toISOString().slice(0,10);
+            return (db.announcements||[]).filter(a=>{
+                if(!a || !String(a.message||'').trim() || !a.id) return false;
+                if(a.expiresAt && a.expiresAt < todayStr) return false;
+                return true;
+            });
+        }
+
+        function getDismissedAnnouncementIds(){
+            try{
+                const raw = localStorage.getItem('saas_dismissed_announcement_ids');
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            }catch(e){ return []; }
+        }
+
+        function checkAndShowAnnouncement(){
+            try{
+                const active = getActiveAnnouncements();
+                if(!active.length) return;
+                const dismissed = getDismissedAnnouncementIds();
+                const next = active.find(a=>!dismissed.includes(a.id));
+                if(!next) return;
+                const modal = document.getElementById('announce-modal');
+                if(!modal) return;
+                if(modal.classList.contains('show')) return; // sudah ada popup tampil, jangan tumpuk
+                const textEl = document.getElementById('announce-modal-text');
+                if(textEl) textEl.textContent = next.message;
+                const checkbox = document.getElementById('announce-modal-dontshow');
+                if(checkbox) checkbox.checked = false;
+                modal.dataset.announceId = next.id;
+                modal.classList.add('show');
+                modal.setAttribute('aria-hidden','false');
+            }catch(e){
+                console.error('checkAndShowAnnouncement error:', e);
+            }
+        }
+
+        function closeAnnouncementModal(){
+            const modal = document.getElementById('announce-modal');
+            if(!modal) return;
+            const checkbox = document.getElementById('announce-modal-dontshow');
+            const id = modal.dataset.announceId || '';
+            if(checkbox?.checked && id){
+                const dismissed = getDismissedAnnouncementIds();
+                if(!dismissed.includes(id)){
+                    dismissed.push(id);
+                    localStorage.setItem('saas_dismissed_announcement_ids', JSON.stringify(dismissed));
+                }
+            }
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden','true');
+            // Jika masih ada pengumuman lain yang belum dicentang, tampilkan berikutnya.
+            setTimeout(checkAndShowAnnouncement, 300);
+        }
+
+        async function addAnnouncement(){
+            const message = document.getElementById('announce-message');
+            const expiresAt = document.getElementById('announce-expires');
+            const newMessage = (message?.value||'').trim();
+            if(!newMessage){
+                alert('Isi pesan pengumuman terlebih dahulu.');
+                return;
+            }
+            db.announcements.push({
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()),
+                message: newMessage,
+                expiresAt: (expiresAt?.value||'').trim(),
+                createdAt: Date.now()
+            });
+            const saved = await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengumuman gagal disimpan ke database. Coba lagi.');
+            alert('Pengumuman baru berhasil ditambahkan dan akan tampil ke pengguna.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('announcement');
+        }
+
+        async function deleteAnnouncement(id){
+            if(!confirm('Hapus pengumuman ini? Pengumuman tidak akan tampil lagi ke pengguna.')) return;
+            db.announcements = (db.announcements||[]).filter(a=>a.id!==id);
+            const saved = await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Gagal menghapus pengumuman. Coba lagi.');
+            alert('Pengumuman berhasil dihapus.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('announcement');
+        }
+
         function startPolling(){
             if(pollTimer) clearInterval(pollTimer);
             pollTimer = setInterval(async()=>{
@@ -1562,6 +1697,7 @@
                 updateNotificationBadge();
                 updateAdminClubRequestBadge();
                 updateAdminSaasEventBadge();
+                checkAndShowAnnouncement();
                 const newCount = (db.notifications[currentUser?.username]||[]).filter(n=>!n.read).length;
                 if(newCount > oldCount && currentUser) showToast('🔔 Kamu punya notifikasi baru! Klik untuk membuka Profile Account.', true);
                 if(!currentUser) return;
@@ -2693,6 +2829,26 @@
                             <label style="font-size:12px;color:var(--text-muted);">Tulisan Button:</label>
                             <input type="text" id="saas-discord-text" value="${escapeHTML(db.saas.discord.text)}" placeholder="DISCORD SAAS">
                             <p style="font-size:10px;color:#777;">Link ini mengatur tombol DISCORD SAAS di bagian atas website dan tombol Discord pada Information SAAS. Gunakan link lengkap seperti https://discord.gg/MqeWH9rxZV.</p>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-announcement">
+                        <div class="admin-form">
+                            <h3>Buat Pengumuman Baru</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Pesan ini akan tampil sebagai popup notifikasi dengan tombol OKE ke semua pengguna (termasuk Guest). Setiap pengumuman baru yang kamu tambahkan TIDAK akan menimpa pengumuman lama — semuanya tetap ada di daftar sampai kamu hapus sendiri. Pengguna yang sebelumnya mencentang "jangan tampilkan lagi" hanya tidak melihat pengumuman lama itu saja, pengumuman baru tetap akan muncul ke mereka.</p>
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Isi Pesan Pengumuman:</label>
+                            <textarea id="announce-message" rows="6" maxlength="1000" placeholder="Tulis pesan pengumuman di sini..."></textarea>
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Tampilkan Sampai Tanggal (kosongkan jika tanpa batas waktu):</label>
+                            <input type="date" id="announce-expires">
+                            <button type="button" class="btn-red" onclick="addAnnouncement()" style="width:max-content;margin-top:10px;">+ Tambah Pengumuman</button>
+                            <hr style="border:1px solid #2a3441;margin:22px 0;width:100%;">
+                            <h3>Daftar Pengumuman Aktif</h3>
+                            ${(db.announcements||[]).length ? db.announcements.slice().reverse().map(a=>`
+                                <div style="border:1px solid #2a3441;padding:14px;margin-bottom:10px;background:#0b0f14;">
+                                    <p style="white-space:pre-wrap;word-break:break-word;font-size:12px;color:#e4e7eb;margin:0 0 8px;">${escapeHTML(a.message)}</p>
+                                    <small style="color:#777;display:block;margin-bottom:10px;">${a.expiresAt ? 'Tampil sampai: '+escapeHTML(a.expiresAt) : 'Tanpa batas waktu'}</small>
+                                    <button type="button" class="btn-red" onclick="deleteAnnouncement('${a.id}')">🗑 Hapus Pengumuman</button>
+                                </div>
+                            `).join('') : `<p style="color:#777;font-size:11px;">Belum ada pengumuman.</p>`}
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-saas-event">

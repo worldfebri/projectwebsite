@@ -1543,6 +1543,7 @@
                 if(!c || typeof c!=='object') return;
                 if(!c.info || typeof c.info!=='object') c.info={top:[],bottom:{img:'',text:''}};
                 if(!Array.isArray(c.info.top)) c.info.top=[];
+                c.info.top.forEach(t=>{ if(t && typeof t==='object' && typeof t.title!=='string') t.title=''; });
                 if(!c.info.bottom || typeof c.info.bottom!=='object') c.info.bottom={img:'',text:''};
                 if(typeof c.info.bottom.img!=='string') c.info.bottom.img='';
                 if(typeof c.info.bottom.text!=='string') c.info.bottom.text='';
@@ -2546,7 +2547,7 @@
             infoData.top.forEach((t, i) => {
                 html += `
                 <div class="card">
-                    <h2 class="card-title">Bagian 0${i + 1}</h2>
+                    <h2 class="card-title">${t.title || ('Bagian 0'+(i + 1))}</h2>
                     <img src="${t.img}">
                     <p>${t.text}</p>
                 </div>`;
@@ -2930,6 +2931,7 @@
                                 <h4 style="color:#a07855;margin-top:15px;">Information Club</h4>
                                 ${c.info.top.map((inf,j)=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
                                     <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                                    <input type="text" id="club-info-top-title-${i}-${j}" value="${escapeHTML(inf.title || ('Bagian 0'+(j+1)))}" placeholder="Nama / Judul Info Club ${j+1}" style="margin-top:8px;">
                                     <input type="text" id="club-info-top-img-${i}-${j}" value="${escapeHTML(inf.img)}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
                                     <textarea id="club-info-top-txt-${i}-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;">${escapeHTML(inf.text)}</textarea>
                                 </div>`).join('')}
@@ -2946,6 +2948,7 @@
                             <h4 style="color:#a07855;margin-top:15px;">Information Club (Baru)</h4>
                             ${[0,1,2].map(j=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
                                 <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                                <input type="text" id="new-info-top-title-${j}" placeholder="Nama / Judul Info Club ${j+1}" style="margin-top:8px;">
                                 <input type="text" id="new-info-top-img-${j}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
                                 <textarea id="new-info-top-txt-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;"></textarea>
                             </div>`).join('')}
@@ -3029,6 +3032,7 @@
             const infoTop = [];
             for(let j=0; j<3; j++) {
                 infoTop.push({
+                    title: document.getElementById(`new-info-top-title-${j}`).value || ("Bagian 0"+(j+1)),
                     img: document.getElementById(`new-info-top-img-${j}`).value || "https://via.placeholder.com/400x250/141b22/e62429?text=Info",
                     text: document.getElementById(`new-info-top-txt-${j}`).value || "Informasi Club"
                 });
@@ -3265,6 +3269,7 @@
                     c.join_msg = document.getElementById(`club-join-${i}`).value;
 
                     for(let j=0; j<3; j++) {
+                        c.info.top[j].title = document.getElementById(`club-info-top-title-${i}-${j}`).value;
                         c.info.top[j].img = document.getElementById(`club-info-top-img-${i}-${j}`).value;
                         c.info.top[j].text = document.getElementById(`club-info-top-txt-${i}-${j}`).value;
                     }

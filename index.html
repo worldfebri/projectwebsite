@@ -584,7 +584,7 @@
             .visual-hero{height:650px}
             .hero-image{background-position:60% center}
             .hero-topline{top:105px}
-            .hero-topline span:last-child{display:none}
+            .hero-topline > span:last-child{display:none}
             .hero-main{top:48%;width:90vw}
             .hero-title{font-size:62px}
             .hero-side{display:none}
@@ -633,6 +633,15 @@
 </head>
 <body>
 
+
+    <div class="guest-prompt" id="user-profile-modal" aria-hidden="true">
+        <div class="guest-prompt-box" style="max-width:360px;">
+            <div id="user-profile-modal-body"></div>
+            <div class="guest-prompt-actions" style="margin-top:16px;">
+                <button class="btn-red" onclick="closeUserProfileModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
 
     <div class="guest-prompt" id="guest-prompt" aria-hidden="true">
         <div class="guest-prompt-box">
@@ -722,17 +731,20 @@
             <button id="nav-public-chat" onclick="showPage('public-chat')">
                 <span class="nav-number">04</span><span>Chat Public</span>
             </button>
+            <button id="nav-find-user" onclick="showPage('find-user')">
+                <span class="nav-number">05</span><span>Cari Pengguna</span>
+            </button>
             <button id="nav-race" onclick="showPage('race')">
-                <span class="nav-number">05</span><span>Information Race</span>
+                <span class="nav-number">06</span><span>Information Race</span>
             </button>
             <button id="nav-club" onclick="showPage('club')">
-                <span class="nav-number">06</span><span>Official Club</span>
+                <span class="nav-number">07</span><span>Official Club</span>
             </button>
             <button id="nav-saas" onclick="showPage('saas')">
-                <span class="nav-number">07</span><span>Information SAAS</span>
+                <span class="nav-number">08</span><span>Information SAAS</span>
             </button>
             <button id="nav-profile" onclick="showPage('profile')">
-                <span class="nav-number">08</span><span>Profile Account</span>
+                <span class="nav-number">09</span><span>Profile Account</span>
             </button>
             <button id="nav-admin" class="btn-admin" onclick="showPage('admin')">
                 <span class="nav-number">••</span><span>Admin</span>
@@ -1444,6 +1456,8 @@
             if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
             if(typeof db.teritory.image !== 'string') db.teritory.image='';
             if(typeof db.teritory.text !== 'string') db.teritory.text='';
+            if(!db.clubSystem || typeof db.clubSystem !== 'object') db.clubSystem={enabled:true};
+            if(typeof db.clubSystem.enabled !== 'boolean') db.clubSystem.enabled=true;
             if(!db.race || typeof db.race !== 'object') db.race={top:[],bottom:{img:'',text:''}};
             if(!Array.isArray(db.race.top)) db.race.top=[];
             if(!db.race.bottom || typeof db.race.bottom !== 'object') db.race.bottom={img:'',text:''};
@@ -1551,10 +1565,67 @@
                     <div class="profile-role-badges">${renderUserRoleBadges(user)}</div></div>
                 </div>
                 <div class="profile-actions">
-                    ${me ? `<button class="btn-red" onclick="showPage('profile')">Profil Saya</button>` :
-                    `<button class="btn-red" onclick="openPrivateChat('${encodeURIComponent(user.username)}')">💬 Chat Pribadi</button>
-                     <button class="btn-red like-btn ${liked?'liked':''}" onclick="toggleLike('${encodeURIComponent(user.username)}')">${liked?'♥ Liked':'♡ Like'}</button>`}
+                    ${me ? `<button class="btn-red" onclick="closeUserProfileModal();showPage('profile')">Profil Saya</button>` :
+                    `<button class="btn-red" onclick="closeUserProfileModal();openPrivateChat('${encodeURIComponent(user.username)}')">💬 Chat Pribadi</button>
+                     <button class="btn-red like-btn ${liked?'liked':''}" onclick="toggleLikeAndRefreshModal('${encodeURIComponent(user.username)}')">${liked?'♥ Liked':'♡ Like'}</button>`}
             </div></div>`;
+        }
+
+        function openUserProfileModal(encodedUsername){
+            if(!currentUser || guestMode) return requireAccount();
+            const username=decodeURIComponent(encodedUsername);
+            const user=getUser(username);
+            if(!user) return;
+            const body=document.getElementById('user-profile-modal-body');
+            if(body) body.innerHTML=userProfileCard(user);
+            const modal=document.getElementById('user-profile-modal');
+            if(modal){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
+        }
+
+        function closeUserProfileModal(){
+            const modal=document.getElementById('user-profile-modal');
+            if(modal){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+        }
+
+        async function toggleLikeAndRefreshModal(encoded){
+            await toggleLike(encoded);
+            const username=decodeURIComponent(encoded), user=getUser(username);
+            const body=document.getElementById('user-profile-modal-body');
+            if(user && body) body.innerHTML=userProfileCard(user);
+        }
+
+        function renderFindUser(container){
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                    <h2>Cari Pengguna</h2>
+                    <p style="color:var(--muted);font-size:11px;margin-top:-8px;">Ketik username lalu klik hasilnya untuk membuka profil pengguna tersebut.</p>
+                    <input class="social-input" id="find-user-search" placeholder="Cari username..." oninput="filterFindUser()" autocomplete="off">
+                    <div id="find-user-list" style="margin-top:14px;">${renderFindUserRows('')}</div>
+                </div>
+            </div>`;
+            setTimeout(()=>document.getElementById('find-user-search')?.focus(),50);
+        }
+
+        function renderFindUserRows(filter){
+            const q=String(filter||'').trim().toLowerCase();
+            const users=(Array.isArray(db.users)?db.users:[])
+                .filter(u=>u.username!==currentUser.username)
+                .filter(u=>!q || u.username.toLowerCase().includes(q))
+                .sort((a,b)=>a.username.localeCompare(b.username));
+            if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
+            return users.map(u=>`<div class="find-user-row" onclick="openUserProfileModal('${encodeURIComponent(u.username)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
+                <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${escapeHTML(u.username.charAt(0).toUpperCase())}</div>
+                <div style="flex:1;">
+                    <div><strong>@${escapeHTML(u.username)}</strong></div>
+                    <div style="margin-top:4px;">${renderUserRoles(u)}</div>
+                </div>
+                <span style="color:var(--muted);font-size:10px;">❤️ ${(u.likes||[]).length}</span>
+            </div>`).join('');
+        }
+
+        function filterFindUser(){
+            const el=document.getElementById('find-user-search'), list=document.getElementById('find-user-list');
+            if(el&&list) list.innerHTML=renderFindUserRows(el.value);
         }
 
         function getChatMessages(category){
@@ -1573,7 +1644,7 @@
                     <p style="color:var(--muted);font-size:11px;">${isIC?'Chat khusus karakter. Nama yang tampil adalah nama IC kamu.':'Chat khusus OOC. Nama yang tampil adalah username akun kamu.'}</p>
                     <div class="chat-list" id="public-chat-list">${messages.length?messages.map(m=>`
                         <div class="chat-msg ${m.displayName===displayName?'mine':''}">
-                            <div class="chat-meta"><strong>${escapeHTML(getChatDisplayName(m))}${renderChatMessageRoles(m)}</strong><span>${fmtTime(m.createdAt)}</span></div>
+                            <div class="chat-meta"><strong class="chat-username-link" onclick="openUserProfileModal('${encodeURIComponent(m.username)}')" style="cursor:pointer;text-decoration:underline dotted;">${escapeHTML(getChatDisplayName(m))}</strong>${renderChatMessageRoles(m)}<span>${fmtTime(m.createdAt)}</span></div>
                             <div class="chat-body">${escapeHTML(m.text)}</div>
                         </div>`).join(''):'<div class="empty-state">Belum ada pesan di kategori ini.</div>'}</div>
                     <form class="chat-compose" onsubmit="event.preventDefault();sendPublicMessage();">
@@ -1804,6 +1875,10 @@
                 updateHero("Private Chat","Pesan pribadi antar anggota");
                 setActiveNav('');
                 renderPrivateChat(container,selectedChatUser);
+            } else if(pageId==='find-user'){
+                if(!requireAccount()) return;
+                updateHero("Cari Pengguna","Temukan akun lain lalu buka profilnya");
+                setActiveNav('nav-find-user'); renderFindUser(container);
             } else if(pageId==='profile'){
                 if(!requireAccount()) return;
                 updateHero("Profile Account","Manage your account & notifications");
@@ -2211,6 +2286,16 @@
         }
 
         function renderClub(container) {
+            if(!db.clubSystem.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">OFFICIAL CLUB BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Official Club saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
             let html = '';
             db.club.forEach((c, index) => {
                 html += `
@@ -2487,6 +2572,13 @@
                     <div class="admin-section" id="admin-section-clubs">
                         <div class="admin-form">
                             <h3>Manage Official Clubs</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Official Club. Jika ON, halaman Official Club akan menampilkan daftar club. Jika OFF, member akan melihat "OFFICIAL CLUB BELUM TERSEDIA".</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="club-system-enabled" ${db.clubSystem.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF OFFICIAL CLUB</b><br><small style="color:#777;">ON = Official Club tersedia · OFF = Official Club belum tersedia</small></span>
+                            </label>
+                            <button type="button" class="btn-red" onclick="saveClubSystemSettings()" style="width:max-content;">Simpan Status Official Club</button>
+                            <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
                             ${db.club.map((c,i)=>`<div style="border:1px solid #2a3441;padding:15px;margin-bottom:20px;background:#0b0f14;">
                                 <label style="color:var(--accent-red);font-weight:bold;font-size:16px;">Club: ${escapeHTML(c.name)}</label>
                                 <input type="text" id="club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club">
@@ -2732,6 +2824,16 @@
             showAdminSection('teritory');
         }
 
+        async function saveClubSystemSettings(){
+            const enabled=document.getElementById('club-system-enabled');
+            db.clubSystem.enabled=!!enabled?.checked;
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Official Club gagal disimpan ke database. Coba lagi.');
+            alert(db.clubSystem.enabled?'Official Club sekarang ON / tersedia.':'Official Club sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('clubs');
+        }
+
         async function saveSaasEventSettings(){
             const enabled=document.getElementById('saas-event-enabled');
             const description=document.getElementById('saas-event-description');
@@ -2785,6 +2887,9 @@
             }
             db.race.bottom.img = document.getElementById('race-bot-img').value;
             db.race.bottom.text = document.getElementById('race-bot-txt').value;
+
+            const clubSystemEnabled = document.getElementById('club-system-enabled');
+            db.clubSystem.enabled = clubSystemEnabled ? !!clubSystemEnabled.checked : !!db.clubSystem.enabled;
 
             db.club.forEach((c, i) => {
                 if(document.getElementById(`club-name-${i}`)) {

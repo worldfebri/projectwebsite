@@ -655,6 +655,17 @@
         </div>
     </div>
 
+    <div class="guest-prompt" id="discord-notice-modal" aria-hidden="true">
+        <div class="guest-prompt-box">
+            <div class="guest-prompt-icon">⚠️</div>
+            <h2>PENTING</h2>
+            <p>UNTUK INFO LEBIH LANJUT SILAKAN JOIN DISCORD KAMI KARNA PENTING UNTUK MEMASUKAN KALIAN KE DISCORD JUGA</p>
+            <div class="guest-prompt-actions">
+                <button class="btn-red" onclick="closeDiscordNotice(true)">OKE</button>
+            </div>
+        </div>
+    </div>
+
     <div class="auth-screen show" id="auth-screen">
         <div class="auth-box">
             <div class="auth-logo">
@@ -835,6 +846,7 @@
                 text: "Wilayah kekuasaan utama. Pelanggaran batas wilayah tanpa izin akan ditindak tegas."
             },
             race: {
+                enabled: true,
                 top: [
                     { title: "Race Information 01", text: "Tulis informasi race bagian pertama di sini." },
                     { title: "Race Information 02", text: "Tulis informasi race bagian kedua di sini." },
@@ -936,6 +948,7 @@
                     race: db.race,
                     saas: db.saas,
                     club: db.club,
+                    clubSystem: db.clubSystem,
                     saasEvent: db.saasEvent
                 }
             };
@@ -973,7 +986,7 @@
             password: 'Owner#SAAS2026'
         };
 
-        let currentUser = JSON.parse(sessionStorage.getItem('saas_session') || 'null');
+        let currentUser = JSON.parse(localStorage.getItem('saas_session') || 'null');
         let guestMode = false;
         let adminAuthenticated = false;
         let authMode = 'login';
@@ -1039,7 +1052,7 @@
         function enterGuestMode(){
             guestMode=true;
             currentUser=null;
-            sessionStorage.removeItem('saas_session');
+            localStorage.removeItem('saas_session');
             document.getElementById('auth-screen')?.classList.remove('show');
             const chip=document.getElementById('user-chip');
             if(chip) chip.classList.add('show');
@@ -1073,12 +1086,30 @@
             switchAuth('register');
         }
 
+        // Modal peringatan "join Discord" sebelum form dikirim. Dipakai untuk form
+        // DAFTARKAN CLUB KE ACARA SAAS dan AJUKAN MASUKAN NAMA CLUB KE WEBSITE.
+        let pendingDiscordNoticeAction = null;
+
+        function showDiscordNotice(actionFn){
+            pendingDiscordNoticeAction = actionFn;
+            const el=document.getElementById('discord-notice-modal');
+            if(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+        }
+
+        function closeDiscordNotice(confirmed){
+            const el=document.getElementById('discord-notice-modal');
+            if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+            const action=pendingDiscordNoticeAction;
+            pendingDiscordNoticeAction=null;
+            if(confirmed && typeof action==='function') action();
+        }
+
         function openApp(){
             guestMode=false;
             const me=getUser(currentUser?.username);
             if(me){
                 currentUser.icName=me.icName || '';
-                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
             }
             document.getElementById('auth-screen')?.classList.remove('show');
             const chip=document.getElementById('user-chip');
@@ -1095,7 +1126,7 @@
 
         function logout(){
             guestMode=false;
-            sessionStorage.removeItem('saas_session');
+            localStorage.removeItem('saas_session');
             currentUser=null;
             adminAuthenticated=false;
             document.getElementById('admin-subnav')?.classList.remove('show');
@@ -1146,7 +1177,7 @@
             if(authMode==='login' && username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){
                 if(password!==OWNER_ACCOUNT.password){ if(status) status.textContent='Username atau password salah.'; return; }
                 currentUser={username:OWNER_ACCOUNT.username, icName:'', isOwner:true};
-                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
                 openApp();
                 return;
             }
@@ -1190,7 +1221,7 @@
             const user=db.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
             if(!user || user.passwordHash!==hash){ if(status) status.textContent='Username atau password salah.'; return; }
                 currentUser={username:user.username,icName:user.icName||''};
-                sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
                 openApp();
             }catch(error){
                 console.error('Auth error:', error);
@@ -1235,11 +1266,11 @@
             if(githubDatabaseReady) startAutoDatabaseSync();
             startDbRetry();
 
-            if(currentUser && db.users.some(u => u.username === currentUser.username)) {
+            if(currentUser && (currentUser.isOwner || db.users.some(u => u.username === currentUser.username))) {
                 openApp();
             } else {
                 currentUser = null;
-                sessionStorage.removeItem('saas_session');
+                localStorage.removeItem('saas_session');
                 showAuth();
             }
         };
@@ -1458,7 +1489,8 @@
             if(typeof db.teritory.text !== 'string') db.teritory.text='';
             if(!db.clubSystem || typeof db.clubSystem !== 'object') db.clubSystem={enabled:true};
             if(typeof db.clubSystem.enabled !== 'boolean') db.clubSystem.enabled=true;
-            if(!db.race || typeof db.race !== 'object') db.race={top:[],bottom:{img:'',text:''}};
+            if(!db.race || typeof db.race !== 'object') db.race={enabled:true,top:[],bottom:{img:'',text:''}};
+            if(typeof db.race.enabled !== 'boolean') db.race.enabled=true;
             if(!Array.isArray(db.race.top)) db.race.top=[];
             if(!db.race.bottom || typeof db.race.bottom !== 'object') db.race.bottom={img:'',text:''};
             if(typeof db.race.bottom.img !== 'string') db.race.bottom.img='';
@@ -1697,7 +1729,7 @@
             currentUser.icName=name;
             activeICName=name;
             activeChatCategory='ic';
-            sessionStorage.setItem('saas_session', JSON.stringify(currentUser));
+            localStorage.setItem('saas_session', JSON.stringify(currentUser));
 
             // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
             const saved=await saveToDB(true);
@@ -1814,7 +1846,7 @@
             // Chat OOC/IC display names remain independent from account username.
             Object.values(db.notifications).flat().forEach(n=>{if(n.from===old)n.from=next});
             currentUser={username:next};
-            sessionStorage.setItem('saas_session',JSON.stringify(currentUser));
+            localStorage.setItem('saas_session',JSON.stringify(currentUser));
             await saveToDB();
             openApp();
             showPage('profile');
@@ -1916,7 +1948,7 @@
                     <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
                         <h2>AJUKAN MASUKAN NAMA CLUB KE WEBSITE</h2>
                         <p style="color:var(--muted);font-size:11px;line-height:1.7;">Isi data club yang ingin dimasukkan ke website. Pengajuan akan diperiksa oleh Admin.</p>
-                        <form class="admin-form" onsubmit="event.preventDefault();submitClubWebsiteRequest();">
+                        <form class="admin-form" onsubmit="event.preventDefault();confirmClubWebsiteRequest();">
                             <label>NAMA IC :</label>
                             <input type="text" id="clubreq-ic" value="${escapeHTML(savedIC)}" placeholder="Contoh: Jhon_Smith" maxlength="40" required>
                             <label>NAMA CLUB :</label>
@@ -1927,6 +1959,15 @@
                         </form>
                     </div>
                 </div>`;
+        }
+
+        function confirmClubWebsiteRequest(){
+            if(!requireAccount()) return;
+            const ic=document.getElementById('clubreq-ic')?.value.trim();
+            const club=document.getElementById('clubreq-club')?.value.trim();
+            const leader=document.getElementById('clubreq-leader')?.value.trim();
+            if(!ic || !club || !leader) return alert('Lengkapi NAMA IC, NAMA CLUB, dan NAMA LEADER.');
+            showDiscordNotice(submitClubWebsiteRequest);
         }
 
         async function submitClubWebsiteRequest(){
@@ -1973,7 +2014,7 @@
                 <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
                     <h2>DAFTARKAN CLUB KE ACARA SAAS</h2>
                     <p style="color:var(--muted);font-size:11px;line-height:1.7;">${escapeHTML(db.saasEvent.description)}</p>
-                    <form class="admin-form" onsubmit="event.preventDefault();submitSaasEventRequest();">
+                    <form class="admin-form" onsubmit="event.preventDefault();confirmSaasEventRequest();">
                         <label>Nama IC</label>
                         <input type="text" id="saas-event-ic" value="${escapeHTML(savedIC)}" placeholder="Contoh: Jhon_Smith" maxlength="40" required>
                         <label>Dari Club Mana</label>
@@ -1996,6 +2037,15 @@
                     </div>
                 </div>
             </div>`;
+        }
+
+        function confirmSaasEventRequest(){
+            if(!requireAccount()) return;
+            if(!db.saasEvent.enabled) return showPage('saas-event');
+            const ic=document.getElementById('saas-event-ic').value.trim();
+            const club=document.getElementById('saas-event-club').value.trim();
+            if(!ic||!club) return alert('Lengkapi nama IC dan club.');
+            showDiscordNotice(submitSaasEventRequest);
         }
 
         async function submitSaasEventRequest(){
@@ -2263,6 +2313,16 @@
         }
 
         function renderRace(container) {
+            if(!db.race.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">INFORMATION RACE BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Information Race saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
             let html = `<div style="width:100%;">
                 <div class="race-grid">`;
 
@@ -2471,6 +2531,13 @@
                     <div class="admin-section" id="admin-section-race">
                         <div class="admin-form">
                             <h3>Edit Information Race</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Information Race. Jika ON, halaman Race akan menampilkan informasi. Jika OFF, member akan melihat "INFORMATION RACE BELUM TERSEDIA".</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="race-system-enabled" ${db.race.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF INFORMATION RACE</b><br><small style="color:#777;">ON = Race tersedia · OFF = Race belum tersedia</small></span>
+                            </label>
+                            <button type="button" class="btn-red" onclick="saveRaceSystemSettings()" style="width:max-content;">Simpan Status Race</button>
+                            <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
                             ${db.race.top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;">
                                 <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Race 0${i+1}</label>
                                 <input type="text" id="race-top-title-${i}" value="${escapeHTML(t.title)}" placeholder="Judul Kotak ${i+1}" style="margin-top:8px;">
@@ -2824,6 +2891,16 @@
             showAdminSection('teritory');
         }
 
+        async function saveRaceSystemSettings(){
+            const enabled=document.getElementById('race-system-enabled');
+            db.race.enabled=!!enabled?.checked;
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Information Race gagal disimpan ke database. Coba lagi.');
+            alert(db.race.enabled?'Information Race sekarang ON / tersedia.':'Information Race sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('race');
+        }
+
         async function saveClubSystemSettings(){
             const enabled=document.getElementById('club-system-enabled');
             db.clubSystem.enabled=!!enabled?.checked;
@@ -2881,6 +2958,8 @@
             updateSaasDiscordLink();
             
             // Save Information Race
+            const raceSystemEnabled = document.getElementById('race-system-enabled');
+            db.race.enabled = raceSystemEnabled ? !!raceSystemEnabled.checked : !!db.race.enabled;
             for(let i = 0; i < 4; i++) {
                 db.race.top[i].title = document.getElementById(`race-top-title-${i}`).value;
                 db.race.top[i].text = document.getElementById(`race-top-txt-${i}`).value;

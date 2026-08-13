@@ -160,6 +160,7 @@
             color:#8d939b;
             font-size:9px;
             letter-spacing:2.3px;
+            z-index:150;
         }
         .hero-topline span:first-child{color:#fff}
         .hero-main{
@@ -621,6 +622,20 @@
             .saas-discord-icon{width:28px;height:28px;font-size:14px;}
         }
 
+        .saas-discord-disclaimer{
+            display:block;
+            max-width:280px;
+            margin-top:8px;
+            color:#8d939b;
+            font:600 9px var(--body);
+            letter-spacing:.3px;
+            line-height:1.5;
+            text-transform:none;
+        }
+        @media(max-width:600px){
+            .saas-discord-disclaimer{max-width:100%;}
+        }
+
         .guest-prompt{position:fixed;inset:0;z-index:30000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,7,.88);backdrop-filter:blur(5px)}
         .guest-prompt.show{display:flex}
         .guest-prompt-box{width:min(430px,100%);background:#0b0e12;border:1px solid #303943;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.65);text-align:center}
@@ -816,6 +831,7 @@
                         <span class="saas-discord-icon" aria-hidden="true">◉</span>
                         <span>DISCORD SAAS</span>
                     </a>
+                    <span class="saas-discord-disclaimer">Web ini adalah komunitas roleplay / fiksi tidak nyata yaitu ber roleplay di server <span style="color:#39ff14;">Jogjagamers</span></span>
                 </div>
                 <span>LOS SANTOS — SAN ANDREAS</span>
             </div>

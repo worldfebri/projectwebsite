@@ -900,20 +900,19 @@
             normalizeDB();
         }
 
-        // GITHUB CONFIG: digunakan sebagai fallback global agar website statis yang
-        // dibuka dari perangkat berbeda tetap dapat membaca/menulis database GitHub.
-        // PERINGATAN: token di browser dapat terlihat oleh pengunjung. Untuk produksi,
-        // sebaiknya pindahkan operasi GitHub ke backend/serverless proxy.
-        const EMBEDDED_GITHUB_CONFIG = {
-            owner: 'worldfebri',
-            repo: 'websitefebri',
-            token: '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'
+        // SUPABASE CONFIG: database global agar website statis yang dibuka dari
+        // perangkat berbeda tetap membaca/menulis database pusat yang sama.
+        // Supabase "anon key" AMAN untuk ditaruh di frontend (berbeda dari token
+        // GitHub) karena hak aksesnya dibatasi oleh Row Level Security (RLS) yang
+        // diatur di dashboard Supabase, bukan oleh kerahasiaan key itu sendiri.
+        // Isi 2 nilai ini setelah kamu membuat project di supabase.com:
+        const EMBEDDED_SUPABASE_CONFIG = {
+            url: 'https://GANTI-DENGAN-PROJECT-ID.supabase.co',
+            key: 'GANTI-DENGAN-ANON-PUBLIC-KEY'
         };
-        let ghConfig = {
-            token: localStorage.getItem('gh_token') || EMBEDDED_GITHUB_CONFIG.token,
-            owner: localStorage.getItem('gh_owner') || EMBEDDED_GITHUB_CONFIG.owner,
-            repo: localStorage.getItem('gh_repo') || EMBEDDED_GITHUB_CONFIG.repo,
-            sha: ''
+        let sbConfig = {
+            url: localStorage.getItem('sb_url') || EMBEDDED_SUPABASE_CONFIG.url,
+            key: localStorage.getItem('sb_key') || EMBEDDED_SUPABASE_CONFIG.key
         };
 
         let currentUser = JSON.parse(sessionStorage.getItem('saas_session') || 'null');
@@ -937,45 +936,44 @@
             return map[status] || `${action} gagal (HTTP ${status}).`;
         }
 
-        function githubFileUrl(fileName){
-            return `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${encodeURIComponent(fileName)}`;
+        // Semua partisi database (accounts/chats/requests/settings) disimpan sebagai
+        // satu baris masing-masing di tabel `kv_store` (key text primary key, value jsonb).
+        function supaHeaders(extra){
+            return Object.assign({
+                'apikey': sbConfig.key,
+                'Authorization': `Bearer ${sbConfig.key}`,
+                'Content-Type': 'application/json'
+            }, extra || {});
         }
 
-        function decodeGithubContent(content){
-            return decodeURIComponent(escape(atob((content || '').replace(/\n/g,''))));
-        }
-
-        function encodeGithubContent(value){
-            return btoa(unescape(encodeURIComponent(JSON.stringify(value,null,2))));
+        function supaErrorMessage(status, action='Supabase'){
+            const map={401:'Anon key Supabase tidak valid.',403:'Row Level Security menolak akses. Cek policy tabel kv_store di Supabase.',404:'Tabel kv_store tidak ditemukan. Jalankan SQL setup terlebih dahulu.'};
+            return map[status] || `${action} gagal (HTTP ${status}).`;
         }
 
         async function getGithubFile(fileKey){
-            const res = await fetch(githubFileUrl(GITHUB_DB_FILES[fileKey]), {
-                headers:{'Authorization':`Bearer ${ghConfig.token}`}
-            });
-            if(res.ok){
-                const data=await res.json();
-                ghFileSha[fileKey]=data.sha || '';
-                ghFileReady[fileKey]=true;
-                const parsed=JSON.parse(decodeGithubContent(data.content));
-                ghFileSnapshots[fileKey]=JSON.stringify(parsed);
-                return {status:'ok', data:parsed};
+            const key=GITHUB_DB_FILES[fileKey];
+            try{
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=value`, {
+                    headers: supaHeaders()
+                });
+                if(res.ok){
+                    const rows=await res.json();
+                    if(!rows.length) return {status:'missing'};
+                    ghFileReady[fileKey]=true;
+                    const parsed=rows[0].value;
+                    ghFileSnapshots[fileKey]=JSON.stringify(parsed);
+                    return {status:'ok', data:parsed};
+                }
+                githubLastError=supaErrorMessage(res.status,'Membaca database');
+                return {status:'error', httpStatus:res.status, message:githubLastError};
+            }catch(e){
+                githubLastError=`Gagal terhubung ke Supabase: ${e.message || e}`;
+                return {status:'error', message:githubLastError};
             }
-            if(res.status===404) return {status:'missing'};
-            githubLastError=githubErrorMessage(res.status,'Membaca database');
-            return {status:'error', httpStatus:res.status, message:githubLastError};
         }
 
-        async function getLegacyDb(){
-            try{
-                const res=await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/db.json`, {
-                    headers:{'Authorization':`Bearer ${ghConfig.token}`}
-                });
-                if(!res.ok) return null;
-                const data=await res.json();
-                return JSON.parse(decodeGithubContent(data.content));
-            }catch(e){ return null; }
-        }
+        async function getLegacyDb(){ return null; }
 
         function showAuth(){
             guestMode=false;
@@ -1095,7 +1093,7 @@
                 // Sebelum membuat akun, ambil database terbaru dari GitHub. Dengan begitu
                 // perangkat baru (HP teman, PC lain, dsb.) tidak memakai db lokal kosong
                 // dan username baru benar-benar ditambahkan ke database pusat.
-                if(ghConfig.token && ghConfig.owner && ghConfig.repo){
+                if(sbConfig.url && sbConfig.key){
                     const remoteLoaded=await fetchFromGitHub(true);
                     if(!remoteLoaded && githubLastFetchOk===false){
                         if(status) status.textContent='GitHub tidak dapat diakses. Cek koneksi/token di Admin Panel.';
@@ -1108,7 +1106,7 @@
                 db.users.push(user);
                 db.notifications[username]=[];
                 let saved=true;
-                if(ghConfig.token && ghConfig.owner && ghConfig.repo){
+                if(sbConfig.url && sbConfig.key){
                     saved=await saveToGitHub(true);
                     if(!saved){
                         db.users=db.users.filter(u=>u!==user);
@@ -1117,7 +1115,7 @@
                         return;
                     }
                 }
-                if(status) status.textContent=ghConfig.token ? 'Akun berhasil dibuat dan disimpan ke GitHub. Silakan login.' : 'Akun berhasil dibuat secara lokal. Hubungkan GitHub di Admin Panel agar tersimpan ke GitHub.';
+                if(status) status.textContent=sbConfig.url ? 'Akun berhasil dibuat dan disimpan ke database. Silakan login.' : 'Akun berhasil dibuat secara lokal. Hubungkan Supabase di Admin Panel agar tersimpan secara global.';
                 const u=document.getElementById('auth-username');
                 const pw=document.getElementById('auth-password');
                 const pw2=document.getElementById('auth-password2');
@@ -1188,7 +1186,7 @@
 
         async function fetchFromGitHub(silent=false) {
             githubLastFetchOk = false;
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo){
+            if(!sbConfig.url || !sbConfig.key){
                 normalizeDB();
                 return false;
             }
@@ -1240,45 +1238,28 @@
         }
 
         async function saveGithubPartition(fileKey, value, attempt=0){
-            const url=githubFileUrl(GITHUB_DB_FILES[fileKey]);
+            const key=GITHUB_DB_FILES[fileKey];
             try{
-                const res=await fetch(url,{
-                    method:'PUT',
-                    headers:{
-                        'Authorization':`Bearer ${ghConfig.token}`,
-                        'Content-Type':'application/json'
-                    },
-                    body:JSON.stringify({
-                        message:`Update ${GITHUB_DB_FILES[fileKey]}`,
-                        content:encodeGithubContent(value),
-                        ...(ghFileSha[fileKey] ? {sha:ghFileSha[fileKey]} : {})
-                    })
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store`,{
+                    method:'POST',
+                    headers: supaHeaders({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+                    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
                 });
-                let data={}; try{data=await res.json();}catch(_){ }
-                if(res.ok && data.content){
-                    ghFileSha[fileKey]=data.content.sha || ghFileSha[fileKey];
+                if(res.ok){
                     ghFileReady[fileKey]=true;
                     ghFileSnapshots[fileKey]=JSON.stringify(value);
                     return true;
                 }
-                // Perangkat lain mungkin baru saja menulis file yang sama. Ambil SHA terbaru
-                // lalu ulangi sekali agar perangkat kedua tidak gagal hanya karena race condition.
-                if((res.status===409 || res.status===422) && attempt<2){
-                    const fresh=await getGithubFile(fileKey);
-                    if(fresh.status==='ok'){
-                        return saveGithubPartition(fileKey, value, attempt+1);
-                    }
-                }
-                githubLastError=data?.message || githubErrorMessage(res.status, `Menulis ${GITHUB_DB_FILES[fileKey]}`);
+                githubLastError=supaErrorMessage(res.status, `Menulis ${key}`);
                 return false;
             }catch(e){
-                githubLastError=`Gagal terhubung ke GitHub: ${e.message || e}`;
+                githubLastError=`Gagal terhubung ke Supabase: ${e.message || e}`;
                 return false;
             }
         }
 
         async function saveToGitHub(silent=false){
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo){
+            if(!sbConfig.url || !sbConfig.key){
                 if(!silent) alert('GitHub belum dikonfigurasi. Isi Owner, Repository, dan Token sekali di Admin Panel.');
                 return false;
             }
@@ -1323,7 +1304,7 @@
         }
 
         async function ensureGitHubDatabase(){
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return false;
+            if(!sbConfig.url || !sbConfig.key) return false;
             if(githubDatabaseReady) return true;
             if(githubLastFetchOk === false) return false;
 
@@ -1354,10 +1335,10 @@
 
         function startAutoDatabaseSync(){
             if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo || !githubDatabaseReady) return;
+            if(!sbConfig.url || !sbConfig.key || !githubDatabaseReady) return;
             if(!lastSyncedDbSnapshot) lastSyncedDbSnapshot=getDatabaseSnapshot();
             autoDbSyncTimer=setInterval(async()=>{
-                if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo || !githubDatabaseReady) return;
+                if(!sbConfig.url || !sbConfig.key || !githubDatabaseReady) return;
                 const snapshot=getDatabaseSnapshot();
                 if(snapshot!==lastSyncedDbSnapshot) await saveToGitHub(true);
             },5000);
@@ -1365,7 +1346,7 @@
 
         function startGitHubRetry(){
             if(githubRetryTimer) clearInterval(githubRetryTimer);
-            if(!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return;
+            if(!sbConfig.url || !sbConfig.key) return;
             githubRetryTimer=setInterval(async()=>{
                 if(githubDatabaseReady) return;
                 const found=await fetchFromGitHub(true);
@@ -1599,7 +1580,7 @@
 
             // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
             const saved=await saveToGitHub(true);
-            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo){
+            if(!saved && sbConfig.url && sbConfig.key){
                 return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke GitHub gagal. Coba lagi.');
             }
 
@@ -1843,7 +1824,7 @@
             db.clubWebsiteRequests.unshift(req);
             db.clubWebsiteRequests=db.clubWebsiteRequests.slice(0,300);
             const saved=await saveToGitHub(true);
-            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo) return alert('Pengajuan gagal disimpan ke GitHub. Coba lagi.');
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengajuan gagal disimpan ke GitHub. Coba lagi.');
             alert('Pengajuan nama club berhasil dikirim dan menunggu pemeriksaan Admin.');
             showPage('teritory');
         }
@@ -1911,7 +1892,7 @@
             db.saasEventRequests.unshift(req);
             db.saasEventRequests=db.saasEventRequests.slice(0,300);
             const saved=await saveToGitHub(true);
-            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo) return alert('Pendaftaran gagal disimpan ke GitHub. Coba lagi.');
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pendaftaran gagal disimpan ke GitHub. Coba lagi.');
             alert('Pendaftaran Acara SAAS berhasil dikirim dan menunggu pemeriksaan Admin.');
             showPage('teritory');
         }
@@ -2323,14 +2304,13 @@
                     </div>
                     <div class="admin-section" id="admin-section-github">
                         <div class="admin-form">
-                            <h3>GitHub Database Link</h3>
-                            <input type="text" id="gh-owner" placeholder="GitHub Username" value="${escapeHTML(ghConfig.owner)}">
-                            <input type="text" id="gh-repo" placeholder="Repository Name" value="${escapeHTML(ghConfig.repo)}">
-                            <input type="password" id="gh-token" placeholder="Personal Access Token (masukkan di sini)" value="${escapeHTML(ghConfig.token)}">
-                            <small style="display:block;opacity:.75;line-height:1.5;">Token GitHub tidak ditanam ke source website. Masukkan token baru di sini lalu gunakan TEST GITHUB CONNECTION.</small>
+                            <h3>Supabase Database Link</h3>
+                            <input type="text" id="sb-url" placeholder="Project URL (https://xxxx.supabase.co)" value="${escapeHTML(sbConfig.url)}">
+                            <input type="password" id="sb-key" placeholder="Anon Public Key" value="${escapeHTML(sbConfig.key)}">
+                            <small style="display:block;opacity:.75;line-height:1.5;">Anon key aman ditaruh di browser karena dibatasi Row Level Security di Supabase. Isi lalu tekan TEST CONNECTION.</small>
                             <button onclick="saveGhConfig()" class="btn-red" style="width:max-content;">Set Config</button>
-                            <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST GITHUB CONNECTION</button>
-                            <p style="font-size:10px;color:#777;line-height:1.6;">Owner dan Repository sudah diarahkan ke worldfebri / websitefebri. Token disimpan di browser dan digunakan untuk membuat/memperbarui database terpisah. Untuk website publik, backend/serverless tetap lebih aman.</p>
+                            <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST CONNECTION</button>
+                            <p style="font-size:10px;color:#777;line-height:1.6;">Project URL dan Anon Key didapat dari Supabase Dashboard &gt; Settings &gt; API. Semua perangkat yang membuka website ini akan membaca/menulis ke database Supabase yang sama.</p>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-security">
@@ -2501,46 +2481,36 @@
         }
 
         async function testGithubConnection(showAlert=true){
-            const owner=(document.getElementById('gh-owner')?.value || ghConfig.owner || '').trim();
-            const repo=(document.getElementById('gh-repo')?.value || ghConfig.repo || '').trim();
-            const token=(document.getElementById('gh-token')?.value || ghConfig.token || '').trim();
-            if(!owner || !repo || !token){
-                if(showAlert) alert('Isi Owner, Repository, dan Personal Access Token terlebih dahulu.');
+            const url=(document.getElementById('sb-url')?.value || sbConfig.url || '').trim().replace(/\/$/,'');
+            const key=(document.getElementById('sb-key')?.value || sbConfig.key || '').trim();
+            if(!url || !key){
+                if(showAlert) alert('Isi Project URL dan Anon Key terlebih dahulu.');
                 return false;
             }
-            ghConfig.owner=owner; ghConfig.repo=repo; ghConfig.token=token;
+            sbConfig.url=url; sbConfig.key=key;
             githubLastError='';
             try{
-                const res=await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,{headers:{'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json'}});
+                const res=await fetch(`${url}/rest/v1/kv_store?select=key&limit=1`,{headers: supaHeaders()});
                 if(!res.ok){
-                    githubLastError=githubErrorMessage(res.status,'Koneksi repository');
-                    if(showAlert) alert('❌ '+githubLastError);
-                    return false;
-                }
-                const repoData=await res.json();
-                const permissions=repoData.permissions || {};
-                if(permissions.push===false){
-                    githubLastError='Token berhasil terhubung, tetapi tidak memiliki izin push/write ke repository.';
-                    if(showAlert) alert('❌ '+githubLastError);
+                    githubLastError=supaErrorMessage(res.status,'Koneksi Supabase');
+                    if(showAlert) alert('❌ '+githubLastError+' (Pastikan sudah menjalankan SQL setup tabel kv_store)');
                     return false;
                 }
                 githubLastError='';
-                if(showAlert) alert('✅ Koneksi GitHub berhasil. Repository dapat ditulis.');
+                if(showAlert) alert('✅ Koneksi Supabase berhasil.');
                 return true;
             }catch(e){
-                githubLastError=`Gagal menghubungi GitHub: ${e.message || e}`;
+                githubLastError=`Gagal menghubungi Supabase: ${e.message || e}`;
                 if(showAlert) alert('❌ '+githubLastError);
                 return false;
             }
         }
 
         async function saveGhConfig() {
-            ghConfig.owner = (document.getElementById('gh-owner')?.value || '').trim();
-            ghConfig.repo = (document.getElementById('gh-repo')?.value || '').trim();
-            ghConfig.token = (document.getElementById('gh-token')?.value || '').trim();
-            localStorage.setItem('gh_owner', ghConfig.owner);
-            localStorage.setItem('gh_repo', ghConfig.repo);
-            localStorage.setItem('gh_token', ghConfig.token);
+            sbConfig.url = (document.getElementById('sb-url')?.value || '').trim().replace(/\/$/,'');
+            sbConfig.key = (document.getElementById('sb-key')?.value || '').trim();
+            localStorage.setItem('sb_url', sbConfig.url);
+            localStorage.setItem('sb_key', sbConfig.key);
             githubDatabaseReady=false; githubLastFetchOk=null; lastSyncedDbSnapshot='';
             const ok=await testGithubConnection(false);
             if(!ok){ alert('❌ GitHub belum siap: '+(githubLastError || 'Periksa Owner, Repository, dan Token.')); return; }
@@ -2706,7 +2676,7 @@
             db.teritory.image=(image?.value||'').trim();
             db.teritory.text=(text?.value||'').trim();
             const saved=await saveToGitHub(true);
-            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo) return alert('Pengaturan Teritory gagal disimpan ke GitHub. Coba lagi.');
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan Teritory gagal disimpan ke GitHub. Coba lagi.');
             alert(db.teritory.enabled?'Teritory sekarang ON / tersedia.':'Teritory sekarang OFF / belum tersedia.');
             renderAdminDashboard(document.getElementById('app-content'));
             showAdminSection('teritory');
@@ -2718,7 +2688,7 @@
             db.saasEvent.enabled=!!enabled?.checked;
             db.saasEvent.description=(description?.value||'').trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
             const saved=await saveToGitHub(true);
-            if(!saved && ghConfig.token && ghConfig.owner && ghConfig.repo) return alert('Pengaturan acara gagal disimpan ke GitHub. Coba lagi.');
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke GitHub. Coba lagi.');
             alert(db.saasEvent.enabled?'Pendaftaran Acara SAAS sekarang ON.':'Pendaftaran Acara SAAS sekarang OFF.');
             renderAdminDashboard(document.getElementById('app-content')); showAdminSection('saas-event');
         }

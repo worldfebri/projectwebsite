@@ -2928,7 +2928,12 @@
                                 <label style="font-size:12px;color:var(--text-muted);">Pesan Join Location:</label>
                                 <input type="text" id="club-join-${i}" value="${escapeHTML(c.join_msg)}">
                                 <h4 style="color:#a07855;margin-top:15px;">Information Club</h4>
-                                ${c.info.top.map((inf,j)=>`<div style="display:flex;gap:10px;margin-top:8px;"><input type="text" id="club-info-top-img-${i}-${j}" value="${escapeHTML(inf.img)}"><input type="text" id="club-info-top-txt-${i}-${j}" value="${escapeHTML(inf.text)}" style="flex:1;"></div>`).join('')}
+                                ${c.info.top.map((inf,j)=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
+                                    <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                                    <input type="text" id="club-info-top-img-${i}-${j}" value="${escapeHTML(inf.img)}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
+                                    <textarea id="club-info-top-txt-${i}-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;">${escapeHTML(inf.text)}</textarea>
+                                </div>`).join('')}
+                                <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
                                 <input type="text" id="club-info-bot-img-${i}" value="${escapeHTML(c.info.bottom.img)}" style="margin-top:8px;">
                                 <textarea id="club-info-bot-txt-${i}" rows="2" style="margin-top:8px;">${escapeHTML(c.info.bottom.text)}</textarea>
                             </div>`).join('')}
@@ -2938,7 +2943,16 @@
                             <textarea id="new-club-txt" rows="2" placeholder="Deskripsi Markas"></textarea>
                             <input type="text" id="new-club-discord" placeholder="Link Invite Discord">
                             <input type="text" id="new-club-join" placeholder="Pesan Teks Join Location">
-                            <button onclick="addClub()" class="btn-red" style="width:max-content;">+ Tambah Club</button>
+                            <h4 style="color:#a07855;margin-top:15px;">Information Club (Baru)</h4>
+                            ${[0,1,2].map(j=>`<div style="border:1px solid #2a3441;padding:14px;margin-top:10px;background:#12161c;">
+                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Info Club ${j+1}</label>
+                                <input type="text" id="new-info-top-img-${j}" placeholder="URL Foto Info Club ${j+1}" style="margin-top:8px;">
+                                <textarea id="new-info-top-txt-${j}" rows="3" placeholder="Deskripsi Info Club ${j+1}" style="margin-top:8px;"></textarea>
+                            </div>`).join('')}
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Foto Info Club Bagian Bawah:</label>
+                            <input type="text" id="new-info-bot-img" placeholder="URL Foto Info Club Bagian Bawah" style="margin-top:8px;">
+                            <textarea id="new-info-bot-txt" rows="2" placeholder="Deskripsi Info Club Bagian Bawah" style="margin-top:8px;"></textarea>
+                            <button onclick="addClub()" class="btn-red" style="width:max-content;margin-top:14px;">+ Tambah Club</button>
                         </div>
                     </div>
                     <hr style="border:1px solid #2a3441;margin:30px 0;">

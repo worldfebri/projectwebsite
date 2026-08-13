@@ -514,7 +514,67 @@
         .auth-form input:focus,.social-input:focus,.social-textarea:focus{border-color:var(--red); box-shadow: 0 0 8px rgba(255,255,255,0.2);}
         .auth-note{font-size:10px;color:#666;line-height:1.6;margin-top:12px}
         
-        .role-badge{display:inline-flex;align-items:center;padding:6px 12px;border:1px solid;border-radius:999px;font:800 11px var(--body);letter-spacing:.07em;text-transform:uppercase;background:#0b0f14;line-height:1.2;box-shadow:0 0 10px rgba(255,255,255,.04);}.chat-role-badges{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:7px;vertical-align:middle}.chat-role-badges .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.05em}.profile-role-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.profile-role-badges .role-badge{font-size:11px;padding:6px 12px}
+        /* === CUSTOM ROLE BADGE DENGAN EFEK CYBER/NEON BARU === */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border: 1px solid currentColor;
+            border-radius: 999px;
+            font: 800 11px var(--body);
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            background: rgba(0, 0, 0, 0.5); /* Background gelap transparan */
+            line-height: 1.2;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+        }
+        
+        /* Efek kilauan cahaya (Shine) modern */
+        .role-badge::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -150%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+            transform: skewX(-20deg);
+            animation: cyberShine 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            z-index: -1;
+        }
+
+        /* Efek glow pulse mengikuti warna custom (currentColor) */
+        .role-badge::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 10px currentColor;
+            opacity: 0.2;
+            border-radius: inherit;
+            animation: pulseGlow 2s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes cyberShine {
+            0% { left: -150%; }
+            20% { left: 150%; }
+            100% { left: 150%; }
+        }
+        
+        @keyframes pulseGlow {
+            0% { opacity: 0.1; }
+            100% { opacity: 0.4; }
+        }
+
+        .role-badge:hover {
+            transform: translateY(-2px) scale(1.05);
+            filter: brightness(1.3);
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .chat-role-badges{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:7px;vertical-align:middle}.chat-role-badges .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.05em}.profile-role-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.profile-role-badges .role-badge{font-size:11px;padding:6px 12px}
         
         .admin-subnav{
             display:none;
@@ -1773,8 +1833,14 @@
                 const active = getActiveAnnouncements();
                 if(!active.length) return;
                 const dismissed = getDismissedAnnouncementIds();
-                const next = active.find(a=>!dismissed.includes(a.id));
+                
+                // Tambahan: cek sessionStorage agar tidak spam di sesi tab ini jika tidak dicentang
+                const sessionDismissed = JSON.parse(sessionStorage.getItem('saas_session_dismissed') || '[]');
+
+                // Lewati pengumuman yang ada di dismissed (permanen) ATAU sessionDismissed (sementara di tab ini)
+                const next = active.find(a=> !dismissed.includes(a.id) && !sessionDismissed.includes(a.id));
                 if(!next) return;
+                
                 const modal = document.getElementById('announce-modal');
                 if(!modal) return;
                 if(modal.classList.contains('show')) return; 
@@ -1795,16 +1861,26 @@
             if(!modal) return;
             const checkbox = document.getElementById('announce-modal-dontshow');
             const id = modal.dataset.announceId || '';
-            if(checkbox?.checked && id){
-                const dismissed = getDismissedAnnouncementIds();
-                if(!dismissed.includes(id)){
-                    dismissed.push(id);
-                    localStorage.setItem('saas_dismissed_announcement_ids', JSON.stringify(dismissed));
+            
+            if(id) {
+                // Selalu simpan ke sessionStorage agar tidak spam ketika belum refresh/tutup tab
+                const sessionDismissed = JSON.parse(sessionStorage.getItem('saas_session_dismissed') || '[]');
+                if(!sessionDismissed.includes(id)){
+                    sessionDismissed.push(id);
+                    sessionStorage.setItem('saas_session_dismissed', JSON.stringify(sessionDismissed));
+                }
+
+                // Jika pengguna mencentang, maka simpan ke localStorage secara permanen
+                if(checkbox?.checked){
+                    const dismissed = getDismissedAnnouncementIds();
+                    if(!dismissed.includes(id)){
+                        dismissed.push(id);
+                        localStorage.setItem('saas_dismissed_announcement_ids', JSON.stringify(dismissed));
+                    }
                 }
             }
             modal.classList.remove('show');
             modal.setAttribute('aria-hidden','true');
-            setTimeout(checkAndShowAnnouncement, 300);
         }
 
         async function addAnnouncement(){

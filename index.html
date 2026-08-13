@@ -629,6 +629,9 @@
         .guest-prompt-box p{font-size:11px;color:var(--muted);line-height:1.8;margin:0 0 22px}
         .guest-prompt-actions{display:flex;gap:10px}.guest-prompt-actions button{flex:1}
         .guest-later{background:#11161c!important;border-color:#303943!important;color:#c7ccd2!important}
+
+        .announce-modal-check{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
+        .announce-modal-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--red);}
     </style>
 </head>
 <body>
@@ -662,6 +665,21 @@
             <p>UNTUK INFO LEBIH LANJUT SILAKAN JOIN DISCORD KAMI KARNA PENTING UNTUK MEMASUKAN KALIAN KE DISCORD JUGA</p>
             <div class="guest-prompt-actions">
                 <button class="btn-red" onclick="closeDiscordNotice(true)">OKE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="guest-prompt" id="announce-modal" aria-hidden="true">
+        <div class="guest-prompt-box">
+            <div class="guest-prompt-icon">📢</div>
+            <h2>PENGUMUMAN</h2>
+            <p id="announce-modal-text"></p>
+            <label class="announce-modal-check">
+                <input type="checkbox" id="announce-modal-dontshow">
+                Jangan tampilkan notifikasi ini lagi
+            </label>
+            <div class="guest-prompt-actions" style="margin-top:16px;">
+                <button class="btn-red" onclick="closeAnnouncementModal()">OKE</button>
             </div>
         </div>
     </div>
@@ -771,6 +789,7 @@
             <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
             <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
             <button data-admin-section="saas" onclick="showAdminSection('saas')">Information SAAS</button>
+            <button data-admin-section="announcement" onclick="showAdminSection('announcement')">Pengumuman</button>
             <button data-admin-section="clubs" onclick="showAdminSection('clubs')">Official Clubs</button>
             <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
             <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
@@ -911,7 +930,13 @@
                 description: "ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR",
                 clubs: []
             },
-            saasEventRequests: []
+            saasEventRequests: [],
+            announcement: {
+                id: '',
+                message: '',
+                expiresAt: '',
+                enabled: false
+            }
         };
 
         const GITHUB_DB_FILES = {
@@ -952,7 +977,8 @@
                     saas: db.saas,
                     club: db.club,
                     clubSystem: db.clubSystem,
-                    saasEvent: db.saasEvent
+                    saasEvent: db.saasEvent,
+                    announcement: db.announcement
                 }
             };
         }
@@ -1069,6 +1095,7 @@
             if(count){ count.textContent='0'; count.classList.remove('show'); }
             closeGuestPrompt();
             showPage('teritory');
+            checkAndShowAnnouncement();
         }
 
         function requireAccount(){
@@ -1125,6 +1152,7 @@
             updateNotificationBadge();
             showPage('teritory');
             startPolling();
+            checkAndShowAnnouncement();
         }
 
         function logout(){
@@ -1486,6 +1514,11 @@
             if(!Array.isArray(db.saasEventRequests)) db.saasEventRequests=[];
             if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
             if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
+            if(!db.announcement || typeof db.announcement !== 'object') db.announcement={id:'',message:'',expiresAt:'',enabled:false};
+            if(typeof db.announcement.id !== 'string') db.announcement.id=String(db.announcement.id||'');
+            if(typeof db.announcement.message !== 'string') db.announcement.message='';
+            if(typeof db.announcement.expiresAt !== 'string') db.announcement.expiresAt='';
+            if(typeof db.announcement.enabled !== 'boolean') db.announcement.enabled=false;
             if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
             if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
             if(typeof db.teritory.image !== 'string') db.teritory.image='';
@@ -1554,6 +1587,81 @@
             badge.classList.toggle('show', unread > 0);
         }
 
+        // === PENGUMUMAN ADMIN (FULL SCREEN) ===
+        // Admin bisa membuat pesan pengumuman yang tampil ke semua pengguna (termasuk
+        // guest) sampai tanggal tertentu. Setiap kali admin menyimpan pengumuman baru,
+        // sebuah id unik dibuat sehingga pengguna yang sebelumnya mencentang "jangan
+        // tampilkan lagi" akan tetap melihat pengumuman yang baru tersebut.
+        function getActiveAnnouncement(){
+            const a = db.announcement;
+            if(!a || !a.enabled || !String(a.message||'').trim() || !a.id) return null;
+            if(a.expiresAt){
+                const todayStr = new Date().toISOString().slice(0,10);
+                if(a.expiresAt < todayStr) return null;
+            }
+            return a;
+        }
+
+        function checkAndShowAnnouncement(){
+            const a = getActiveAnnouncement();
+            if(!a) return;
+            const dismissedId = localStorage.getItem('saas_dismissed_announcement_id') || '';
+            if(dismissedId === a.id) return;
+            const modal = document.getElementById('announce-modal');
+            if(!modal) return;
+            const textEl = document.getElementById('announce-modal-text');
+            if(textEl) textEl.textContent = a.message;
+            const checkbox = document.getElementById('announce-modal-dontshow');
+            if(checkbox) checkbox.checked = false;
+            modal.dataset.announceId = a.id;
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden','false');
+        }
+
+        function closeAnnouncementModal(){
+            const modal = document.getElementById('announce-modal');
+            if(!modal) return;
+            const checkbox = document.getElementById('announce-modal-dontshow');
+            const id = modal.dataset.announceId || '';
+            if(checkbox?.checked && id){
+                localStorage.setItem('saas_dismissed_announcement_id', id);
+            }
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden','true');
+        }
+
+        async function saveAnnouncementSettings(){
+            const enabled = document.getElementById('announce-enabled');
+            const message = document.getElementById('announce-message');
+            const expiresAt = document.getElementById('announce-expires');
+            const newMessage = (message?.value||'').trim();
+            if(!!enabled?.checked && !newMessage){
+                alert('Isi pesan pengumuman terlebih dahulu.');
+                return;
+            }
+            db.announcement.message = newMessage;
+            db.announcement.expiresAt = (expiresAt?.value||'').trim();
+            db.announcement.enabled = !!enabled?.checked;
+            // ID baru dibuat setiap kali disimpan, supaya pengguna yang sudah
+            // mencentang "jangan tampilkan lagi" pada pengumuman sebelumnya tetap
+            // melihat pengumuman yang baru ini (harus centang ulang jika mau).
+            db.announcement.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random());
+            const saved = await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengumuman gagal disimpan ke database. Coba lagi.');
+            alert(db.announcement.enabled ? 'Pengumuman berhasil disimpan dan aktif.' : 'Pengumuman disimpan dalam keadaan OFF.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('announcement');
+        }
+
+        async function turnOffAnnouncement(){
+            db.announcement.enabled = false;
+            const saved = await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Gagal mematikan pengumuman. Coba lagi.');
+            alert('Pengumuman sekarang OFF / tidak ditampilkan ke pengguna.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('announcement');
+        }
+
         function startPolling(){
             if(pollTimer) clearInterval(pollTimer);
             pollTimer = setInterval(async()=>{
@@ -1562,6 +1670,7 @@
                 updateNotificationBadge();
                 updateAdminClubRequestBadge();
                 updateAdminSaasEventBadge();
+                checkAndShowAnnouncement();
                 const newCount = (db.notifications[currentUser?.username]||[]).filter(n=>!n.read).length;
                 if(newCount > oldCount && currentUser) showToast('🔔 Kamu punya notifikasi baru! Klik untuk membuka Profile Account.', true);
                 if(!currentUser) return;
@@ -2695,6 +2804,23 @@
                             <p style="font-size:10px;color:#777;">Link ini mengatur tombol DISCORD SAAS di bagian atas website dan tombol Discord pada Information SAAS. Gunakan link lengkap seperti https://discord.gg/MqeWH9rxZV.</p>
                         </div>
                     </div>
+                    <div class="admin-section" id="admin-section-announcement">
+                        <div class="admin-form">
+                            <h3>Pengumuman Full Screen ke Pengguna</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Pesan ini akan tampil sebagai notifikasi selayar penuh dengan tombol OKE ke semua pengguna (termasuk Guest) saat mereka membuka website, sampai tanggal yang kamu tentukan. Setiap kali pengumuman ini disimpan ulang (walau isinya sama), pengumuman akan dianggap baru dan tetap tampil lagi ke pengguna yang sebelumnya sudah mencentang "jangan tampilkan lagi".</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="announce-enabled" ${db.announcement.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF PENGUMUMAN</b><br><small style="color:#777;">ON = pengumuman tampil ke pengguna · OFF = tidak tampil</small></span>
+                            </label>
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Isi Pesan Pengumuman:</label>
+                            <textarea id="announce-message" rows="6" maxlength="1000" placeholder="Tulis pesan pengumuman di sini...">${escapeHTML(db.announcement.message)}</textarea>
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Tampilkan Sampai Tanggal (kosongkan jika tanpa batas waktu):</label>
+                            <input type="date" id="announce-expires" value="${escapeHTML(db.announcement.expiresAt)}">
+                            <button type="button" class="btn-red" onclick="saveAnnouncementSettings()" style="width:max-content;margin-top:10px;">💾 Simpan & Tampilkan ke Pengguna</button>
+                            <button type="button" onclick="turnOffAnnouncement()" style="width:max-content;margin-top:10px;">Matikan Pengumuman</button>
+                            <p style="font-size:10px;color:#777;line-height:1.6;">Pengguna dapat mencentang "Jangan tampilkan notifikasi ini lagi" di popup mereka. Centang tersebut hanya berlaku untuk pengumuman versi saat ini — begitu kamu simpan pengumuman baru, centang lama otomatis tidak berlaku lagi.</p>
+                        </div>
+                    </div>
                     <div class="admin-section" id="admin-section-saas-event">
                         <div class="admin-form">
                             <h3>ACARA SAAS — PENGATURAN & NOTIFIKASI</h3>
@@ -2873,246 +2999,4 @@
                     text: txt,
                     discord_link: discordLink,
                     join_msg: joinMsg,
-                    info: {
-                        top: infoTop,
-                        bottom: {
-                            img: infoBotImg,
-                            text: infoBotTxt
-                        }
-                    }
-                });
-                alert(`Club ${name} berhasil dimasukkan ke antrean! Klik Save & Sync untuk menerapkan.`);
-                renderAdminDashboard(document.getElementById('app-content'));
-            } else {
-                alert("Lengkapi URL foto markas utama dan teks deskripsinya!");
-            }
-        }
-
-        function addSaasBottomMember(){
-            db.saas.bottomMembers = Array.isArray(db.saas.bottomMembers) ? db.saas.bottomMembers : [];
-            db.saas.bottomMembers.push({title:`ALL SYNDICATE MEMBER INTI ${String(db.saas.bottomMembers.length+1).padStart(2,'0')}`,img:'',text:''});
-            renderAdminDashboard(document.getElementById('app-content'));
-            showAdminSection('saas');
-        }
-
-        function removeSaasBottomMember(index){
-            if(db.saas.bottomMembers.length <= 3){
-                alert('Minimal harus ada 3 bagian Member Inti.');
-                return;
-            }
-            db.saas.bottomMembers.splice(index,1);
-            renderAdminDashboard(document.getElementById('app-content'));
-            showAdminSection('saas');
-        }
-
-        function getUserRoles(user){
-            if(!user) return [];
-            const ids=Array.isArray(user.roleIds)?user.roleIds:[];
-            return (db.roles||[]).filter(r=>ids.includes(r.id));
-        }
-        function renderUserRoleBadges(user){
-            const roles=getUserRoles(user);
-            return roles.length ? roles.map(r=>`<span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};box-shadow:0 0 12px ${escapeHTML(r.color)}33;">${escapeHTML(r.name)}</span>`).join('') : '';
-        }
-        function renderUserRoles(user){
-            const badges=renderUserRoleBadges(user);
-            return badges || '<span style="font-size:10px;color:#777;">No special role</span>';
-        }
-        function updateUserChipRoles(){
-            const el=document.getElementById('user-chip-roles');
-            if(!el) return;
-            const me=currentUser ? getUser(currentUser.username) : null;
-            el.innerHTML=me ? renderUserRoleBadges(me) : '';
-        }
-        function renderChatMessageRoles(message){
-            const author=getUser(message?.username);
-            const badges=renderUserRoleBadges(author);
-            return badges ? `<span class="chat-role-badges">${badges}</span>` : '';
-        }
-
-        function renderRoleUserRows(filter=''){
-            const q=String(filter||'').trim().toLowerCase();
-            const users=db.users.filter(u=>!q || u.username.toLowerCase().includes(q));
-            if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
-            return users.map(u=>`<div class="role-user-row" style="border:1px solid #2a3441;padding:12px;margin:8px 0;background:#0b0f14;">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-                    <div><strong>@${escapeHTML(u.username)}</strong><div style="margin-top:6px;">${renderUserRoles(u)}</div></div>
-                    <button type="button" class="btn-red" onclick="openRoleAssignment('${encodeURIComponent(u.username)}')">Atur Role</button>
-                </div>
-            </div>`).join('');
-        }
-
-        function filterRoleUsers(){
-            const el=document.getElementById('role-user-search'), list=document.getElementById('role-user-list');
-            if(el&&list) list.innerHTML=renderRoleUserRows(el.value);
-        }
-
-        function createCustomRole(){
-            const name=(document.getElementById('new-role-name')?.value||'').trim();
-            const color=(document.getElementById('new-role-color-text')?.value||'').trim();
-            if(name.length<2) return alert('Nama role minimal 2 karakter.');
-            if(!/^#[0-9a-fA-F]{6}$/.test(color)) return alert('Warna harus format HEX, contoh #ff2938.');
-            if(db.roles.some(r=>r.name.toLowerCase()===name.toLowerCase())) return alert('Nama role sudah ada.');
-            db.roles.push({id:'role_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),name,color});
-            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('create-role');
-        }
-
-        function syncRoleColorInputs(){
-            const c=document.getElementById('new-role-color'), t=document.getElementById('new-role-color-text');
-            if(c&&t){ c.oninput=()=>t.value=c.value; t.oninput=()=>{if(/^#[0-9a-fA-F]{6}$/.test(t.value)) c.value=t.value;} }
-        }
-
-        function openRoleAssignment(encodedUser){
-            const username=decodeURIComponent(encodedUser), user=getUser(username); if(!user) return;
-            document.getElementById('app-content').innerHTML=`<div class="card" style="width:100%;">
-                <h2 class="card-title">Atur Role @${escapeHTML(username)}</h2>
-                <div class="admin-form">
-                    ${(db.roles||[]).map(r=>`<label style="display:flex;align-items:center;gap:10px;border:1px solid #2a3441;padding:12px;margin:7px 0;background:#0b0f14;cursor:pointer;">
-                        <input type="checkbox" class="assign-role-check" value="${escapeHTML(r.id)}" ${(Array.isArray(user.roleIds)?user.roleIds:[]).includes(r.id)?'checked':''}>
-                        <span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span>
-                    </label>`).join('') || '<div class="empty-state">Buat role terlebih dahulu.</div>'}
-                    <button class="btn-red" type="button" onclick="saveUserRoles('${encodeURIComponent(username)}')">Simpan Role</button>
-                    <button class="btn-red" type="button" onclick="renderAdminDashboard(document.getElementById('app-content'));showAdminSection('assign-role');">Kembali</button>
-                </div>
-            </div>`;
-        }
-
-        async function saveUserRoles(encodedUser){
-            const username=decodeURIComponent(encodedUser), user=getUser(username); if(!user) return;
-            user.roleIds=[...document.querySelectorAll('.assign-role-check:checked')].map(x=>x.value);
-            await saveToDB();
-            alert('Role pengguna berhasil disimpan.');
-            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('assign-role');
-        }
-
-        function deleteCustomRole(encodedId){
-            const id=decodeURIComponent(encodedId), role=db.roles.find(r=>r.id===id); if(!role) return;
-            if(!confirm(`Hapus role "${role.name}"? Role ini juga akan dilepas dari semua pengguna.`)) return;
-            db.roles=db.roles.filter(r=>r.id!==id);
-            db.users.forEach(u=>u.roleIds=(u.roleIds||[]).filter(x=>x!==id));
-            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('create-role');
-        }
-
-        async function saveTeritorySettings(){
-            const enabled=document.getElementById('teritory-enabled');
-            const image=document.getElementById('edit-teri-img');
-            const text=document.getElementById('edit-teri-txt');
-            db.teritory.enabled=!!enabled?.checked;
-            db.teritory.image=(image?.value||'').trim();
-            db.teritory.text=(text?.value||'').trim();
-            const saved=await saveToDB(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan Teritory gagal disimpan ke database. Coba lagi.');
-            alert(db.teritory.enabled?'Teritory sekarang ON / tersedia.':'Teritory sekarang OFF / belum tersedia.');
-            renderAdminDashboard(document.getElementById('app-content'));
-            showAdminSection('teritory');
-        }
-
-        async function saveRaceSystemSettings(){
-            const enabled=document.getElementById('race-system-enabled');
-            db.race.enabled=!!enabled?.checked;
-            const saved=await saveToDB(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Information Race gagal disimpan ke database. Coba lagi.');
-            alert(db.race.enabled?'Information Race sekarang ON / tersedia.':'Information Race sekarang OFF / belum tersedia.');
-            renderAdminDashboard(document.getElementById('app-content'));
-            showAdminSection('race');
-        }
-
-        async function saveClubSystemSettings(){
-            const enabled=document.getElementById('club-system-enabled');
-            db.clubSystem.enabled=!!enabled?.checked;
-            const saved=await saveToDB(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Official Club gagal disimpan ke database. Coba lagi.');
-            alert(db.clubSystem.enabled?'Official Club sekarang ON / tersedia.':'Official Club sekarang OFF / belum tersedia.');
-            renderAdminDashboard(document.getElementById('app-content'));
-            showAdminSection('clubs');
-        }
-
-        async function saveSaasEventSettings(){
-            const enabled=document.getElementById('saas-event-enabled');
-            const description=document.getElementById('saas-event-description');
-            db.saasEvent.enabled=!!enabled?.checked;
-            db.saasEvent.description=(description?.value||'').trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
-            const saved=await saveToDB(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke database. Coba lagi.');
-            alert(db.saasEvent.enabled?'Pendaftaran Acara SAAS sekarang ON.':'Pendaftaran Acara SAAS sekarang OFF.');
-            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('saas-event');
-        }
-
-        function saveAllEdits() {
-            db.password = document.getElementById('new-pw').value;
-            const teritoryEnabled = document.getElementById('teritory-enabled');
-            db.teritory.enabled = teritoryEnabled ? !!teritoryEnabled.checked : !!db.teritory.enabled;
-            db.teritory.image = document.getElementById('edit-teri-img').value;
-            db.teritory.text = document.getElementById('edit-teri-txt').value;
-            
-            for(let i=0; i<db.saas.top.length; i++) {
-                const titleEl=document.getElementById(`saas-top-title-${i}`);
-                const imgEl=document.getElementById(`saas-top-img-${i}`);
-                const txtEl=document.getElementById(`saas-top-txt-${i}`);
-                if(titleEl) db.saas.top[i].title = titleEl.value;
-                if(imgEl) db.saas.top[i].img = imgEl.value;
-                if(txtEl) db.saas.top[i].text = txtEl.value;
-            }
-            document.querySelectorAll('.saas-bottom-editor').forEach((el, i) => {
-                if(!db.saas.bottomMembers[i]) db.saas.bottomMembers[i] = {title:'',img:'',text:''};
-                const titleEl=document.getElementById(`saas-bottom-title-${i}`);
-                const imgEl=document.getElementById(`saas-bottom-img-${i}`);
-                const txtEl=document.getElementById(`saas-bottom-txt-${i}`);
-                if(titleEl) db.saas.bottomMembers[i].title = titleEl.value.trim() || (i===0 ? 'ALL SYNDICATE MEMBER INTI' : `ALL SYNDICATE MEMBER INTI 0${i+1}`);
-                if(imgEl) db.saas.bottomMembers[i].img = imgEl.value.trim();
-                if(txtEl) db.saas.bottomMembers[i].text = txtEl.value.trim();
-            });
-            saveSaasEventClubs();
-            const discordLink=document.getElementById('saas-discord-link');
-            const discordText=document.getElementById('saas-discord-text');
-            if(discordLink) db.saas.discord.link = normalizeExternalUrl(discordLink.value, 'https://discord.gg/MqeWH9rxZV');
-            if(discordText) db.saas.discord.text = discordText.value.trim() || 'DISCORD SAAS';
-            const eventEnabled=document.getElementById('saas-event-enabled');
-            const eventDescription=document.getElementById('saas-event-description');
-            if(eventEnabled) db.saasEvent.enabled=!!eventEnabled.checked;
-            if(eventDescription) db.saasEvent.description=eventDescription.value.trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
-            updateSaasDiscordLink();
-            
-            // Save Information Race
-            const raceSystemEnabled = document.getElementById('race-system-enabled');
-            db.race.enabled = raceSystemEnabled ? !!raceSystemEnabled.checked : !!db.race.enabled;
-            for(let i = 0; i < 4; i++) {
-                db.race.top[i].title = document.getElementById(`race-top-title-${i}`).value;
-                db.race.top[i].text = document.getElementById(`race-top-txt-${i}`).value;
-            }
-            db.race.bottom.img = document.getElementById('race-bot-img').value;
-            db.race.bottom.text = document.getElementById('race-bot-txt').value;
-
-            const clubSystemEnabled = document.getElementById('club-system-enabled');
-            db.clubSystem.enabled = clubSystemEnabled ? !!clubSystemEnabled.checked : !!db.clubSystem.enabled;
-
-            db.club.forEach((c, i) => {
-                if(document.getElementById(`club-name-${i}`)) {
-                    c.name = document.getElementById(`club-name-${i}`).value;
-                    c.img = document.getElementById(`club-img-${i}`).value;
-                    c.text = document.getElementById(`club-txt-${i}`).value;
-                    c.discord_link = document.getElementById(`club-discord-${i}`).value;
-                    c.join_msg = document.getElementById(`club-join-${i}`).value;
-
-                    for(let j=0; j<3; j++) {
-                        c.info.top[j].img = document.getElementById(`club-info-top-img-${i}-${j}`).value;
-                        c.info.top[j].text = document.getElementById(`club-info-top-txt-${i}-${j}`).value;
-                    }
-
-                    c.info.bottom.img = document.getElementById(`club-info-bot-img-${i}`).value;
-                    c.info.bottom.text = document.getElementById(`club-info-bot-txt-${i}`).value;
-                }
-            });
-
-            saveToDB(true).then(saved=>{
-                if(saved){
-                    showPage('teritory');
-                    showToast('✅ Perubahan berhasil disimpan ke database.');
-                }else{
-                    showToast('⚠️ Database sedang tidak terhubung. Sistem akan mencoba sinkronisasi lagi otomatis.');
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+       

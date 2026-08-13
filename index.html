@@ -1,1 +1,3118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syndicate Racer - SAMP</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
+        :root {
+            --black:#050608;
+            --panel:#0b0d10;
+            --panel2:#101318;
+            --line:#252a31;
+            --red:#ff2938;
+            --red2:#b90e1a;
+            --white:#f4f5f7;
+            --muted:#8b919a;
+            --dim:#555c66;
+            --display:'Barlow Condensed',sans-serif;
+            --body:'DM Sans',sans-serif;
+        }
+
+        *{box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{
+            margin:0;
+            min-height:100vh;
+            background:var(--black);
+            color:var(--white);
+            font-family:var(--body);
+            overflow-x:hidden;
+        }
+        body:after{
+            content:"";
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            opacity:.06;
+            background-image:radial-gradient(#fff .6px,transparent .6px);
+            background-size:5px 5px;
+            z-index:9999;
+        }
+
+        .top-bar{
+            position:fixed;
+            z-index:10000;
+            top:0;left:0;
+            width:100%;
+            height:4px;
+            background:var(--red);
+        }
+
+        header{
+            position:absolute;
+            z-index:100;
+            top:0;left:0;
+            width:100%;
+            padding:28px 5vw;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:40px;
+        }
+
+        .brand{display:flex;align-items:center;gap:13px}
+        .brand-mark{
+            width:43px;height:43px;
+            display:grid;place-items:center;
+            background:var(--red);
+            color:#fff;
+            font-family:var(--display);
+            font-weight:800;
+            font-size:20px;
+            transform:skew(-9deg);
+        }
+        .brand-copy{display:flex;flex-direction:column}
+        .brand-copy strong{
+            font-family:var(--display);
+            font-size:27px;
+            line-height:.8;
+            letter-spacing:1px;
+        }
+        .brand-copy span{
+            color:#9ba1a9;
+            font-size:7px;
+            letter-spacing:2.1px;
+            margin-top:7px;
+        }
+
+        nav{
+            display:flex;
+            align-items:stretch;
+            gap:1px;
+            background:rgba(5,6,8,.78);
+            border:1px solid rgba(255,255,255,.1);
+        }
+        nav button{
+            border:0;
+            border-right:1px solid var(--line);
+            background:transparent;
+            color:#aeb4bc;
+            padding:12px 15px;
+            min-height:50px;
+            display:flex;
+            flex-direction:column;
+            align-items:flex-start;
+            justify-content:center;
+            gap:3px;
+            font:600 11px var(--body);
+            cursor:pointer;
+            transition:.2s;
+        }
+        nav button:last-child{border-right:0}
+        nav button:hover,nav button.active{
+            color:#fff!important;
+            background:var(--red);
+        }
+        nav button.active .nav-number{color:#ffdadd}
+        .nav-number{
+            font:700 8px var(--display);
+            color:#555c66;
+            letter-spacing:1px;
+        }
+        .mobile-menu{display:none}
+
+        .landing{width:100%}
+        .visual-hero{
+            height:720px;
+            min-height:650px;
+            position:relative;
+            overflow:hidden;
+            background:#090a0c;
+        }
+        .hero-image{
+            position:absolute;
+            inset:0;
+            background:url('https://i.postimg.cc/fW5z0bz0/testing-paok.png') center/cover no-repeat;
+            filter:grayscale(.85) contrast(1.15);
+            transform:scale(1.04);
+        }
+        .hero-overlay{
+            position:absolute;
+            inset:0;
+            background:
+                linear-gradient(90deg,rgba(5,6,8,.96) 0%,rgba(5,6,8,.78) 35%,rgba(5,6,8,.15) 75%,rgba(5,6,8,.62) 100%),
+                linear-gradient(0deg,#050608 0%,transparent 38%);
+        }
+        .hero-noise{
+            position:absolute;
+            inset:0;
+            opacity:.2;
+            background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.025) 4px);
+        }
+        .hero-topline{
+            position:absolute;
+            top:105px;left:5vw;right:5vw;
+            display:flex;
+            justify-content:space-between;
+            color:#8d939b;
+            font-size:9px;
+            letter-spacing:2.3px;
+        }
+        .hero-topline span:first-child{color:#fff}
+        .hero-main{
+            position:absolute;
+            left:5vw;
+            top:50%;
+            transform:translateY(-38%);
+            width:min(680px,70vw);
+        }
+        .hero-kicker{
+            color:var(--red);
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:3px;
+            margin-bottom:16px;
+        }
+        .hero-title{
+            font-family:var(--display);
+            text-transform:uppercase;
+            font-size:clamp(55px,8vw,115px);
+            line-height:.82;
+            letter-spacing:-2px;
+            margin:0;
+            max-width:700px;
+        }
+        .hero-subtitle{
+            margin:23px 0 0;
+            color:#a4aab2;
+            font-size:14px;
+            max-width:440px;
+            line-height:1.6;
+        }
+        .hero-side{
+            position:absolute;
+            right:5vw;
+            bottom:130px;
+            width:90px;
+            text-align:right;
+            display:flex;
+            flex-direction:column;
+            align-items:flex-end;
+            font-family:var(--display);
+        }
+        .hero-side-line{height:1px;width:90px;background:var(--red);margin-bottom:12px}
+        .hero-side span{font-size:9px;color:#777}
+        .hero-side strong{font-size:43px;line-height:.8}
+        .hero-side small{font:700 8px var(--body);letter-spacing:2px;color:#7d838b;margin-top:8px}
+        .hero-bottom{
+            position:absolute;
+            left:5vw;right:5vw;bottom:38px;
+            display:flex;
+            align-items:flex-end;
+            gap:45px;
+            border-top:1px solid rgba(255,255,255,.14);
+            padding-top:18px;
+        }
+        .scroll-hint{
+            flex:1;
+            color:#777e87;
+            font-size:8px;
+            letter-spacing:2px;
+        }
+        .scroll-hint b{color:var(--red);font-size:14px;margin-left:8px}
+        .hero-stat{
+            display:flex;
+            align-items:center;
+            gap:9px;
+            padding-left:22px;
+            border-left:1px solid var(--line);
+        }
+        .hero-stat b{font:700 27px var(--display);color:var(--red)}
+        .hero-stat span{font-size:7px;line-height:1.25;letter-spacing:1.2px;color:#888e96}
+
+        .quick-strip{
+            width:90%;
+            margin:-1px auto 0;
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            border:1px solid var(--line);
+            background:var(--panel);
+            position:relative;
+            z-index:20;
+        }
+        .quick-strip div{
+            padding:16px 20px;
+            border-right:1px solid var(--line);
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .quick-strip div:last-child{border-right:0}
+        .quick-strip span{font-size:8px;letter-spacing:1.7px;color:#5d646d}
+        .quick-strip b{font-size:9px;letter-spacing:1px;color:#ddd}
+
+        .content-container{
+            width:90%;
+            max-width:1450px;
+            margin:55px auto 100px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:20px;
+        }
+
+        .card{
+            position:relative;
+            overflow:hidden;
+            flex:1;
+            min-width:300px;
+            padding:28px;
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:0;
+            box-shadow:none;
+            transition:.25s;
+        }
+        .card:before{
+            content:"";
+            position:absolute;
+            left:0;top:0;
+            width:4px;height:0;
+            background:var(--red);
+            transition:.25s;
+        }
+        .card:hover{
+            transform:translateY(-3px);
+            border-color:#3a4048;
+        }
+        .card:hover:before{height:100%}
+        .card-title{
+            margin:0 0 13px;
+            font:700 27px var(--display);
+            text-transform:uppercase;
+            letter-spacing:.2px;
+        }
+        .card-title:before{
+            content:"";
+            display:inline-block;
+            width:22px;height:3px;
+            background:var(--red);
+            margin:0 9px 6px 0;
+        }
+        .card p{
+            color:var(--muted);
+            font-size:13px;
+            line-height:1.75;
+            margin:0 0 20px;
+        }
+        .card img{
+            width:100%;
+            display:block;
+            border:0;
+            margin-bottom:20px;
+            filter:saturate(.82);
+        }
+        .card:hover img{transform:none;filter:saturate(1)}
+
+        .btn-red{
+            border:0;
+            border-radius:0;
+            background:var(--red);
+            color:#fff;
+            padding:12px 18px;
+            font:700 10px var(--body);
+            letter-spacing:.6px;
+            cursor:pointer;
+            transition:.2s;
+        }
+        .btn-red:hover{
+            background:#fff;
+            color:#050608;
+            transform:none;
+        }
+        .btn-red:disabled{opacity:.65;cursor:wait;pointer-events:none;}
+        .btn-group{display:flex;gap:7px;flex-wrap:wrap}
+
+        .saas-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:20px;
+            width:100%;
+        }
+        .saas-member-grid{
+            display:grid;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:24px;
+            width:100%;
+            margin-top:24px;
+        }
+        .saas-member-card{
+            min-width:0;
+            margin:0!important;
+        }
+        .saas-member-card img{
+            width:100%;
+            max-height:360px;
+            object-fit:cover;
+            display:block;
+        }
+        @media(max-width:900px){
+            .saas-member-grid{grid-template-columns:1fr;}
+        }
+        .race-grid{
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:20px;
+            width:100%;
+        }
+        .race-text-card{min-height:230px}
+        .race-text-card p{white-space:pre-wrap}
+        .race-photo-card{width:100%;margin-top:0!important}
+        .race-photo-card img{width:100%;max-height:500px;object-fit:cover}
+
+        .admin-form{display:flex;flex-direction:column;gap:12px;width:100%}
+        .admin-form input,.admin-form textarea{
+            width:100%;
+            background:#07080a;
+            border:1px solid var(--line);
+            border-radius:0;
+            color:#fff;
+            padding:12px;
+            font:12px var(--body);
+            outline:none;
+        }
+        .admin-form input:focus,.admin-form textarea:focus{border-color:var(--red)}
+        .admin-form h3{
+            color:#fff;
+            border-bottom:1px solid var(--line);
+            padding:18px 0 9px;
+            margin:5px 0;
+            font:700 20px var(--display);
+            text-transform:uppercase;
+        }
+        hr{border-color:var(--line)!important}
+
+
+        /* === AUTH / SOCIAL SYSTEM === */
+        .auth-screen{
+            position:fixed; inset:0; z-index:50000; display:none; pointer-events:auto;
+            align-items:center; justify-content:center; padding:25px;
+            background:rgba(5,6,8,.98);
+        }
+        .auth-screen.show{display:flex}
+        .auth-box{
+            position:relative; z-index:50001; pointer-events:auto; width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
+            padding:32px; box-shadow:0 25px 80px rgba(0,0,0,.55);
+        }
+        .auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+        .auth-logo .brand-mark{flex:none}
+        .auth-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 7px}
+        .auth-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
+        .auth-tabs{display:flex;border:1px solid var(--line);margin-bottom:18px}
+        .auth-tabs button{position:relative;z-index:50002;pointer-events:auto;flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px}
+        .auth-tabs button.active{background:var(--red);color:#fff}
+        .auth-tabs button.guest-auth-tab{background:#11161c;color:#c7ccd2;border-left:1px solid var(--line)}
+        .auth-tabs button.guest-auth-tab:hover{background:#1a2028;color:#fff}
+        .auth-form{display:flex;flex-direction:column;gap:10px}
+        .auth-form input,.social-input,.social-textarea{
+            width:100%;background:#07080a;border:1px solid var(--line);color:#fff;
+            padding:13px;outline:none;font:12px var(--body);
+        }
+        .auth-form input:focus,.social-input:focus,.social-textarea:focus{border-color:var(--red)}
+        .auth-note{font-size:10px;color:#666;line-height:1.6;margin-top:12px}
+        .user-chip{
+            display:none;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--line);
+            background:rgba(5,6,8,.85);font-size:10px;cursor:pointer;
+        }
+        .user-chip-info{display:flex;flex-direction:column;gap:5px;min-width:0;}
+        .user-chip-info #user-chip-name{font:800 10px var(--body);white-space:nowrap;}
+        .user-chip-roles{display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:210px;}
+        .user-chip-roles .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.04em;}
+        .user-chip.show{display:flex}
+        .user-avatar{
+            width:25px;height:25px;display:grid;place-items:center;background:var(--red);
+            font:800 12px var(--display);color:#fff;
+        }
+        .notif-bell{position:relative}
+        .notif-count{
+            position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 4px;
+            border-radius:20px;background:var(--red);color:#fff;font:800 8px var(--body);
+            display:none;align-items:center;justify-content:center;
+        }
+        .notif-count.show{display:flex}
+        .role-badge{display:inline-flex;align-items:center;padding:6px 12px;border:1px solid;border-radius:999px;font:800 11px var(--body);letter-spacing:.07em;text-transform:uppercase;background:#0b0f14;line-height:1.2;box-shadow:0 0 10px rgba(255,255,255,.04);}.chat-role-badges{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:7px;vertical-align:middle}.chat-role-badges .role-badge{font-size:10px;padding:4px 9px;letter-spacing:.05em}.profile-role-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.profile-role-badges .role-badge{font-size:11px;padding:6px 12px}
+        .admin-subnav{
+            display:none;
+            position:fixed;
+            top:92px;
+            right:5vw;
+            z-index:10001;
+            gap:6px;
+            flex-wrap:wrap;
+            max-width:min(1200px,90vw);
+            padding:10px;
+            background:rgba(9,11,14,.98);
+            border:1px solid var(--line);
+            box-shadow:0 12px 35px rgba(0,0,0,.45);
+        }
+        .admin-subnav.show{display:flex}
+        .admin-subnav button{border:1px solid var(--line);background:#0c0f13;color:#8c929b;padding:9px 12px;font:700 10px var(--body);cursor:pointer;text-transform:uppercase}
+        .admin-subnav button.active,.admin-subnav button:hover{background:var(--red);color:#fff;border-color:var(--red)}
+        @media(max-width:760px){
+            .admin-subnav{top:78px;left:3vw;right:3vw;max-width:none;}
+        }
+        .admin-notif-badge{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--accent-red);color:#fff;align-items:center;justify-content:center;font-size:9px;font-weight:900;margin-left:5px;}
+        .admin-total-users{flex:0 0 100%;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:4px;padding:11px 13px;border:1px solid #2a3441;background:#07090c;color:#fff;}
+        .admin-total-users-label{font:800 10px var(--body);letter-spacing:.08em;text-transform:uppercase;color:#8c929b;}
+        .admin-total-users-count{font:900 20px var(--display);color:var(--red);line-height:1;}
+.admin-section{display:none}
+        .admin-section.active{display:block}
+        .saas-discord-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:10px;
+            margin-top:14px;
+            text-decoration:none;
+            background:#5865F2;
+            color:#fff;
+            padding:16px 26px;
+            font:800 14px var(--body);
+            letter-spacing:.6px;
+            border-radius:8px;
+            box-shadow:0 6px 18px rgba(88,101,242,.45);
+        }
+        .saas-discord-btn:hover{
+            background:#4752C4;
+            color:#fff;
+            transform:translateY(-1px);
+            box-shadow:0 8px 22px rgba(88,101,242,.55);
+        }
+        @media(max-width:600px){
+            .saas-discord-btn{
+                width:100%;
+                justify-content:center;
+                padding:18px 20px;
+                font-size:15px;
+            }
+        }
+        .saas-event-club-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px;}
+        .saas-event-club-card{display:grid;grid-template-columns:78px 1fr;gap:14px;align-items:center;border:1px solid #2a3441;background:#0b0f14;padding:14px;min-height:105px;}
+        .saas-event-club-logo{width:78px;height:78px;border:1px solid #2a3441;background:#080a0d;display:grid;place-items:center;overflow:hidden;font:800 12px var(--display);color:#666;}
+        .saas-event-club-logo img{width:100%;height:100%;object-fit:contain;}
+        .saas-event-club-card h3{margin:4px 0;font:800 20px var(--display);text-transform:uppercase;}
+        .saas-event-club-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.5;}
+        @media(max-width:850px){.saas-event-club-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        @media(max-width:560px){.saas-event-club-grid{grid-template-columns:1fr;}.saas-event-club-card{grid-template-columns:68px 1fr;}.saas-event-club-logo{width:68px;height:68px;}}
+        .chat-category-screen{position:fixed;inset:0;z-index:25000;display:none;align-items:center;justify-content:center;padding:25px;background:rgba(5,6,8,.97)}
+        .chat-category-screen.show{display:flex}
+        .chat-category-box{width:min(520px,100%);background:var(--panel);border:1px solid var(--line);padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.6)}
+        .chat-category-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 8px}
+        .chat-category-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
+        .chat-category-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .chat-category-btn{border:1px solid var(--line);background:#080a0d;color:#fff;padding:20px;text-align:left;cursor:pointer;transition:.2s}
+        .chat-category-btn:hover{border-color:var(--red);background:#111419;transform:translateY(-2px)}
+        .chat-category-btn strong{display:block;font:800 25px var(--display);text-transform:uppercase;margin-bottom:5px}
+        .chat-category-btn span{font-size:10px;color:#777e87;line-height:1.5}
+        .ic-name-form{display:none;flex-direction:column;gap:10px;margin-top:18px}
+        .ic-name-form.show{display:flex}
+        .ic-name-form input{width:100%;background:#07080a;border:1px solid var(--line);color:#fff;padding:13px;outline:none;font:12px var(--body)}
+        .ic-name-form input:focus{border-color:var(--red)}
+        .chat-category-back{margin-top:10px;background:transparent!important;border:1px solid var(--line)!important}
+        .chat-mode-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);font:700 9px var(--body);letter-spacing:1px;color:#aaa;margin-bottom:10px}
+        @media(max-width:600px){.chat-category-actions{grid-template-columns:1fr}.chat-category-box{padding:22px}.chat-category-title{font-size:32px}}
+        .social-layout{display:grid;grid-template-columns:1.35fr .65fr;gap:20px;width:100%}
+        .social-panel{background:var(--panel);border:1px solid var(--line);padding:22px}
+        .social-panel h2{margin:0 0 16px;font:700 28px var(--display);text-transform:uppercase}
+        .chat-list{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto}
+        .chat-msg{padding:12px;background:#080a0d;border:1px solid #1b2026}
+        .chat-msg.mine{border-left:3px solid var(--red)}
+        .chat-meta{font-size:9px;color:#707780;margin-bottom:5px;display:flex;justify-content:space-between;gap:10px}
+        .chat-body{font-size:12px;line-height:1.55;color:#ddd;word-break:break-word}
+        .chat-compose{display:flex;gap:8px;margin-top:12px}
+        .chat-compose input{flex:1}
+        .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px}
+        .profile-card{background:#080a0d;border:1px solid var(--line);padding:18px}
+        .profile-head{display:flex;align-items:center;gap:12px}
+        .profile-avatar{width:50px;height:50px;background:var(--red);display:grid;place-items:center;font:800 22px var(--display)}
+        .profile-name{font:700 22px var(--display);text-transform:uppercase}
+        .profile-stats{font-size:9px;color:#777;margin-top:3px}
+        .profile-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}
+        .like-btn.liked{background:#fff;color:#050608}
+        .notification-item{padding:13px;border-bottom:1px solid var(--line);cursor:pointer}
+        .notification-item:hover{background:#101318}
+        .notification-item.unread{border-left:3px solid var(--red)}
+        .notification-item strong{font-size:11px}
+        .notification-item p{margin:5px 0 0;color:#8b919a;font-size:10px}
+        .empty-state{padding:30px;text-align:center;color:#666;font-size:12px}
+        .back-btn{margin-bottom:15px}
+        @media(max-width:800px){
+            .social-layout{grid-template-columns:1fr}
+            .user-chip{position:absolute;right:58px;top:22px}
+        }
+
+        @media(max-width:1050px){
+            header{padding:22px 3vw}
+            nav button{padding:10px 10px}
+            .hero-main{left:3vw}
+            .hero-topline,.hero-bottom{left:3vw;right:3vw}
+            .hero-side{right:3vw}
+            .quick-strip,.content-container{width:94%}
+            .race-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        }
+        @media(max-width:760px){
+            header{position:absolute;align-items:flex-start}
+            .mobile-menu{
+                display:grid;
+                place-items:center;
+                width:43px;height:43px;
+                border:1px solid var(--line);
+                background:#090a0c;
+                cursor:pointer;
+            }
+            nav{
+                display:none;
+                position:absolute;
+                top:78px;
+                right:3vw;
+                left:3vw;
+                flex-direction:column;
+            }
+            nav.open{display:flex}
+            nav button{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;gap:10px}
+            .visual-hero{height:650px}
+            .hero-image{background-position:60% center}
+            .hero-topline{top:105px}
+            .hero-topline > span:last-child{display:none}
+            .hero-main{top:48%;width:90vw}
+            .hero-title{font-size:62px}
+            .hero-side{display:none}
+            .hero-bottom{gap:15px}
+            .hero-stat{padding-left:12px}
+            .quick-strip{grid-template-columns:repeat(2,1fr)}
+            .quick-strip div:nth-child(2){border-right:0}
+            .quick-strip div:nth-child(-n+2){border-bottom:1px solid var(--line)}
+            .content-container{margin-top:35px}
+            .card{min-width:100%;padding:22px}
+            .race-grid{grid-template-columns:1fr}
+        }
+    
+        .hero-brand-stack{display:flex;flex-direction:column;align-items:flex-start;gap:7px;}
+        .saas-year-label{color:#fff !important;}
+        .saas-hero-discord{
+            display:inline-flex;align-items:center;gap:10px;color:#fff;
+            text-decoration:none;font:800 13px var(--body);letter-spacing:1.6px;
+            line-height:1;transition:.2s ease;
+            background:#5865F2;padding:11px 18px;border-radius:8px;
+            box-shadow:0 5px 16px rgba(88,101,242,.5);
+        }
+        .saas-hero-discord:hover{background:#4752C4;color:#fff;transform:translateX(2px);}
+        .saas-discord-icon{
+            display:inline-grid;place-items:center;width:26px;height:26px;
+            border:1px solid rgba(255,255,255,.5);border-radius:6px;color:#fff;font-size:13px;line-height:1;
+            background:rgba(255,255,255,.12);
+        }
+        @media(max-width:600px){
+            .saas-hero-discord{
+                font-size:14px;padding:13px 20px;letter-spacing:1.2px;
+                width:100%;justify-content:center;
+            }
+            .saas-discord-icon{width:28px;height:28px;font-size:14px;}
+        }
+
+        .guest-prompt{position:fixed;inset:0;z-index:30000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,5,7,.88);backdrop-filter:blur(5px)}
+        .guest-prompt.show{display:flex}
+        .guest-prompt-box{width:min(430px,100%);background:#0b0e12;border:1px solid #303943;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.65);text-align:center}
+        .guest-prompt-icon{font-size:34px;margin-bottom:10px}
+        .guest-prompt-box h2{font:800 24px var(--display);margin:0 0 10px}
+        .guest-prompt-box p{font-size:11px;color:var(--muted);line-height:1.8;margin:0 0 22px}
+        .guest-prompt-actions{display:flex;gap:10px}.guest-prompt-actions button{flex:1}
+        .guest-later{background:#11161c!important;border-color:#303943!important;color:#c7ccd2!important}
+    </style>
+</head>
+<body>
+
+
+    <div class="guest-prompt" id="user-profile-modal" aria-hidden="true">
+        <div class="guest-prompt-box" style="max-width:360px;">
+            <div id="user-profile-modal-body"></div>
+            <div class="guest-prompt-actions" style="margin-top:16px;">
+                <button class="btn-red" onclick="closeUserProfileModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="guest-prompt" id="guest-prompt" aria-hidden="true">
+        <div class="guest-prompt-box">
+            <div class="guest-prompt-icon">🔐</div>
+            <h2>BUAT AKUN TERLEBIH DAHULU</h2>
+            <p>Untuk mengisi form atau menggunakan fitur yang membutuhkan akun, kamu harus membuat akun terlebih dahulu. Mau membuat akun sekarang?</p>
+            <div class="guest-prompt-actions">
+                <button class="btn-red" onclick="guestPromptRegister()">OKE</button>
+                <button class="btn-red guest-later" onclick="closeGuestPrompt()">NANTI</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="guest-prompt" id="discord-notice-modal" aria-hidden="true">
+        <div class="guest-prompt-box">
+            <div class="guest-prompt-icon">⚠️</div>
+            <h2>PENTING</h2>
+            <p>UNTUK INFO LEBIH LANJUT SILAKAN JOIN DISCORD KAMI KARNA PENTING UNTUK MEMASUKAN KALIAN KE DISCORD JUGA</p>
+            <div class="guest-prompt-actions">
+                <button class="btn-red" onclick="closeDiscordNotice(true)">OKE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-screen show" id="auth-screen">
+        <div class="auth-box">
+            <div class="auth-logo">
+                <div class="brand-mark">SA</div>
+                <div class="brand-copy"><strong>SAAS</strong><span>SAN ANDREAS AUTO SYNDICATE</span></div>
+            </div>
+            <h1 class="auth-title" id="auth-title">Login Account</h1>
+            <p class="auth-subtitle" id="auth-subtitle">Silakan login ke website ini dengan akun yang sudah kamu buat.</p>
+
+            <div class="auth-tabs">
+                <button id="auth-tab-login" class="active" onclick="switchAuth('login')">LOGIN</button>
+                <button id="auth-tab-register" onclick="switchAuth('register')">BUAT AKUN</button>
+                <button id="auth-tab-guest" class="guest-auth-tab" type="button" onclick="enterGuestMode()">GUEST</button>
+            </div>
+
+            <form class="auth-form" onsubmit="event.preventDefault(); submitAuth();">
+                <input id="auth-username" maxlength="20" autocomplete="username" placeholder="Username" required>
+                <input id="auth-password" type="password" minlength="6" maxlength="72" autocomplete="current-password" placeholder="Password" required>
+                <input id="auth-password2" type="password" minlength="6" maxlength="72" autocomplete="new-password" placeholder="Ulangi Password" style="display:none">
+                <button class="btn-red" type="submit" id="auth-submit">LOGIN</button>
+            </form>
+            <div class="auth-note">Akun disimpan pada database Supabase yang dikonfigurasi Admin. Password tidak disimpan sebagai teks biasa.</div>
+            <div class="auth-note" id="auth-status"></div>
+        </div>
+    </div>
+
+    <div class="chat-category-screen" id="chat-category-screen">
+        <div class="chat-category-box">
+            <div class="chat-category-title">Chat Public</div>
+            <p class="chat-category-subtitle">Pilih kategori chat terlebih dahulu. OOC menggunakan nama akun kamu, sedangkan IC menggunakan nama karakter IC yang kamu tentukan.</p>
+            <div class="chat-category-actions" id="chat-category-actions">
+                <button class="chat-category-btn" onclick="selectChatCategory('ooc')"><strong>OOC</strong><span>Out Of Character · langsung masuk dengan nama akun.</span></button>
+                <button class="chat-category-btn" onclick="selectChatCategory('ic')"><strong>IC</strong><span>In Character · gunakan nama karakter IC yang berbeda dari username.</span></button>
+            </div>
+            <div class="ic-name-form" id="ic-name-form">
+                <input id="ic-name-input" maxlength="40" autocomplete="off" placeholder="Masukkan nama IC kamu...">
+                <button class="btn-red" onclick="confirmICChat()">MASUK CHAT IC</button>
+                <button class="btn-red chat-category-back" onclick="resetChatCategoryChooser()">← Kembali Pilih Kategori</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="top-bar"></div>
+
+    <header>
+        <div class="brand">
+            <div class="brand-mark">SA</div>
+            <div class="brand-copy">
+                <strong>SAAS</strong>
+                <span>SAN ANDREAS AUTO SYNDICATE</span>
+            </div>
+        </div>
+
+        <div class="user-chip" id="user-chip" onclick="showPage('profile')">
+            <div class="user-avatar" id="user-avatar">?</div>
+            <div class="user-chip-info">
+                <span id="user-chip-name">Guest</span>
+                <div class="user-chip-roles" id="user-chip-roles"></div>
+            </div>
+            <span class="notif-bell">🔔<i class="notif-count" id="notif-count">0</i></span>
+        </div>
+        <div class="mobile-menu" onclick="document.querySelector('nav').classList.toggle('open')">☰</div>
+
+        <nav>
+            <button id="nav-teritory" onclick="showPage('teritory')">
+                <span class="nav-number">01</span><span>Teritory</span>
+            </button>
+            <button id="nav-saas-event" onclick="showPage('saas-event')">
+                <span class="nav-number">02</span><span>DAFTARKAN CLUB KE ACARA SAAS</span>
+            </button>
+            <button id="nav-club-request" onclick="showPage('club-request')">
+                <span class="nav-number">03</span><span>AJUKAN MASUKAN NAMA CLUB KE WEBSITE</span>
+            </button>
+            <button id="nav-public-chat" onclick="showPage('public-chat')">
+                <span class="nav-number">04</span><span>Chat Public</span>
+            </button>
+            <button id="nav-find-user" onclick="showPage('find-user')">
+                <span class="nav-number">05</span><span>Cari Pengguna</span>
+            </button>
+            <button id="nav-race" onclick="showPage('race')">
+                <span class="nav-number">06</span><span>Information Race</span>
+            </button>
+            <button id="nav-club" onclick="showPage('club')">
+                <span class="nav-number">07</span><span>Official Club</span>
+            </button>
+            <button id="nav-saas" onclick="showPage('saas')">
+                <span class="nav-number">08</span><span>Information SAAS</span>
+            </button>
+            <button id="nav-profile" onclick="showPage('profile')">
+                <span class="nav-number">09</span><span>Profile Account</span>
+            </button>
+            <button id="nav-my-chats" onclick="showPage('my-chats')">
+                <span class="nav-number">10</span><span>Lihat Chat Saya</span>
+            </button>
+            <button id="nav-admin" class="btn-admin" onclick="showPage('admin')">
+                <span class="nav-number">••</span><span>Admin</span>
+            </button>
+        </nav>
+        <div class="admin-subnav" id="admin-subnav">
+            <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
+            <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
+            <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
+            <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
+            <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
+            <button data-admin-section="saas" onclick="showAdminSection('saas')">Information SAAS</button>
+            <button data-admin-section="clubs" onclick="showAdminSection('clubs')">Official Clubs</button>
+            <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
+            <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
+            <button data-admin-section="saas-event-clubs" onclick="showAdminSection('saas-event-clubs')">CLUB ACARA SAAS</button>
+            <button data-admin-section="create-role" onclick="showAdminSection('create-role')">Create Role</button>
+            <button data-admin-section="assign-role" onclick="showAdminSection('assign-role')">Tambah Role ke Pengguna</button>
+            <div class="admin-total-users" id="admin-total-users">
+                <span class="admin-total-users-label">Total User / Akun Terdaftar</span>
+                <span class="admin-total-users-count" id="admin-total-users-count">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="landing">
+        <section class="visual-hero">
+            <div class="hero-image"></div>
+            <div class="hero-noise"></div>
+            <div class="hero-overlay"></div>
+
+            <div class="hero-topline">
+                <div class="hero-brand-stack">
+                    <span class="saas-year-label">SAAS / 2026</span>
+                    <a id="saas-hero-discord-link" class="saas-hero-discord" href="https://discord.gg/MqeWH9rxZV" target="_blank" rel="noopener noreferrer" aria-label="Discord SAAS" onclick="openSaasDiscord(event)">
+                        <span class="saas-discord-icon" aria-hidden="true">◉</span>
+                        <span>DISCORD SAAS</span>
+                    </a>
+                </div>
+                <span>LOS SANTOS — SAN ANDREAS</span>
+            </div>
+
+            <div class="hero-main">
+                <div class="hero-kicker">AUTOMOTIVE CULTURE • STREET RACING • COMMUNITY</div>
+                <h1 id="hero-title">The wind is not even close to us</h1>
+                <p id="hero-subtitle">Only the best can win the race</p>
+            </div>
+
+            <div class="hero-side">
+                <div class="hero-side-line"></div>
+                <span>EST.</span>
+                <strong>SAAS</strong>
+                <small>AUTO<br>SYNDICATE</small>
+            </div>
+
+            <div class="hero-bottom">
+                <div class="scroll-hint">SCROLL TO EXPLORE <b>↓</b></div>
+                <div class="hero-stat"><b>01</b><span>OFFICIAL<br>NETWORK</span></div>
+                <div class="hero-stat"><b>∞</b><span>RACE<br>MEMORIES</span></div>
+            </div>
+        </section>
+
+        <section class="quick-strip">
+            <div><span>STATUS</span><b>ACTIVE</b></div>
+            <div><span>BASE</span><b>LOS SANTOS</b></div>
+            <div><span>NETWORK</span><b>SAAS CLUB</b></div>
+            <div><span>MODE</span><b>STREET / RACE</b></div>
+        </section>
+    </main>
+
+    <!-- Container Utama Render JavaScript -->
+    <div class="content-container" id="app-content">
+        <!-- JS Injects HTML Here -->
+    </div>
+
+    <script>
+        // Database utama di memori. Di GitHub, data dipisahkan menjadi beberapa file agar tidak menumpuk.
+        // db.accounts.json  -> akun, role, notifikasi, password admin
+        // db.chats.json     -> chat public IC/OOC dan private chat
+        // db.requests.json  -> pengajuan club dan acara SAAS
+        // db.settings.json  -> seluruh konten/pengaturan website
+        let db = {
+            password: "world132",
+            adminPasswordMigratedWorld132: true,
+            teritory: {
+                enabled: true,
+                image: "https://images.unsplash.com/photo-1547619292-240402b5ae5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                text: "Wilayah kekuasaan utama. Pelanggaran batas wilayah tanpa izin akan ditindak tegas."
+            },
+            race: {
+                enabled: true,
+                top: [
+                    { title: "Race Information 01", text: "Tulis informasi race bagian pertama di sini." },
+                    { title: "Race Information 02", text: "Tulis informasi race bagian kedua di sini." },
+                    { title: "Race Information 03", text: "Tulis informasi race bagian ketiga di sini." },
+                    { title: "Race Information 04", text: "Tulis informasi race bagian keempat di sini." }
+                ],
+                bottom: {
+                    img: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+                    text: "Dokumentasi / foto race dapat diletakkan di bagian bawah."
+                }
+            },
+            saas: {
+                top: [
+                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+1", text: "Divisi Keamanan Internal" },
+                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+2", text: "Intelijen & Pengawasan" },
+                    { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Divisi+3", text: "Operasi Lapangan Khusus" }
+                ],
+                bottom: {
+                    img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+                    text: "Sistem Administrasi Terpusat. Seluruh log terekam secara aman."
+                },
+                discord: {
+                    link: "https://discord.gg/MqeWH9rxZV",
+                    text: "DISCORD SAAS"
+                }
+            },
+            club: [
+                {
+                    name: "Los Santos Midnight",
+                    img: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+                    text: "Los Santos Midnight Club - Markas Utama. Terbuka 24/7.",
+                    discord_link: "https://discord.com/",
+                    join_msg: "Silakan datang ke titik GPS Los Santos Midnight. Hubungi perwakilan kami saat tiba.",
+                    info: {
+                        top: [
+                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+1", text: "Divisi Rekrutmen Club" },
+                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+2", text: "Divisi Modifikasi Kendaraan" },
+                            { img: "https://via.placeholder.com/400x250/141b22/e62429?text=Info+3", text: "Jadwal Balap Liar" }
+                        ],
+                        bottom: {
+                            img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+                            text: "Aturan internal Club. Dilarang menyebarkan informasi ini ke pihak luar."
+                        }
+                    }
+                }
+            ],
+            users: [
+                {username: "febrihansx", passwordHash: "68ce5b374d4209b601544c4061c95804866e70bc8b0687980fc646e2f1e05507", likes: [], icName: "", roleIds: [], createdAt: Date.now()}
+            ],
+            roles: [],
+            notifications: {},
+            publicChat: [],
+            publicChatOOC: [],
+            publicChatIC: [],
+            privateChats: {},
+            clubWebsiteRequests: [],
+            saasEvent: {
+                enabled: false,
+                description: "ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR",
+                clubs: []
+            },
+            saasEventRequests: []
+        };
+
+        const GITHUB_DB_FILES = {
+            accounts: 'db.accounts.json',
+            chats: 'db.chats.json',
+            requests: 'db.requests.json',
+            settings: 'db.settings.json'
+        };
+
+        const DB_FILE_KEYS = Object.keys(GITHUB_DB_FILES);
+        let ghFileSha = {accounts:'', chats:'', requests:'', settings:''};
+        let ghFileReady = {accounts:false, chats:false, requests:false, settings:false};
+        let ghFileSnapshots = {accounts:'', chats:'', requests:'', settings:''};
+        let githubLegacyDb = null;
+
+        function getDbPartitions(){
+            return {
+                accounts: {
+                    password: db.password,
+                    adminPasswordMigratedWorld132: db.adminPasswordMigratedWorld132 === true,
+                    users: db.users,
+                    roles: db.roles,
+                    notifications: db.notifications
+                },
+                chats: {
+                    publicChat: db.publicChat,
+                    publicChatOOC: db.publicChatOOC,
+                    publicChatIC: db.publicChatIC,
+                    privateChats: db.privateChats
+                },
+                requests: {
+                    clubWebsiteRequests: db.clubWebsiteRequests,
+                    saasEventRequests: db.saasEventRequests
+                },
+                settings: {
+                    teritory: db.teritory,
+                    race: db.race,
+                    saas: db.saas,
+                    club: db.club,
+                    clubSystem: db.clubSystem,
+                    saasEvent: db.saasEvent
+                }
+            };
+        }
+
+        function applyDbPartitions(parts){
+            if(parts.accounts && typeof parts.accounts === 'object') Object.assign(db, parts.accounts);
+            if(parts.chats && typeof parts.chats === 'object') Object.assign(db, parts.chats);
+            if(parts.requests && typeof parts.requests === 'object') Object.assign(db, parts.requests);
+            if(parts.settings && typeof parts.settings === 'object') Object.assign(db, parts.settings);
+            normalizeDB();
+        }
+
+        // SUPABASE CONFIG: database global agar website statis yang dibuka dari
+        // perangkat berbeda tetap membaca/menulis database pusat yang sama.
+        // Supabase "anon key" AMAN untuk ditaruh di frontend (berbeda dari token
+        // GitHub) karena hak aksesnya dibatasi oleh Row Level Security (RLS) yang
+        // diatur di dashboard Supabase, bukan oleh kerahasiaan key itu sendiri.
+        // Isi 2 nilai ini setelah kamu membuat project di supabase.com:
+        const EMBEDDED_SUPABASE_CONFIG = {
+            url: 'https://mifcjgdvycxbgoumtqsf.supabase.co',
+            key: 'sb_publishable_q6lFfiwIPiSlL1h76LHdrA__eaPoIQK'
+        };
+        let sbConfig = {
+            url: localStorage.getItem('sb_url') || EMBEDDED_SUPABASE_CONFIG.url,
+            key: localStorage.getItem('sb_key') || EMBEDDED_SUPABASE_CONFIG.key
+        };
+
+        // AKUN OWNER: login khusus yang tidak tersimpan di database Supabase sama
+        // sekali. Selalu bisa dipakai login dari perangkat manapun, bahkan kalau
+        // Supabase belum di-setting atau sedang bermasalah. GANTI password di
+        // bawah ini sebelum website kamu dipakai publik.
+        const OWNER_ACCOUNT = {
+            username: 'owner',
+            password: 'Owner#SAAS2026'
+        };
+
+        let currentUser = JSON.parse(localStorage.getItem('saas_session') || 'null');
+        let guestMode = false;
+        let adminAuthenticated = false;
+        let authMode = 'login';
+        let selectedChatUser = null;
+        let pollTimer = null;
+        let activeChatCategory = null;
+        let activeICName = '';
+        let lastSyncedDbSnapshot = '';
+        let autoDbSyncTimer = null;
+        let githubDatabaseReady = false;
+        let githubLastFetchOk = false;
+        let githubWriteInProgress = false;
+        let githubRetryTimer = null;
+        let githubLastError = '';
+
+
+        // Semua partisi database (accounts/chats/requests/settings) disimpan sebagai
+        // satu baris masing-masing di tabel `kv_store` (key text primary key, value jsonb).
+        function supaHeaders(extra){
+            return Object.assign({
+                'apikey': sbConfig.key,
+                'Authorization': `Bearer ${sbConfig.key}`,
+                'Content-Type': 'application/json'
+            }, extra || {});
+        }
+
+        function supaErrorMessage(status, action='Supabase'){
+            const map={401:'Anon key Supabase tidak valid.',403:'Row Level Security menolak akses. Cek policy tabel kv_store di Supabase.',404:'Tabel kv_store tidak ditemukan. Jalankan SQL setup terlebih dahulu.'};
+            return map[status] || `${action} gagal (HTTP ${status}).`;
+        }
+
+        async function getGithubFile(fileKey){
+            const key=GITHUB_DB_FILES[fileKey];
+            try{
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=value`, {
+                    headers: supaHeaders()
+                });
+                if(res.ok){
+                    const rows=await res.json();
+                    if(!rows.length) return {status:'missing'};
+                    ghFileReady[fileKey]=true;
+                    const parsed=rows[0].value;
+                    ghFileSnapshots[fileKey]=JSON.stringify(parsed);
+                    return {status:'ok', data:parsed};
+                }
+                githubLastError=supaErrorMessage(res.status,'Membaca database');
+                return {status:'error', httpStatus:res.status, message:githubLastError};
+            }catch(e){
+                githubLastError=`Gagal terhubung ke Supabase: ${e.message || e}`;
+                return {status:'error', message:githubLastError};
+            }
+        }
+
+        async function getLegacyDb(){ return null; }
+
+        function showAuth(){
+            guestMode=false;
+            document.getElementById('auth-screen')?.classList.add('show');
+            document.getElementById('user-chip')?.classList.remove('show');
+            closeGuestPrompt();
+        }
+
+        function enterGuestMode(){
+            guestMode=true;
+            currentUser=null;
+            localStorage.removeItem('saas_session');
+            document.getElementById('auth-screen')?.classList.remove('show');
+            const chip=document.getElementById('user-chip');
+            if(chip) chip.classList.add('show');
+            const name=document.getElementById('user-chip-name');
+            if(name) name.textContent='Guest';
+            const avatar=document.getElementById('user-avatar');
+            if(avatar) avatar.textContent='G';
+            const roles=document.getElementById('user-chip-roles');
+            if(roles) roles.innerHTML='<span class="role-badge" style="background:#20262d;color:#d8dde3;border:1px solid #3a424b;">GUEST</span>';
+            const count=document.getElementById('notif-count');
+            if(count){ count.textContent='0'; count.classList.remove('show'); }
+            closeGuestPrompt();
+            showPage('teritory');
+        }
+
+        function requireAccount(){
+            if(!guestMode && currentUser) return true;
+            const el=document.getElementById('guest-prompt');
+            if(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+            return false;
+        }
+
+        function closeGuestPrompt(){
+            const el=document.getElementById('guest-prompt');
+            if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+        }
+
+        function guestPromptRegister(){
+            closeGuestPrompt();
+            document.getElementById('auth-screen')?.classList.add('show');
+            switchAuth('register');
+        }
+
+        // Modal peringatan "join Discord" sebelum form dikirim. Dipakai untuk form
+        // DAFTARKAN CLUB KE ACARA SAAS dan AJUKAN MASUKAN NAMA CLUB KE WEBSITE.
+        let pendingDiscordNoticeAction = null;
+
+        function showDiscordNotice(actionFn){
+            pendingDiscordNoticeAction = actionFn;
+            const el=document.getElementById('discord-notice-modal');
+            if(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+        }
+
+        function closeDiscordNotice(confirmed){
+            const el=document.getElementById('discord-notice-modal');
+            if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+            const action=pendingDiscordNoticeAction;
+            pendingDiscordNoticeAction=null;
+            if(confirmed && typeof action==='function') action();
+        }
+
+        function openApp(){
+            guestMode=false;
+            const me=getUser(currentUser?.username);
+            if(me){
+                currentUser.icName=me.icName || '';
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
+            }
+            document.getElementById('auth-screen')?.classList.remove('show');
+            const chip=document.getElementById('user-chip');
+            if(chip) chip.classList.add('show');
+            const name=document.getElementById('user-chip-name');
+            if(name) name.textContent='@'+currentUser.username;
+            const avatar=document.getElementById('user-avatar');
+            if(avatar) avatar.textContent=currentUser.username.charAt(0).toUpperCase();
+            if(typeof updateUserChipRoles==='function') updateUserChipRoles();
+            updateNotificationBadge();
+            showPage('teritory');
+            startPolling();
+        }
+
+        function logout(){
+            guestMode=false;
+            localStorage.removeItem('saas_session');
+            currentUser=null;
+            adminAuthenticated=false;
+            document.getElementById('admin-subnav')?.classList.remove('show');
+            selectedChatUser=null;
+            if(pollTimer) clearInterval(pollTimer);
+            if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
+            showAuth();
+            switchAuth('login');
+        }
+
+        function switchAuth(mode){
+            authMode=mode==='register'?'register':'login';
+            const reg=authMode==='register';
+            const title=document.getElementById('auth-title');
+            const subtitle=document.getElementById('auth-subtitle');
+            const submit=document.getElementById('auth-submit');
+            const pass2=document.getElementById('auth-password2');
+            const loginTab=document.getElementById('auth-tab-login');
+            const registerTab=document.getElementById('auth-tab-register');
+            const status=document.getElementById('auth-status');
+            if(title) title.textContent=reg?'Create Account':'Login Account';
+            if(subtitle) subtitle.textContent=reg?'Silakan buat akun terlebih dahulu, lalu login ke website ini dengan akun yang sudah kamu buat.':'Silakan login ke website ini dengan akun yang sudah kamu buat.';
+            if(submit) submit.textContent=reg?'BUAT AKUN':'LOGIN';
+            if(pass2){ pass2.style.display=reg?'block':'none'; pass2.required=reg; }
+            if(loginTab) loginTab.classList.toggle('active',!reg);
+            if(registerTab) registerTab.classList.toggle('active',reg);
+            if(status) status.textContent='';
+            if(!reg){
+                const p2=document.getElementById('auth-password2');
+                if(p2) p2.value='';
+            }
+        }
+
+        async function submitAuth(){
+            const username=(document.getElementById('auth-username')?.value || '').trim();
+            const password=document.getElementById('auth-password')?.value || '';
+            const password2=document.getElementById('auth-password2')?.value || '';
+            const status=document.getElementById('auth-status');
+            const submit=document.getElementById('auth-submit');
+            try{
+                normalizeDB();
+                if(!validUsername(username)){ if(status) status.textContent='Username 3-20 karakter: huruf, angka, atau _.'; return; }
+                if(password.length<6){ if(status) status.textContent='Password minimal 6 karakter.'; return; }
+                if(authMode==='register' && password!==password2){ if(status) status.textContent='Konfirmasi password tidak sama.'; return; }
+                if(status) status.textContent='Memproses...';
+                if(submit){ submit.disabled=true; submit.style.opacity='.65'; submit.style.cursor='wait'; }
+                const hash=await sha256(password);
+            if(authMode==='login' && username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){
+                if(password!==OWNER_ACCOUNT.password){ if(status) status.textContent='Username atau password salah.'; return; }
+                currentUser={username:OWNER_ACCOUNT.username, icName:'', isOwner:true};
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
+                openApp();
+                return;
+            }
+            if(authMode==='register'){
+                // Sebelum membuat akun, ambil database terbaru dari GitHub. Dengan begitu
+                // perangkat baru (HP teman, PC lain, dsb.) tidak memakai db lokal kosong
+                // dan username baru benar-benar ditambahkan ke database pusat.
+                if(sbConfig.url && sbConfig.key){
+                    const remoteLoaded=await fetchFromDB(true);
+                    if(!remoteLoaded && githubLastFetchOk===false){
+                        if(status) status.textContent='Database Supabase tidak dapat diakses. Cek koneksi di Admin Panel.';
+                        return;
+                    }
+                    normalizeDB();
+                }
+                if(username.toLowerCase()===OWNER_ACCOUNT.username.toLowerCase()){ if(status) status.textContent='Username ini tidak dapat digunakan.'; return; }
+                if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ if(status) status.textContent='Username sudah digunakan.'; return; }
+                const user={username,passwordHash:hash,likes:[],icName:'',roleIds:[],createdAt:Date.now()};
+                db.users.push(user);
+                db.notifications[username]=[];
+                let saved=true;
+                if(sbConfig.url && sbConfig.key){
+                    saved=await saveToDB(true);
+                    if(!saved){
+                        db.users=db.users.filter(u=>u!==user);
+                        delete db.notifications[username];
+                        if(status) status.textContent='Akun gagal disimpan ke database Supabase. Periksa koneksi di Admin Panel.';
+                        return;
+                    }
+                }
+                if(status) status.textContent=sbConfig.url ? 'Akun berhasil dibuat dan disimpan ke database. Silakan login.' : 'Akun berhasil dibuat secara lokal. Hubungkan Supabase di Admin Panel agar tersimpan secara global.';
+                const u=document.getElementById('auth-username');
+                const pw=document.getElementById('auth-password');
+                const pw2=document.getElementById('auth-password2');
+                if(pw) pw.value='';
+                if(pw2) pw2.value='';
+                switchAuth('login');
+                if(u) u.value=username;
+                return;
+            }
+            const user=db.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
+            if(!user || user.passwordHash!==hash){ if(status) status.textContent='Username atau password salah.'; return; }
+                currentUser={username:user.username,icName:user.icName||''};
+                localStorage.setItem('saas_session',JSON.stringify(currentUser));
+                openApp();
+            }catch(error){
+                console.error('Auth error:', error);
+                if(status) status.textContent='Terjadi error saat login. Silakan coba lagi.';
+            }finally{
+                if(submit){ submit.disabled=false; submit.style.opacity=''; submit.style.cursor=''; }
+            }
+        }
+
+        // AUTH BUTTON HARDENING: make Login / Register / Guest clickable even if another UI layer is present.
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('auth-tab-login');
+            const registerBtn = document.getElementById('auth-tab-register');
+            const guestBtn = document.getElementById('auth-tab-guest');
+            const authScreen = document.getElementById('auth-screen');
+            if(authScreen){ authScreen.style.pointerEvents='auto'; }
+            if(loginBtn){
+                loginBtn.type='button';
+                loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchAuth('login'); }, true);
+            }
+            if(registerBtn){
+                registerBtn.type='button';
+                registerBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchAuth('register'); }, true);
+            }
+            if(guestBtn){
+                guestBtn.type='button';
+                guestBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); enterGuestMode(); }, true);
+            }
+        });
+
+        window.onload = async () => {
+            const loaded = await fetchFromDB();
+            normalizeDB();
+            if(!githubDatabaseReady && githubLastFetchOk === null){
+                await ensureDatabaseReady();
+            }
+            if(githubDatabaseReady && db.adminPasswordMigratedWorld132 !== true){
+                db.password = 'world132';
+                db.adminPasswordMigratedWorld132 = true;
+                await saveToDB(true);
+            }
+            if(githubDatabaseReady) startAutoDatabaseSync();
+            startDbRetry();
+
+            if(currentUser && (currentUser.isOwner || db.users.some(u => u.username === currentUser.username))) {
+                openApp();
+            } else {
+                currentUser = null;
+                localStorage.removeItem('saas_session');
+                showAuth();
+            }
+        };
+
+        function getDatabaseSnapshot(){ return JSON.stringify(db); }
+
+        async function fetchFromDB(silent=false) {
+            githubLastFetchOk = false;
+            if(!sbConfig.url || !sbConfig.key){
+                normalizeDB();
+                return false;
+            }
+            try{
+                const results={};
+                let allReady=true;
+                let anySplitFile=false;
+                for(const key of DB_FILE_KEYS){
+                    const result=await getGithubFile(key);
+                    results[key]=result;
+                    if(result.status==='ok') anySplitFile=true;
+                    if(result.status==='error'){
+                        githubLastFetchOk=false;
+                        githubDatabaseReady=false;
+                        return false;
+                    }
+                    if(result.status!=='ok') allReady=false;
+                }
+
+                // Migrasi otomatis dari db.json lama jika database terpisah belum ada.
+                if(!anySplitFile){
+                    githubLegacyDb=await getLegacyDb();
+                    if(githubLegacyDb){
+                        db=githubLegacyDb;
+                        normalizeDB();
+                        githubLastFetchOk=null;
+                        githubDatabaseReady=false;
+                        return false;
+                    }
+                    githubLastFetchOk=null;
+                    githubDatabaseReady=false;
+                    return false;
+                }
+
+                // Jika hanya sebagian file sudah ada, gabungkan yang tersedia dan buat sisanya otomatis.
+                const parts={};
+                for(const key of DB_FILE_KEYS){ if(results[key].status==='ok') parts[key]=results[key].data; }
+                applyDbPartitions(parts);
+                githubDatabaseReady=allReady;
+                githubLastFetchOk=allReady ? true : null;
+                lastSyncedDbSnapshot=getDatabaseSnapshot();
+                updateAdminTotalUsers();
+                return allReady;
+            }catch(e){
+                githubLastFetchOk=false;
+                githubDatabaseReady=false;
+                return false;
+            }
+        }
+
+        async function saveGithubPartition(fileKey, value, attempt=0){
+            const key=GITHUB_DB_FILES[fileKey];
+            try{
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store`,{
+                    method:'POST',
+                    headers: supaHeaders({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+                    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+                });
+                if(res.ok){
+                    ghFileReady[fileKey]=true;
+                    ghFileSnapshots[fileKey]=JSON.stringify(value);
+                    return true;
+                }
+                githubLastError=supaErrorMessage(res.status, `Menulis ${key}`);
+                return false;
+            }catch(e){
+                githubLastError=`Gagal terhubung ke Supabase: ${e.message || e}`;
+                return false;
+            }
+        }
+
+        async function saveToDB(silent=false){
+            if(!sbConfig.url || !sbConfig.key){
+                if(!silent) alert('Supabase belum dikonfigurasi. Isi Project URL dan Anon Key di Admin Panel.');
+                return false;
+            }
+            if(githubWriteInProgress) return false;
+            if(!githubDatabaseReady){
+                const refreshed=await fetchFromDB(true);
+                if(!refreshed && githubLastFetchOk===null){
+                    const initialized=await ensureDatabaseReady();
+                    if(!initialized){
+                        if(!silent && githubLastError) alert(githubLastError);
+                        return false;
+                    }
+                } else if(!refreshed && githubLastFetchOk!==null){
+                    if(!silent && githubLastError) alert(githubLastError);
+                    return false;
+                }
+            }
+            githubWriteInProgress=true;
+            try{
+                normalizeDB();
+                const parts=getDbPartitions();
+                let allOk=true;
+                let wroteAny=false;
+                for(const key of DB_FILE_KEYS){
+                    const snapshot=JSON.stringify(parts[key]);
+                    if(!ghFileReady[key] || ghFileSnapshots[key]!==snapshot){
+                        const ok=await saveGithubPartition(key, parts[key]);
+                        if(!ok) allOk=false; else wroteAny=true;
+                    }
+                }
+                if(allOk && DB_FILE_KEYS.every(k=>ghFileReady[k])){
+                    githubDatabaseReady=true;
+                    githubLastFetchOk=true;
+                    lastSyncedDbSnapshot=getDatabaseSnapshot();
+                    if(wroteAny) startAutoDatabaseSync();
+                    return true;
+                }
+                return false;
+            }finally{
+                githubWriteInProgress=false;
+            }
+        }
+
+        async function ensureDatabaseReady(){
+            if(!sbConfig.url || !sbConfig.key) return false;
+            if(githubDatabaseReady) return true;
+            if(githubLastFetchOk === false) return false;
+
+            // Se o db.json lama ditemukan, migrasikan isi lamanya ke 4 file terpisah.
+            if(githubLegacyDb){
+                db=githubLegacyDb;
+                normalizeDB();
+            }
+            const parts=getDbPartitions();
+            githubWriteInProgress=true;
+            try{
+                let allOk=true;
+                for(const key of DB_FILE_KEYS){
+                    if(!ghFileReady[key]){
+                        const ok=await saveGithubPartition(key, parts[key]);
+                        if(!ok) allOk=false;
+                    }
+                }
+                if(allOk){
+                    githubDatabaseReady=true;
+                    githubLastFetchOk=true;
+                    lastSyncedDbSnapshot=getDatabaseSnapshot();
+                    return true;
+                }
+                return false;
+            }finally{ githubWriteInProgress=false; }
+        }
+
+        function startAutoDatabaseSync(){
+            if(autoDbSyncTimer) clearInterval(autoDbSyncTimer);
+            if(!sbConfig.url || !sbConfig.key || !githubDatabaseReady) return;
+            if(!lastSyncedDbSnapshot) lastSyncedDbSnapshot=getDatabaseSnapshot();
+            autoDbSyncTimer=setInterval(async()=>{
+                if(!sbConfig.url || !sbConfig.key || !githubDatabaseReady) return;
+                const snapshot=getDatabaseSnapshot();
+                if(snapshot!==lastSyncedDbSnapshot) await saveToDB(true);
+            },5000);
+        }
+
+        function startDbRetry(){
+            if(githubRetryTimer) clearInterval(githubRetryTimer);
+            if(!sbConfig.url || !sbConfig.key) return;
+            githubRetryTimer=setInterval(async()=>{
+                if(githubDatabaseReady) return;
+                const found=await fetchFromDB(true);
+                if(found){
+                    startAutoDatabaseSync();
+                    return;
+                }
+                if(githubLastFetchOk === null){
+                    const created=await ensureDatabaseReady();
+                    if(created) startAutoDatabaseSync();
+                }
+            },15000);
+        }
+
+        // === AUTH HELPERS / DB NORMALIZATION ===
+        // Beberapa versi sebelumnya memanggil helper ini tetapi definisinya tidak ikut
+        // terbawa. Akibatnya klik LOGIN/BUAT AKUN masuk ke submitAuth(), lalu berhenti
+        // karena ReferenceError sebelum proses autentikasi berjalan.
+        function validUsername(username){
+            return /^[A-Za-z0-9_]{3,20}$/.test(String(username || ''));
+        }
+
+        async function sha256(value){
+            const data = new TextEncoder().encode(String(value ?? ''));
+            const buffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2,'0'))
+                .join('');
+        }
+
+        function normalizeDB(){
+            if(!db || typeof db !== 'object') db = {};
+            if(!Array.isArray(db.users)) db.users=[];
+            if(!Array.isArray(db.roles)) db.roles=[];
+            if(!db.notifications || typeof db.notifications !== 'object' || Array.isArray(db.notifications)) db.notifications={};
+            if(!Array.isArray(db.publicChat)) db.publicChat=[];
+            if(!Array.isArray(db.publicChatOOC)) db.publicChatOOC=[];
+            if(!Array.isArray(db.publicChatIC)) db.publicChatIC=[];
+            if(!db.privateChats || typeof db.privateChats !== 'object' || Array.isArray(db.privateChats)) db.privateChats={};
+            if(!Array.isArray(db.clubWebsiteRequests)) db.clubWebsiteRequests=[];
+            if(!Array.isArray(db.saasEventRequests)) db.saasEventRequests=[];
+            if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
+            if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
+            if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
+            if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
+            if(typeof db.teritory.image !== 'string') db.teritory.image='';
+            if(typeof db.teritory.text !== 'string') db.teritory.text='';
+            if(!db.clubSystem || typeof db.clubSystem !== 'object') db.clubSystem={enabled:true};
+            if(typeof db.clubSystem.enabled !== 'boolean') db.clubSystem.enabled=true;
+            if(!db.race || typeof db.race !== 'object') db.race={enabled:true,top:[],bottom:{img:'',text:''}};
+            if(typeof db.race.enabled !== 'boolean') db.race.enabled=true;
+            if(!Array.isArray(db.race.top)) db.race.top=[];
+            if(!db.race.bottom || typeof db.race.bottom !== 'object') db.race.bottom={img:'',text:''};
+            if(typeof db.race.bottom.img !== 'string') db.race.bottom.img='';
+            if(typeof db.race.bottom.text !== 'string') db.race.bottom.text='';
+            if(!Array.isArray(db.club)) db.club=[];
+            db.club.forEach(c=>{
+                if(!c || typeof c!=='object') return;
+                if(!c.info || typeof c.info!=='object') c.info={top:[],bottom:{img:'',text:''}};
+                if(!Array.isArray(c.info.top)) c.info.top=[];
+                if(!c.info.bottom || typeof c.info.bottom!=='object') c.info.bottom={img:'',text:''};
+                if(typeof c.info.bottom.img!=='string') c.info.bottom.img='';
+                if(typeof c.info.bottom.text!=='string') c.info.bottom.text='';
+            });
+            if(!db.saas || typeof db.saas !== 'object') db.saas={};
+            if(!Array.isArray(db.saas.top)) db.saas.top=[];
+            if(!Array.isArray(db.saas.bottomMembers)) db.saas.bottomMembers=[];
+            if(!db.saas.bottom || typeof db.saas.bottom !== 'object') db.saas.bottom={img:'',text:''};
+            if(typeof db.saas.bottom.img !== 'string') db.saas.bottom.img='';
+            if(typeof db.saas.bottom.text !== 'string') db.saas.bottom.text='';
+            if(!db.saas.discord || typeof db.saas.discord !== 'object') db.saas.discord={link:'https://discord.gg/MqeWH9rxZV',text:'DISCORD SAAS'};
+            if(typeof db.saas.discord.link !== 'string') db.saas.discord.link='https://discord.gg/MqeWH9rxZV';
+            if(typeof db.saas.discord.text !== 'string') db.saas.discord.text='DISCORD SAAS';
+            db.users.forEach(u=>{
+                if(!u || typeof u!=='object') return;
+                if(!Array.isArray(u.likes)) u.likes=[];
+                if(!Array.isArray(u.roleIds)) u.roleIds=[];
+                if(typeof u.icName!=='string') u.icName='';
+            });
+            return db;
+        }
+
+        function getUser(username){
+            return db.users.find(u => u.username === username);
+        }
+
+        // Nama IC adalah identitas karakter yang terikat ke akun, sehingga tetap ada
+        // walaupun user keluar/login lagi dan tersimpan bersama record user di database GitHub.
+        function getSavedICName(username){
+            const user=getUser(username);
+            return user?.icName || '';
+        }
+
+        function addNotification(username, type, from, text, targetUser){
+            db.notifications[username] = Array.isArray(db.notifications[username]) ? db.notifications[username] : [];
+            db.notifications[username].unshift({
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()),
+                type, from, text, targetUser: targetUser || from, read:false, createdAt:Date.now()
+            });
+            db.notifications[username] = db.notifications[username].slice(0,100);
+        }
+
+        function updateNotificationBadge(){
+            if(!currentUser) return;
+            const arr = db.notifications[currentUser.username] || [];
+            const unread = arr.filter(n=>!n.read).length;
+            const badge = document.getElementById('notif-count');
+            badge.textContent = unread > 99 ? '99+' : unread;
+            badge.classList.toggle('show', unread > 0);
+        }
+
+        function startPolling(){
+            if(pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async()=>{
+                const oldCount = (db.notifications[currentUser?.username]||[]).filter(n=>!n.read).length;
+                await fetchFromDB(true);
+                updateNotificationBadge();
+                updateAdminClubRequestBadge();
+                updateAdminSaasEventBadge();
+                const newCount = (db.notifications[currentUser?.username]||[]).filter(n=>!n.read).length;
+                if(newCount > oldCount && currentUser) showToast('🔔 Kamu punya notifikasi baru! Klik untuk membuka Profile Account.', true);
+                if(!currentUser) return;
+                const activePublic = document.getElementById('nav-public-chat')?.classList.contains('active');
+                const privateView = document.getElementById('private-chat-view');
+                updateUserChipRoles();
+                if(activePublic && activeChatCategory) renderPublicChat(document.getElementById('app-content'),activeChatCategory);
+                if(selectedChatUser && privateView) renderPrivateChat(document.getElementById('app-content'), selectedChatUser);
+                const activeMyChats = document.getElementById('nav-my-chats')?.classList.contains('active') && !privateView;
+                if(activeMyChats) renderMyChats(document.getElementById('app-content'));
+            }, 12000);
+        }
+
+        function showToast(message, openProfile=false){
+            let t=document.getElementById('saas-toast');
+            if(!t){ t=document.createElement('div'); t.id='saas-toast'; t.style.cssText='position:fixed;right:20px;bottom:20px;z-index:30000;background:#ff2938;color:#fff;padding:13px 17px;font:700 11px DM Sans,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18);'; document.body.appendChild(t); }
+            t.textContent=message;
+            t.style.cursor=openProfile?'pointer':'default';
+            t.onclick=openProfile?()=>showPage('profile'):null;
+            t.style.display='block';
+            clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',5000);
+        }
+
+        function escapeHTML(value){
+            return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+        }
+
+        function fmtTime(ts){ return new Date(ts).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}); }
+
+        // Key unik & konsisten untuk sepasang akun, dipakai sebagai nama percakapan
+        // di db.privateChats — urutan username tidak berpengaruh (A→B sama dengan B→A).
+        function privateKey(a,b){
+            return [String(a||''),String(b||'')].sort().join('::');
+        }
+
+        function userProfileCard(user){
+            const me = user.username === currentUser.username;
+            const liked = user.likes.includes(currentUser.username);
+            return `<div class="profile-card">
+                <div class="profile-head">
+                    <div class="profile-avatar">${escapeHTML(user.username.charAt(0).toUpperCase())}</div>
+                    <div><div class="profile-name">@${escapeHTML(user.username)}</div>
+                    <div class="profile-stats">❤️ ${user.likes.length} like · Bergabung ${new Date(user.createdAt).toLocaleDateString('id-ID')}</div>
+                    <div class="profile-role-badges">${renderUserRoleBadges(user)}</div></div>
+                </div>
+                <div class="profile-actions">
+                    ${me ? `<button class="btn-red" onclick="closeUserProfileModal();showPage('profile')">Profil Saya</button>` :
+                    `<button class="btn-red" onclick="closeUserProfileModal();openPrivateChat('${encodeURIComponent(user.username)}')">💬 Chat Pribadi</button>
+                     <button class="btn-red like-btn ${liked?'liked':''}" onclick="toggleLikeAndRefreshModal('${encodeURIComponent(user.username)}')">${liked?'♥ Liked':'♡ Like'}</button>`}
+            </div></div>`;
+        }
+
+        function openUserProfileModal(encodedUsername){
+            if(!currentUser || guestMode) return requireAccount();
+            const username=decodeURIComponent(encodedUsername);
+            const user=getUser(username);
+            if(!user) return;
+            const body=document.getElementById('user-profile-modal-body');
+            if(body) body.innerHTML=userProfileCard(user);
+            const modal=document.getElementById('user-profile-modal');
+            if(modal){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
+        }
+
+        function closeUserProfileModal(){
+            const modal=document.getElementById('user-profile-modal');
+            if(modal){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+        }
+
+        async function toggleLikeAndRefreshModal(encoded){
+            await toggleLike(encoded);
+            const username=decodeURIComponent(encoded), user=getUser(username);
+            const body=document.getElementById('user-profile-modal-body');
+            if(user && body) body.innerHTML=userProfileCard(user);
+        }
+
+        function renderFindUser(container){
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                    <h2>Cari Pengguna</h2>
+                    <p style="color:var(--muted);font-size:11px;margin-top:-8px;">Ketik username lalu klik hasilnya untuk membuka profil pengguna tersebut.</p>
+                    <input class="social-input" id="find-user-search" placeholder="Cari username..." oninput="filterFindUser()" autocomplete="off">
+                    <div id="find-user-list" style="margin-top:14px;">${renderFindUserRows('')}</div>
+                </div>
+            </div>`;
+            setTimeout(()=>document.getElementById('find-user-search')?.focus(),50);
+        }
+
+        function renderFindUserRows(filter){
+            const q=String(filter||'').trim().toLowerCase();
+            const users=(Array.isArray(db.users)?db.users:[])
+                .filter(u=>u.username!==currentUser.username)
+                .filter(u=>!q || u.username.toLowerCase().includes(q))
+                .sort((a,b)=>a.username.localeCompare(b.username));
+            if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
+            return users.map(u=>`<div class="find-user-row" onclick="openUserProfileModal('${encodeURIComponent(u.username)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
+                <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${escapeHTML(u.username.charAt(0).toUpperCase())}</div>
+                <div style="flex:1;">
+                    <div><strong>@${escapeHTML(u.username)}</strong></div>
+                    <div style="margin-top:4px;">${renderUserRoles(u)}</div>
+                </div>
+                <span style="color:var(--muted);font-size:10px;">❤️ ${(u.likes||[]).length}</span>
+            </div>`).join('');
+        }
+
+        function filterFindUser(){
+            const el=document.getElementById('find-user-search'), list=document.getElementById('find-user-list');
+            if(el&&list) list.innerHTML=renderFindUserRows(el.value);
+        }
+
+        function getChatMessages(category){
+            if(category === 'ic') return db.publicChatIC.slice(-80);
+            return db.publicChatOOC.slice(-80);
+        }
+        function getChatDisplayName(message){ return message.displayName || message.username || 'Unknown'; }
+        function renderPublicChat(container, category = activeChatCategory || 'ooc'){
+            activeChatCategory=category;
+            const messages=getChatMessages(category), isIC=category==='ic';
+            const displayName=isIC ? activeICName : currentUser.username;
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel">
+                    <div class="chat-mode-badge">${isIC?'🎭 IN CHARACTER (IC)':'💬 OUT OF CHARACTER (OOC)'}</div>
+                    <h2>Chat Public — ${isIC?'IC':'OOC'}</h2>
+                    <p style="color:var(--muted);font-size:11px;">${isIC?'Chat khusus karakter. Nama yang tampil adalah nama IC kamu.':'Chat khusus OOC. Nama yang tampil adalah username akun kamu.'}</p>
+                    <div class="chat-list" id="public-chat-list">${messages.length?messages.map(m=>`
+                        <div class="chat-msg ${m.displayName===displayName?'mine':''}">
+                            <div class="chat-meta"><strong class="chat-username-link" onclick="openUserProfileModal('${encodeURIComponent(m.username)}')" style="cursor:pointer;text-decoration:underline dotted;">${escapeHTML(getChatDisplayName(m))}</strong>${renderChatMessageRoles(m)}<span>${fmtTime(m.createdAt)}</span></div>
+                            <div class="chat-body">${escapeHTML(m.text)}</div>
+                        </div>`).join(''):'<div class="empty-state">Belum ada pesan di kategori ini.</div>'}</div>
+                    <form class="chat-compose" onsubmit="event.preventDefault();sendPublicMessage();">
+                        <input class="social-input" id="public-message" maxlength="500" placeholder="Tulis pesan ${isIC?'IC':'OOC'}..." required>
+                        <button class="btn-red">Kirim</button>
+                    </form>
+                    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button class="btn-red" onclick="openChatCategoryChooser()">Ganti Kategori</button></div>
+                </div>
+                <div class="social-panel">
+                    <h2>${isIC?'IC Identity':'OOC Account'}</h2>
+                    <div class="profile-card"><div class="profile-head">
+                        <div class="profile-avatar">${escapeHTML(displayName.charAt(0).toUpperCase())}</div>
+                        <div><div class="profile-name">${escapeHTML(displayName)}</div><div class="profile-stats">${isIC?'Nama karakter IC kamu':'@'+escapeHTML(currentUser.username)+' · Nama akun OOC'}</div><div class="profile-role-badges">${renderUserRoleBadges(getUser(currentUser.username))}</div></div>
+                    </div></div>
+                </div>
+            </div>`;
+            const list=document.getElementById('public-chat-list'); if(list) list.scrollTop=list.scrollHeight;
+        }
+        function openChatCategoryChooser(){
+            const screen=document.getElementById('chat-category-screen'), actions=document.getElementById('chat-category-actions'), form=document.getElementById('ic-name-form'), input=document.getElementById('ic-name-input');
+            if(actions) actions.style.display='grid'; if(form) form.classList.remove('show');
+            const savedICName=getUser(currentUser.username)?.icName || currentUser?.icName || '';
+            if(input) input.value=activeICName || savedICName;
+            if(screen) screen.classList.add('show');
+        }
+        function resetChatCategoryChooser(){
+            document.getElementById('chat-category-actions').style.display='grid';
+            document.getElementById('ic-name-form').classList.remove('show');
+        }
+        function selectChatCategory(category){
+            if(category==='ooc'){
+                activeChatCategory='ooc'; activeICName='';
+                document.getElementById('chat-category-screen').classList.remove('show');
+                showPage('public-chat-ooc'); return;
+            }
+            const me=getUser(currentUser.username), input=document.getElementById('ic-name-input');
+            if(input) input.value=me?.icName || activeICName || '';
+            document.getElementById('chat-category-actions').style.display='none';
+            document.getElementById('ic-name-form').classList.add('show');
+            setTimeout(()=>input?.focus(),50);
+        }
+        async function confirmICChat(){
+            const name=(document.getElementById('ic-name-input').value||'').trim();
+            if(name.length<2) return alert('Nama IC minimal 2 karakter.');
+            if(name.length>40) return alert('Nama IC maksimal 40 karakter.');
+            const me=getUser(currentUser.username); if(!me) return;
+
+            // Nama IC disimpan di record akun yang sama dan tidak mengubah username akun.
+            me.icName=name;
+            currentUser.icName=name;
+            activeICName=name;
+            activeChatCategory='ic';
+            localStorage.setItem('saas_session', JSON.stringify(currentUser));
+
+            // Langsung sinkron ke database GitHub terpisah saat pertama kali dibuat / saat diganti.
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key){
+                return alert('Nama IC sudah tersimpan di akun, tetapi sinkronisasi ke database gagal. Coba lagi.');
+            }
+
+            document.getElementById('chat-category-screen').classList.remove('show');
+            showPage('public-chat-ic');
+        }
+        async function sendPublicMessage(){
+            const input=document.getElementById('public-message'), text=input.value.trim(); if(!text) return;
+            const category=activeChatCategory||'ooc', isIC=category==='ic', displayName=isIC?activeICName:currentUser.username;
+            if(isIC&&!displayName) return openChatCategoryChooser();
+            const message={username:currentUser.username,displayName,text,category,createdAt:Date.now()};
+            if(isIC){db.publicChatIC.push(message);db.publicChatIC=db.publicChatIC.slice(-300)}
+            else{db.publicChatOOC.push(message);db.publicChatOOC=db.publicChatOOC.slice(-300)}
+            input.value=''; await saveToDB(); renderPublicChat(document.getElementById('app-content'),category);
+        }
+
+        async function sendPrivateMessage(encoded){
+            const other=decodeURIComponent(encoded), input=document.getElementById('private-message');
+            const text=input.value.trim(); if(!text) return;
+            const key=privateKey(currentUser.username,other);
+            db.privateChats[key]=Array.isArray(db.privateChats[key])?db.privateChats[key]:[];
+            db.privateChats[key].push({from:currentUser.username,to:other,text,createdAt:Date.now()});
+            db.privateChats[key]=db.privateChats[key].slice(-500);
+            addNotification(other,'message',currentUser.username,`Pesan baru dari @${currentUser.username}`,other);
+            input.value='';
+            await saveToDB();
+            renderPrivateChat(document.getElementById('app-content'),other);
+        }
+
+        // Membuka halaman chat pribadi dengan pengguna tertentu. Dipanggil dari
+        // tombol "Chat Pribadi" di profil pengguna lain, dari notifikasi pesan
+        // baru, dan dari daftar "Lihat Chat Saya".
+        async function openPrivateChat(encoded){
+            if(!requireAccount()) return;
+            const other=decodeURIComponent(encoded);
+            if(!other || other===currentUser.username) return;
+            if(!getUser(other)) return alert('Pengguna tidak ditemukan.');
+            selectedChatUser=other;
+            closeUserProfileModal();
+            let changed=false;
+            (db.notifications[currentUser.username]||[]).forEach(n=>{
+                if(n.type==='message' && n.from===other && !n.read){ n.read=true; changed=true; }
+            });
+            if(changed){ updateNotificationBadge(); await saveToDB(true); }
+            showPage('private-chat');
+        }
+
+        function renderPrivateChat(container, otherUsername){
+            if(!requireAccount()) return;
+            if(!otherUsername){
+                container.innerHTML=`<div class="card" style="width:100%;max-width:640px;margin:0 auto;text-align:center;padding:45px 25px;">
+                    <div style="font-size:42px;margin-bottom:14px;">💬</div>
+                    <h2 class="card-title" style="justify-content:center;">BELUM ADA CHAT DIPILIH</h2>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.7;">Buka "Lihat Chat Saya" atau profil pengguna lain untuk mulai chat pribadi.</p>
+                    <button class="btn-red" style="margin-top:14px;" onclick="showPage('my-chats')">Lihat Chat Saya</button>
+                </div>`;
+                return;
+            }
+            const otherUser=getUser(otherUsername);
+            if(!otherUser){
+                container.innerHTML=`<div class="card" style="width:100%;max-width:640px;margin:0 auto;text-align:center;padding:45px 25px;">
+                    <div style="font-size:42px;margin-bottom:14px;">⚠️</div>
+                    <h2 class="card-title" style="justify-content:center;">PENGGUNA TIDAK DITEMUKAN</h2>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.7;">Akun ini mungkin sudah tidak ada atau username-nya sudah berubah.</p>
+                    <button class="btn-red" style="margin-top:14px;" onclick="showPage('my-chats')">Kembali ke Chat Saya</button>
+                </div>`;
+                return;
+            }
+            const key=privateKey(currentUser.username,otherUsername);
+            const messages=(db.privateChats[key]||[]).slice(-200);
+            container.innerHTML=`<div class="social-layout" id="private-chat-view">
+                <div class="social-panel">
+                    <div style="margin-bottom:10px;"><button class="btn-red" style="padding:6px 12px;font-size:10px;" onclick="showPage('my-chats')">← Lihat Chat Saya</button></div>
+                    <h2>💬 Chat dengan <span style="cursor:pointer;text-decoration:underline dotted;" onclick="openUserProfileModal('${encodeURIComponent(otherUsername)}')">@${escapeHTML(otherUsername)}</span></h2>
+                    <p style="color:var(--muted);font-size:11px;">Pesan pribadi ini hanya bisa dilihat oleh kamu dan @${escapeHTML(otherUsername)}.</p>
+                    <div class="chat-list" id="private-chat-list">${messages.length?messages.map(m=>`
+                        <div class="chat-msg ${m.from===currentUser.username?'mine':''}">
+                            <div class="chat-meta"><strong>${m.from===currentUser.username?'Kamu':'@'+escapeHTML(m.from)}</strong><span>${fmtTime(m.createdAt)}</span></div>
+                            <div class="chat-body">${escapeHTML(m.text)}</div>
+                        </div>`).join(''):'<div class="empty-state">Belum ada pesan. Mulai chat sekarang.</div>'}</div>
+                    <form class="chat-compose" onsubmit="event.preventDefault();sendPrivateMessage('${encodeURIComponent(otherUsername)}');">
+                        <input class="social-input" id="private-message" maxlength="500" placeholder="Tulis pesan untuk @${escapeHTML(otherUsername)}..." required>
+                        <button class="btn-red">Kirim</button>
+                    </form>
+                </div>
+                <div class="social-panel">
+                    <h2>Profil</h2>
+                    ${userProfileCard(otherUser)}
+                </div>
+            </div>`;
+            const list=document.getElementById('private-chat-list'); if(list) list.scrollTop=list.scrollHeight;
+        }
+
+        // Daftar semua percakapan pribadi milik akun yang sedang login, diurutkan
+        // dari pesan terbaru. Diakses lewat navigasi "Lihat Chat Saya".
+        function renderMyChats(container){
+            const me=currentUser.username;
+            const conversations=Object.keys(db.privateChats||{})
+                .map(key=>{
+                    const parts=key.split('::');
+                    if(!parts.includes(me)) return null;
+                    const other=parts.find(p=>p!==me) || me;
+                    const messages=db.privateChats[key]||[];
+                    if(!messages.length) return null;
+                    const last=messages[messages.length-1];
+                    const unread=(db.notifications[me]||[]).filter(n=>n.type==='message' && n.from===other && !n.read).length;
+                    return {other,last,unread};
+                })
+                .filter(Boolean)
+                .sort((a,b)=>b.last.createdAt-a.last.createdAt);
+
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                    <h2>Lihat Chat Saya</h2>
+                    <p style="color:var(--muted);font-size:11px;margin-top:-8px;">Semua percakapan pribadi kamu. Klik salah satu untuk membuka chat-nya.</p>
+                    <div style="margin-top:14px;">${conversations.length?conversations.map(c=>`
+                        <div class="find-user-row" onclick="openPrivateChat('${encodeURIComponent(c.other)}')" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);padding:12px;margin:8px 0;background:#0b0f14;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--line)'">
+                            <div class="profile-avatar" style="width:38px;height:38px;font-size:15px;">${escapeHTML(c.other.charAt(0).toUpperCase())}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div><strong>@${escapeHTML(c.other)}</strong>${c.unread?` <span style="color:var(--red);font-size:10px;">● ${c.unread} baru</span>`:''}</div>
+                                <div style="margin-top:4px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.last.from===currentUser.username?'Kamu: ':''}${escapeHTML(c.last.text)}</div>
+                            </div>
+                            <span style="color:var(--muted);font-size:10px;white-space:nowrap;">${fmtTime(c.last.createdAt)}</span>
+                        </div>`).join(''):'<div class="empty-state">Belum ada chat pribadi. Buka profil pengguna lain lalu klik "Chat Pribadi" untuk mulai.</div>'}</div>
+                </div>
+            </div>`;
+        }
+
+        async function toggleLike(encoded){
+            const username=decodeURIComponent(encoded), user=getUser(username);
+            if(!user || username===currentUser.username) return;
+            user.likes=user.likes||[];
+            const idx=user.likes.indexOf(currentUser.username);
+            if(idx>=0) user.likes.splice(idx,1);
+            else { user.likes.push(currentUser.username); addNotification(username,'like',currentUser.username,`@${currentUser.username} menyukai akun kamu`,username); }
+            await saveToDB();
+            renderPublicChat(document.getElementById('app-content'));
+        }
+
+        function renderProfile(container){
+            const me=getUser(currentUser.username);
+            const notes=(db.notifications[currentUser.username]||[]).slice(0,50);
+            const unread=notes.filter(n=>!n.read).length;
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel">
+                    <h2>Profile Account</h2>
+                    <div class="profile-card">
+                        <div class="profile-head">
+                            <div class="profile-avatar">${escapeHTML(me.username.charAt(0).toUpperCase())}</div>
+                            <div><div class="profile-name">@${escapeHTML(me.username)}</div>
+                            <div class="profile-stats">❤️ ${me.likes.length} like</div>
+                            <div class="profile-role-badges">${renderUserRoles(me)}</div></div>
+                        </div>
+                        <hr style="border-color:var(--line);margin:20px 0">
+                        <div class="admin-form">
+                            <h3>Ganti Username</h3>
+                            <input class="social-input" id="change-username" maxlength="20" placeholder="Username baru">
+                            <button class="btn-red" onclick="changeUsername()">Simpan Username</button>
+                            <h3>Ganti Password</h3>
+                            <input class="social-input" id="old-password" type="password" placeholder="Password lama">
+                            <input class="social-input" id="new-password" type="password" minlength="6" placeholder="Password baru">
+                            <button class="btn-red" onclick="changePassword()">Simpan Password</button>
+                            <h3>Akun</h3>
+                            <button class="btn-red" onclick="logout()">Logout</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="social-panel">
+                    <h2>Notifikasi ${unread?`(${unread})`:''}</h2>
+                    <div>${notes.length?notes.map(n=>`
+                        <div class="notification-item ${n.read?'':'unread'}" onclick="openNotification('${encodeURIComponent(n.id)}')">
+                            <strong>${n.type==='message'?'💬':n.type==='like'?'❤️':'🔔'} ${escapeHTML(n.text)}</strong>
+                            <p>${fmtTime(n.createdAt)} · dari @${escapeHTML(n.from)}</p>
+                        </div>`).join(''):'<div class="empty-state">Belum ada notifikasi.</div>'}</div>
+                    ${notes.length?`<button class="btn-red" style="margin-top:15px" onclick="markAllNotificationsRead()">Tandai semua dibaca</button>`:''}
+                </div>
+            </div>`;
+        }
+
+        async function openNotification(encodedId){
+            const id=decodeURIComponent(encodedId), arr=db.notifications[currentUser.username]||[];
+            const n=arr.find(x=>x.id===id); if(!n) return;
+            n.read=true;
+            await saveToDB(true);
+            updateNotificationBadge();
+            if(n.type==='message') openPrivateChat(encodeURIComponent(n.from));
+            else showPage('profile');
+        }
+
+        async function markAllNotificationsRead(){
+            (db.notifications[currentUser.username]||[]).forEach(n=>n.read=true);
+            await saveToDB();
+            updateNotificationBadge();
+            renderProfile(document.getElementById('app-content'));
+        }
+
+        async function changeUsername(){
+            const next=document.getElementById('change-username').value.trim();
+            if(!validUsername(next)) return alert('Username 3-20 karakter: huruf, angka, atau _.');
+            if(db.users.some(u=>u.username.toLowerCase()===next.toLowerCase()))
+                return alert('Username sudah digunakan.');
+            const old=currentUser.username, me=getUser(old);
+            me.username=next;
+            db.notifications[next]=db.notifications[old]||[];
+            delete db.notifications[old];
+            Object.keys(db.privateChats).forEach(key=>{
+                if(key.includes(old)){}
+            });
+            // Chat OOC/IC display names remain independent from account username.
+            Object.values(db.notifications).flat().forEach(n=>{if(n.from===old)n.from=next});
+            currentUser={username:next};
+            localStorage.setItem('saas_session',JSON.stringify(currentUser));
+            await saveToDB();
+            openApp();
+            showPage('profile');
+        }
+
+        async function changePassword(){
+            const oldPw=document.getElementById('old-password').value, newPw=document.getElementById('new-password').value;
+            if(newPw.length<6) return alert('Password baru minimal 6 karakter.');
+            const me=getUser(currentUser.username);
+            if(me.passwordHash!==await sha256(oldPw)) return alert('Password lama salah.');
+            me.passwordHash=await sha256(newPw);
+            await saveToDB();
+            alert('Password berhasil diubah.');
+            document.getElementById('old-password').value='';
+            document.getElementById('new-password').value='';
+        }
+
+        function updateHero(title, subtitle) {
+            document.getElementById('hero-title').innerHTML = title;
+            document.getElementById('hero-subtitle').innerHTML = subtitle;
+        }
+
+        function setActiveNav(navId) {
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+            if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
+        }
+        function showPage(pageId) {
+            if(!currentUser && !guestMode) return showAuth();
+            const adminSubnav=document.getElementById('admin-subnav');
+            if(adminSubnav && pageId!=='admin') adminSubnav.classList.remove('show');
+            const container=document.getElementById('app-content');
+            container.innerHTML='';
+            document.querySelector('nav')?.classList.remove('open');
+
+            if(pageId==='teritory'){
+                updateHero("Our Territory","teritory official club in <span style='color:#39ff14;'>JG-RP</span>");
+                setActiveNav('nav-teritory'); renderTeritory(container);
+            } else if(pageId==='club-request'){
+                updateHero("AJUKAN MASUKAN NAMA CLUB KE WEBSITE","Kirim data club untuk ditinjau oleh admin");
+                setActiveNav('nav-club-request'); renderClubWebsiteRequestForm(container);
+            } else if(pageId==='saas-event'){
+                updateHero("ACARA SAAS", db.saasEvent.enabled ? "Daftarkan Club ke acara SAAS" : "Belum ada acara tersedia");
+                setActiveNav('nav-saas-event'); renderSaasEventForm(container);
+            } else if(pageId==='public-chat'){
+                updateHero("Chat Public","Pilih kategori IC atau OOC");
+                setActiveNav('nav-public-chat'); openChatCategoryChooser();
+            } else if(pageId==='public-chat-ooc'){
+                if(!requireAccount()) return;
+                activeChatCategory='ooc'; updateHero("Chat Public OOC","Out Of Character · Username akun");
+                setActiveNav('nav-public-chat'); renderPublicChat(container,'ooc');
+            } else if(pageId==='public-chat-ic'){
+                if(!requireAccount()) return;
+                activeChatCategory='ic'; activeICName=activeICName||getSavedICName(currentUser.username)||currentUser?.icName||'';
+                if(!activeICName) return openChatCategoryChooser();
+                updateHero("Chat Public IC","In Character · Nama karakter IC");
+                setActiveNav('nav-public-chat'); renderPublicChat(container,'ic');
+            } else if(pageId==='private-chat'){
+                if(!requireAccount()) return;
+                updateHero("Private Chat","Pesan pribadi antar anggota");
+                setActiveNav('nav-my-chats');
+                renderPrivateChat(container,selectedChatUser);
+            } else if(pageId==='my-chats'){
+                if(!requireAccount()) return;
+                updateHero("Lihat Chat Saya","Semua percakapan pribadi kamu");
+                setActiveNav('nav-my-chats');
+                renderMyChats(container);
+            } else if(pageId==='find-user'){
+                if(!requireAccount()) return;
+                updateHero("Cari Pengguna","Temukan akun lain lalu buka profilnya");
+                setActiveNav('nav-find-user'); renderFindUser(container);
+            } else if(pageId==='profile'){
+                if(!requireAccount()) return;
+                updateHero("Profile Account","Manage your account & notifications");
+                setActiveNav('nav-profile'); renderProfile(container);
+            } else if(pageId==='race'){
+                updateHero("Information Race","Official Race Information");
+                setActiveNav('nav-race'); renderRace(container);
+            } else if(pageId==='club'){
+                updateHero("Official Club","");
+                setActiveNav('nav-club'); renderClub(container);
+            } else if(pageId==='saas'){
+                updateHero("Information SAAS","");
+                setActiveNav('nav-saas'); renderSAAS(container); updateSaasDiscordLink();
+            } else if(pageId==='admin'){
+                if(!requireAccount()) return;
+                updateHero("System Admin","Restricted access.");
+                setActiveNav('nav-admin');
+                adminAuthenticated = false;
+                document.getElementById('admin-subnav').classList.remove('show');
+                document.querySelectorAll('.admin-subnav button').forEach(b=>b.classList.remove('active'));
+                renderAdminLogin(container);
+            } else {
+                document.getElementById('admin-subnav').classList.remove('show');
+            }
+        }
+
+        function renderClubWebsiteRequestForm(container){
+            if(guestMode || !currentUser){
+                container.innerHTML='<div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:45px 25px;"><div style="font-size:42px;margin-bottom:14px;">🔐</div><h2 class="card-title">AKUN DIPERLUKAN</h2><p style="color:var(--muted);font-size:11px;line-height:1.7;">Kamu bisa melihat halaman ini sebagai Guest, tetapi harus membuat akun untuk mengisi pengajuan.</p><button class="btn-red" onclick="requireAccount()">DAFTAR / LOGIN</button></div>'; return;
+            }
+            const savedIC = getSavedICName(currentUser.username) || currentUser?.icName || '';
+            const userClub = getUser(currentUser.username)?.club || '';
+            container.innerHTML = `
+                <div class="social-layout">
+                    <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                        <h2>AJUKAN MASUKAN NAMA CLUB KE WEBSITE</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Isi data club yang ingin dimasukkan ke website. Pengajuan akan diperiksa oleh Admin.</p>
+                        <form class="admin-form" onsubmit="event.preventDefault();confirmClubWebsiteRequest();">
+                            <label>NAMA IC :</label>
+                            <input type="text" id="clubreq-ic" value="${escapeHTML(savedIC)}" placeholder="Contoh: Jhon_Smith" maxlength="40" required>
+                            <label>NAMA CLUB :</label>
+                            <input type="text" id="clubreq-club" value="${escapeHTML(userClub)}" placeholder="Contoh: San Andreas JDM" maxlength="80" required>
+                            <label>NAMA LEADER :</label>
+                            <input type="text" id="clubreq-leader" placeholder="Contoh: Jhon_Smith" maxlength="80" required>
+                            <button class="btn-red" type="submit" style="margin-top:12px;">KIRIM PENGAJUAN</button>
+                        </form>
+                    </div>
+                </div>`;
+        }
+
+        function confirmClubWebsiteRequest(){
+            if(!requireAccount()) return;
+            const ic=document.getElementById('clubreq-ic')?.value.trim();
+            const club=document.getElementById('clubreq-club')?.value.trim();
+            const leader=document.getElementById('clubreq-leader')?.value.trim();
+            if(!ic || !club || !leader) return alert('Lengkapi NAMA IC, NAMA CLUB, dan NAMA LEADER.');
+            showDiscordNotice(submitClubWebsiteRequest);
+        }
+
+        async function submitClubWebsiteRequest(){
+            if(!requireAccount()) return;
+            const ic=document.getElementById('clubreq-ic')?.value.trim();
+            const club=document.getElementById('clubreq-club')?.value.trim();
+            const leader=document.getElementById('clubreq-leader')?.value.trim();
+            if(!ic || !club || !leader) return alert('Lengkapi NAMA IC, NAMA CLUB, dan NAMA LEADER.');
+            db.clubWebsiteRequests = Array.isArray(db.clubWebsiteRequests) ? db.clubWebsiteRequests : [];
+            const req={
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()),
+                accountUsername: currentUser.username,
+                icUsername: ic,
+                club,
+                leader,
+                status:'pending',
+                adminRead:false,
+                createdAt:Date.now()
+            };
+            db.clubWebsiteRequests.unshift(req);
+            db.clubWebsiteRequests=db.clubWebsiteRequests.slice(0,300);
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengajuan gagal disimpan ke database. Coba lagi.');
+            alert('Pengajuan nama club berhasil dikirim dan menunggu pemeriksaan Admin.');
+            showPage('teritory');
+        }
+
+        function renderSaasEventForm(container){
+            if(!db.saasEvent.enabled){
+                container.innerHTML=`<div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:45px 25px;">
+                    <div style="font-size:42px;margin-bottom:14px;">⏳</div>
+                    <h2 class="card-title">TIDAK ADA ACARA TERSEDIA DAHULU</h2>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.7;">Admin belum membuka pendaftaran acara SAAS. Silakan cek kembali nanti.</p>
+                </div>`;
+                return;
+            }
+            if(guestMode || !currentUser){
+                container.innerHTML='<div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:45px 25px;"><div style="font-size:42px;margin-bottom:14px;">🔐</div><h2 class="card-title">AKUN DIPERLUKAN</h2><p style="color:var(--muted);font-size:11px;line-height:1.7;">Kamu bisa melihat informasi acara sebagai Guest, tetapi harus membuat akun untuk mengisi pendaftaran.</p><button class="btn-red" onclick="requireAccount()">DAFTAR / LOGIN</button></div>'; return;
+            }
+            const savedIC=getSavedICName(currentUser.username)||currentUser?.icName||'';
+            const userClub=getUser(currentUser.username)?.club||'';
+            const clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
+            container.innerHTML=`<div class="social-layout">
+                <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                    <h2>DAFTARKAN CLUB KE ACARA SAAS</h2>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.7;">${escapeHTML(db.saasEvent.description)}</p>
+                    <form class="admin-form" onsubmit="event.preventDefault();confirmSaasEventRequest();">
+                        <label>Nama IC</label>
+                        <input type="text" id="saas-event-ic" value="${escapeHTML(savedIC)}" placeholder="Contoh: Jhon_Smith" maxlength="40" required>
+                        <label>Dari Club Mana</label>
+                        <input type="text" id="saas-event-club" value="${escapeHTML(userClub)}" placeholder="Nama Club" maxlength="80" required>
+                        <button class="btn-red" type="submit" style="margin-top:12px;">DAFTARKAN CLUB</button>
+                    </form>
+                </div>
+            </div>
+            <div class="saas-event-registered" style="width:100%;max-width:1100px;margin:28px auto 0;">
+                <div class="social-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:end;gap:15px;flex-wrap:wrap;">
+                        <div><span class="section-kicker">SAAS EVENT</span><h2 style="margin:5px 0 0;">CLUB YANG SUDAH TERDAFTAR</h2></div>
+                        <span style="font-size:10px;color:var(--muted);">${clubs.length} CLUB TERDAFTAR</span>
+                    </div>
+                    <div class="saas-event-club-grid">
+                        ${clubs.length ? clubs.map((c,i)=>`<div class="saas-event-club-card">
+                            <div class="saas-event-club-logo">${c.logo?`<img src="${escapeHTML(c.logo)}" alt="${escapeHTML(c.name)}" onerror="this.style.display='none';this.parentElement.classList.add('empty-logo')">`:'<span>SAAS</span>'}</div>
+                            <div><span class="section-kicker">CLUB ${String(i+1).padStart(2,'0')}</span><h3>${escapeHTML(c.name)}</h3><p>Terdaftar untuk acara SAAS.</p></div>
+                        </div>`).join('') : '<div class="empty-state" style="grid-column:1/-1;">Belum ada club yang ditambahkan ke daftar acara.</div>'}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function confirmSaasEventRequest(){
+            if(!requireAccount()) return;
+            if(!db.saasEvent.enabled) return showPage('saas-event');
+            const ic=document.getElementById('saas-event-ic').value.trim();
+            const club=document.getElementById('saas-event-club').value.trim();
+            if(!ic||!club) return alert('Lengkapi nama IC dan club.');
+            showDiscordNotice(submitSaasEventRequest);
+        }
+
+        async function submitSaasEventRequest(){
+            if(!requireAccount()) return;
+            if(!db.saasEvent.enabled) return showPage('saas-event');
+            const ic=document.getElementById('saas-event-ic').value.trim();
+            const club=document.getElementById('saas-event-club').value.trim();
+            if(!ic||!club) return alert('Lengkapi nama IC dan club.');
+            db.saasEventRequests=Array.isArray(db.saasEventRequests)?db.saasEventRequests:[];
+            const req={
+                id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),
+                accountUsername:currentUser.username,
+                icUsername:ic,
+                club,
+                status:'pending',
+                adminRead:false,
+                createdAt:Date.now()
+            };
+            db.saasEventRequests.unshift(req);
+            db.saasEventRequests=db.saasEventRequests.slice(0,300);
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pendaftaran gagal disimpan ke database. Coba lagi.');
+            alert('Pendaftaran Acara SAAS berhasil dikirim dan menunggu pemeriksaan Admin.');
+            showPage('teritory');
+        }
+
+        function updateAdminTotalUsers(){
+            const el=document.getElementById('admin-total-users-count');
+            if(!el) return;
+            const users=Array.isArray(db.users)?db.users:[];
+            el.textContent=users.length.toLocaleString('id-ID');
+        }
+
+        function getUnreadSaasEventCount(){
+            return (db.saasEventRequests||[]).filter(r=>r.adminRead!==true).length;
+        }
+
+        function updateAdminSaasEventBadge(){
+            const badge=document.getElementById('admin-saas-event-badge');
+            if(!badge) return;
+            const count=getUnreadSaasEventCount();
+            badge.textContent=count;
+            badge.style.display=count?'inline-flex':'none';
+        }
+
+        function renderSaasEventClubAdmin(){
+            const box=document.getElementById('saas-event-club-admin-list');
+            if(!box) return;
+            const clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
+            box.innerHTML=clubs.length?clubs.map((c,i)=>`<div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;">
+                <div style="width:60px;height:60px;border:1px solid #2a3441;display:grid;place-items:center;overflow:hidden;background:#080a0d;">${c.logo?`<img src="${escapeHTML(c.logo)}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">`:'<span style="font-size:9px;color:#777;">NO LOGO</span>'}</div>
+                <div><input id="saas-event-club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club"><input id="saas-event-club-logo-${i}" value="${escapeHTML(c.logo)}" placeholder="URL Logo" style="margin-top:7px;"></div>
+                <button type="button" class="btn-red" onclick="removeSaasEventClub(${i})">Hapus</button>
+            </div>`).join(''):'<div class="empty-state">Belum ada club yang ditambahkan.</div>';
+        }
+
+        function addSaasEventClub(){
+            const name=(document.getElementById('new-saas-event-club-name')?.value||'').trim();
+            const logo=(document.getElementById('new-saas-event-club-logo')?.value||'').trim();
+            if(!name) return alert('Masukkan nama club terlebih dahulu.');
+            db.saasEvent.clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
+            db.saasEvent.clubs.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,logo});
+            document.getElementById('new-saas-event-club-name').value='';
+            document.getElementById('new-saas-event-club-logo').value='';
+            renderSaasEventClubAdmin();
+        }
+
+        function removeSaasEventClub(index){
+            if(!confirm('Hapus club ini dari daftar acara SAAS?')) return;
+            db.saasEvent.clubs.splice(index,1);
+            renderSaasEventClubAdmin();
+        }
+
+        function saveSaasEventClubs(){
+            const clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
+            clubs.forEach((c,i)=>{
+                const name=document.getElementById(`saas-event-club-name-${i}`);
+                const logo=document.getElementById(`saas-event-club-logo-${i}`);
+                if(name) c.name=name.value.trim()||'Unnamed Club';
+                if(logo) c.logo=logo.value.trim();
+            });
+        }
+
+        function renderSaasEventRequests(){
+            const container=document.getElementById('saas-event-requests-list');
+            if(!container) return;
+            const requests=db.saasEventRequests||[];
+            container.innerHTML=`<div class="card" style="width:100%;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div><h2 class="card-title">Pendaftaran Acara SAAS</h2><p style="color:var(--muted);font-size:11px;">Pendaftaran club dari member. Badge merah menunjukkan pengajuan yang belum dibaca.</p></div>
+                    <button class="btn-red" onclick="markAllSaasEventRead()">Tandai Semua Dibaca</button>
+                </div>
+                <div style="margin-top:20px;display:grid;gap:14px;">
+                    ${requests.length?requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;">
+                        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                            <strong style="color:var(--accent-red);">${escapeHTML(r.icUsername)}</strong>
+                            <span style="font-size:10px;color:var(--muted);">${fmtTime(r.createdAt)}</span>
+                        </div>
+                        <p style="margin:8px 0;font-size:12px;"><b>Akun:</b> @${escapeHTML(r.accountUsername)} &nbsp; <b>Club:</b> ${escapeHTML(r.club)}</p>
+                        <p style="margin:8px 0;font-size:12px;"><b>Status:</b> ${escapeHTML(String(r.status||'pending').toUpperCase())}</p>
+                        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                            <button class="btn-red" onclick="setSaasEventStatus('${encodeURIComponent(r.id)}','approved')">✓ Approve</button>
+                            <button class="btn-red" onclick="setSaasEventStatus('${encodeURIComponent(r.id)}','rejected')">✕ Reject</button>
+                            <button class="btn-red" onclick="markSaasEventRead('${encodeURIComponent(r.id)}')">${r.adminRead?'Sudah Dibaca':'Tandai Dibaca'}</button>
+                        </div>
+                    </div>`).join(''):'<div class="empty-state">Belum ada pendaftaran acara SAAS.</div>'}
+                </div>
+            </div>`;
+        }
+
+        async function markSaasEventRead(encodedId){
+            const id=decodeURIComponent(encodedId),r=(db.saasEventRequests||[]).find(x=>x.id===id);
+            if(!r)return; r.adminRead=true; await saveToDB(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
+        }
+
+        async function markAllSaasEventRead(){
+            (db.saasEventRequests||[]).forEach(r=>r.adminRead=true);
+            await saveToDB(true); updateAdminSaasEventBadge(); renderSaasEventRequests();
+        }
+
+        async function setSaasEventStatus(encodedId,status){
+            const id=decodeURIComponent(encodedId),r=(db.saasEventRequests||[]).find(x=>x.id===id);
+            if(!r)return;
+            r.status=status; r.adminRead=true; r.reviewedAt=Date.now();
+            const label=status==='approved'?'DISETUJUI':'DITOLAK';
+            addNotification(r.accountUsername,'saas-event', 'admin', `Pendaftaran Acara SAAS kamu ${label}. Club: ${r.club}`, r.accountUsername);
+            await saveToDB(true);
+            updateAdminSaasEventBadge(); renderSaasEventRequests();
+        }
+
+        function getUnreadClubRequestCount(){
+            return (db.clubWebsiteRequests||[]).filter(r=>r.adminRead!==true).length;
+        }
+
+        function updateAdminClubRequestBadge(){
+            const badge=document.getElementById('admin-club-request-badge');
+            if(!badge) return;
+            const count=getUnreadClubRequestCount();
+            badge.textContent=count;
+            badge.style.display=count ? 'inline-flex' : 'none';
+        }
+
+        function renderClubWebsiteRequests(){
+            const section=document.getElementById('admin-section-club-requests');
+            if(!section) return;
+            const requests=(db.clubWebsiteRequests||[]);
+            const host=section.querySelector('.admin-form');
+            if(!host) return;
+            host.innerHTML=`
+                <div class="card" style="width:100%;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div><h2 class="card-title">MASUKAN NAMA CLUB KE WEBSITE</h2><p style="color:var(--muted);font-size:11px;">Daftar pengajuan dari member. Notifikasi pengguna akan dikirim saat pengajuan disetujui atau ditolak.</p></div>
+                        <button class="btn-red" onclick="markAllClubWebsiteRequestsRead()">Tandai Semua Dibaca</button>
+                    </div>
+                    <div style="margin-top:20px;display:grid;gap:14px;">
+                        ${requests.length ? requests.map(r=>`<div style="border:1px solid ${r.adminRead?'#2a3441':'var(--accent-red)'};padding:16px;background:#0b0f14;">
+                            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                                <strong style="color:var(--accent-red);">${escapeHTML(r.club)}</strong>
+                                <span style="font-size:10px;color:var(--muted);">${fmtTime(r.createdAt)}</span>
+                            </div>
+                            <p style="margin:8px 0;font-size:12px;"><b>Akun:</b> @${escapeHTML(r.accountUsername)}</p>
+                            <p style="margin:8px 0;font-size:12px;"><b>NAMA IC:</b> ${escapeHTML(r.icUsername)}</p>
+                            <p style="margin:8px 0;font-size:12px;"><b>NAMA CLUB:</b> ${escapeHTML(r.club)}</p>
+                            <p style="margin:8px 0;font-size:12px;"><b>NAMA LEADER:</b> ${escapeHTML(r.leader)}</p>
+                            <p style="margin:8px 0;font-size:11px;color:var(--muted);"><b>Status:</b> ${escapeHTML(String(r.status||'pending').toUpperCase())}</p>
+                            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                                <button class="btn-red" onclick="setClubWebsiteRequestStatus('${encodeURIComponent(r.id)}','approved')">✓ Approve</button>
+                                <button class="btn-red" onclick="setClubWebsiteRequestStatus('${encodeURIComponent(r.id)}','rejected')">✕ Reject</button>
+                                <button class="btn-red" onclick="markClubWebsiteRequestRead('${encodeURIComponent(r.id)}')">${r.adminRead?'Sudah Dibaca':'Tandai Dibaca'}</button>
+                            </div>
+                        </div>`).join('') : '<div class="empty-state">Belum ada pengajuan nama club.</div>'}
+                    </div>
+                </div>`;
+        }
+
+        async function markClubWebsiteRequestRead(encodedId){
+            const id=decodeURIComponent(encodedId), r=(db.clubWebsiteRequests||[]).find(x=>x.id===id);
+            if(!r) return;
+            r.adminRead=true;
+            await saveToDB(true);
+            updateAdminClubRequestBadge();
+            renderClubWebsiteRequests();
+        }
+
+        async function markAllClubWebsiteRequestsRead(){
+            (db.clubWebsiteRequests||[]).forEach(r=>r.adminRead=true);
+            await saveToDB(true);
+            updateAdminClubRequestBadge();
+            renderClubWebsiteRequests();
+        }
+
+        async function setClubWebsiteRequestStatus(encodedId,status){
+            const id=decodeURIComponent(encodedId), r=(db.clubWebsiteRequests||[]).find(x=>x.id===id);
+            if(!r) return;
+            r.status=status;
+            r.adminRead=true;
+            r.reviewedAt=Date.now();
+            const label=status==='approved'?'DISETUJUI':'DITOLAK';
+            addNotification(r.accountUsername,'club-request','admin',`Pengajuan nama club "${r.club}" ${label}.`,r.accountUsername);
+            await saveToDB(true);
+            updateAdminClubRequestBadge();
+            renderClubWebsiteRequests();
+        }
+
+        function renderTeritory(container) {
+            if(!db.teritory.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">TERITORY BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Teritory saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = `
+                <div class="card" style="width:100%;">
+                    <img src="${escapeHTML(db.teritory.image)}" alt="Teritory">
+                    <p>${escapeHTML(db.teritory.text)}</p>
+                </div>
+            `;
+        }
+
+        function joinLocation(index) {
+            alert(db.club[index].join_msg);
+        }
+
+        function joinDiscord(index) {
+            const link = db.club[index].discord_link;
+            if (link && link !== "") {
+                window.open(link, '_blank');
+            } else {
+                alert("Link Discord belum diatur untuk club ini.");
+            }
+        }
+
+        function infoClub(index) {
+            const clubName = db.club[index].name;
+            setActiveNav(''); 
+            updateHero(`Information ${clubName}`, "Restricted Club Data");
+            
+            const container = document.getElementById('app-content');
+            const infoData = db.club[index].info;
+
+            let html = `<div class="saas-grid">`;
+            infoData.top.forEach((t, i) => {
+                html += `
+                <div class="card">
+                    <h2 class="card-title">Bagian 0${i + 1}</h2>
+                    <img src="${t.img}">
+                    <p>${t.text}</p>
+                </div>`;
+            });
+            html += `</div>`;
+
+            html += `
+                <div class="card" style="width:100%; margin-top:20px;">
+                    <h2 class="card-title">Dokumentasi Utama</h2>
+                    <img src="${infoData.bottom.img}" style="max-height: 400px; width: 100%; object-fit: cover;">
+                    <p>${infoData.bottom.text}</p>
+                    <button class="btn-red" onclick="showPage('club')" style="margin-top:20px;">⬅ Kembali ke Club</button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderRace(container) {
+            if(!db.race.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">INFORMATION RACE BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Information Race saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
+            let html = `<div style="width:100%;">
+                <div class="race-grid">`;
+
+            db.race.top.forEach((item) => {
+                html += `
+                    <div class="card race-text-card">
+                        <h2 class="card-title">${item.title}</h2>
+                        <p>${item.text}</p>
+                    </div>`;
+            });
+
+            html += `</div>
+                <div class="card race-photo-card">
+                    <h2 class="card-title">Race Documentation</h2>
+                    <img src="${db.race.bottom.img}" alt="Race Documentation">
+                    <p>${db.race.bottom.text}</p>
+                </div>
+            </div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderClub(container) {
+            if(!db.clubSystem.enabled){
+                container.innerHTML = `
+                    <div class="card" style="width:100%;max-width:760px;margin:0 auto;text-align:center;padding:50px 25px;">
+                        <div style="font-size:46px;margin-bottom:14px;">⛔</div>
+                        <h2 class="card-title" style="justify-content:center;">OFFICIAL CLUB BELUM TERSEDIA</h2>
+                        <p style="color:var(--muted);font-size:11px;line-height:1.7;">Official Club saat ini sedang OFF / belum tersedia. Silakan cek kembali nanti.</p>
+                    </div>
+                `;
+                return;
+            }
+            let html = '';
+            db.club.forEach((c, index) => {
+                html += `
+                <div class="card">
+                    <h2 class="card-title">${c.name}</h2>
+                    <img src="${c.img}" alt="Club">
+                    <p>${c.text}</p>
+                    
+                    <div class="btn-group">
+                        <button class="btn-red" onclick="joinLocation(${index})">Join Location</button>
+                        <button class="btn-red" onclick="joinDiscord(${index})">Join Discord ${c.name}</button>
+                        <button class="btn-red" onclick="infoClub(${index})">Information Club</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+
+        function normalizeExternalUrl(value, fallback){
+            const raw = String(value || '').trim();
+            if(!raw) return fallback;
+            try{
+                const u = new URL(raw, window.location.href);
+                if(u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+            }catch(e){}
+            return fallback;
+        }
+
+        function openSaasDiscord(event){
+            if(event) event.preventDefault();
+            const url = normalizeExternalUrl(db?.saas?.discord?.link, 'https://discord.gg/MqeWH9rxZV');
+            db.saas.discord.link = url;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        function updateSaasDiscordLink(){
+            const link = document.getElementById('saas-hero-discord-link');
+            if(!link) return;
+            const cfg = (db.saas && db.saas.discord) || {};
+            const url = normalizeExternalUrl(cfg.link, 'https://discord.gg/MqeWH9rxZV');
+            db.saas.discord = db.saas.discord || {};
+            db.saas.discord.link = url;
+            db.saas.discord.text = String(cfg.text || 'DISCORD SAAS').trim() || 'DISCORD SAAS';
+            link.href = url;
+            link.textContent = '';
+            const icon = document.createElement('span');
+            icon.className = 'saas-discord-icon';
+            icon.setAttribute('aria-hidden','true');
+            icon.textContent = '◉';
+            const label = document.createElement('span');
+            label.textContent = db.saas.discord.text;
+            link.append(icon, label);
+            link.title = db.saas.discord.text;
+        }
+
+        function renderSAAS(container) {
+            let html = `<div class="saas-grid">`;
+            db.saas.top.forEach((t, index) => {
+                html += `
+                <div class="card">
+                    <h2 class="card-title">${escapeHTML(t.title || ('Division 0'+(index+1)))}</h2>
+                    <img src="${escapeHTML(t.img)}">
+                    <p>${escapeHTML(t.text)}</p>
+                </div>`;
+            });
+            html += `</div>`;
+
+            html += `<div class="saas-member-grid">`;
+            db.saas.bottomMembers.forEach((m, index) => {
+                html += `
+                    <div class="card saas-member-card">
+                        <h2 class="card-title">${escapeHTML(m.title || (index===0 ? 'ALL SYNDICATE MEMBER INTI' : 'ALL SYNDICATE MEMBER INTI 0'+(index+1)))}</h2>
+                        ${m.img ? `<img src="${escapeHTML(m.img)}" alt="${escapeHTML(m.title)}">` : ''}
+                        ${m.text ? `<p>${escapeHTML(m.text)}</p>` : ''}
+                    </div>`;
+            });
+            html += `</div>`;
+            html += `
+                <div class="card" style="width:100%; margin-top:24px;">
+                    <h2 class="card-title">DISCORD SAAS</h2>
+                    <p>Gabung ke Discord SAAS untuk informasi, komunikasi, dan update komunitas.</p>
+                    <a class="saas-discord-btn" href="${escapeHTML(normalizeExternalUrl(db.saas.discord.link, 'https://discord.gg/MqeWH9rxZV'))}" target="_blank" rel="noopener noreferrer">💬 ${escapeHTML(db.saas.discord.text || 'DISCORD SAAS')}</a>
+                </div>`;
+            container.innerHTML = html;
+        }
+
+        function renderAdminLogin(container) {
+            container.innerHTML = `
+                <div class="card" style="max-width:460px; margin:0 auto;">
+                    <h2 class="card-title">Authentication required</h2>
+                    <div class="admin-form">
+                        <input type="password" id="admin-pw" placeholder="Enter System Password">
+                        <button onclick="checkAdmin()" class="btn-red">Login</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkAdmin() {
+            const input=document.getElementById('admin-pw');
+            const pw=String(input?.value||'');
+            const saved=String(db.password ?? '');
+            if(pw !== saved){
+                adminAuthenticated=false;
+                document.getElementById('admin-subnav')?.classList.remove('show');
+                alert('Akses Ditolak: Password Salah!');
+                return;
+            }
+            try{
+                normalizeDB();
+                adminAuthenticated=true;
+                document.getElementById('admin-subnav')?.classList.add('show');
+                document.querySelectorAll('.admin-subnav button').forEach(b=>b.classList.remove('active'));
+                renderAdminDashboard(document.getElementById('app-content'));
+                showAdminSection('dashboard');
+                updateAdminTotalUsers();
+                updateAdminClubRequestBadge();
+                updateAdminSaasEventBadge();
+                if(input) input.value='';
+            }catch(err){
+                console.error('Admin dashboard error:',err);
+                adminAuthenticated=true;
+                document.getElementById('admin-subnav')?.classList.add('show');
+                const c=document.getElementById('app-content');
+                if(c) c.innerHTML='<div class="card" style="width:100%;"><h2 class="card-title">Admin Panel</h2><p style="color:#ff2938;">Admin berhasil login, tetapi dashboard mengalami error. Silakan refresh halaman.</p><pre style="white-space:pre-wrap;color:#aaa;font-size:11px;">'+escapeHTML(String(err?.message||err))+'</pre></div>';
+            }
+        }
+
+        function renderAdminDashboard(container) {
+            const top = db.saas.top || [];
+            container.innerHTML = `
+                <div class="card" style="width:100%;">
+                    <h2 class="card-title">Dashboard Management</h2>
+                    <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:18px;">Pilih menu admin di bawah navigasi utama untuk membuka pengaturan tertentu. Role khusus dapat dibuat dengan warna berbeda dan diberikan ke setiap pengguna.</p>
+                    <div class="admin-section active" id="admin-section-dashboard">
+                        <div class="profile-card">
+                            <h3>Admin Control Center</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Gunakan navigasi admin di bawah menu utama untuk mengedit Database, Security, Teritory, Race, Information SAAS, Official Clubs, Create Role, atau Tambah Role ke Pengguna.</p>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-github">
+                        <div class="admin-form">
+                            <h3>Supabase Database Link</h3>
+                            <input type="text" id="sb-url" placeholder="Project URL (https://xxxx.supabase.co)" value="${escapeHTML(sbConfig.url)}">
+                            <input type="password" id="sb-key" placeholder="Anon Public Key" value="${escapeHTML(sbConfig.key)}">
+                            <small style="display:block;opacity:.75;line-height:1.5;">Anon key aman ditaruh di browser karena dibatasi Row Level Security di Supabase. Isi lalu tekan TEST CONNECTION.</small>
+                            <button onclick="saveGhConfig()" class="btn-red" style="width:max-content;">Set Config</button>
+                            <button type="button" onclick="testGithubConnection(true)" style="width:max-content;">TEST CONNECTION</button>
+                            <p style="font-size:10px;color:#777;line-height:1.6;">Project URL dan Anon Key didapat dari Supabase Dashboard &gt; Settings &gt; API. Semua perangkat yang membuka website ini akan membaca/menulis ke database Supabase yang sama.</p>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-security">
+                        <div class="admin-form">
+                            <h3>Sistem Keamanan</h3>
+                            <label style="color:var(--text-muted);font-size:12px;">Ubah Password Admin Utama:</label>
+                            <input type="text" id="new-pw" value="${escapeHTML(db.password)}">
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-teritory">
+                        <div class="admin-form">
+                            <h3>Edit Teritory</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Teritory. Jika ON, halaman Teritory akan menampilkan gambar dan informasi. Jika OFF, member akan melihat “TERITORY BELUM TERSEDIA”.</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="teritory-enabled" ${db.teritory.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF TERITORY</b><br><small style="color:#777;">ON = Teritory tersedia · OFF = Teritory belum tersedia</small></span>
+                            </label>
+                            <input type="text" id="edit-teri-img" value="${escapeHTML(db.teritory.image)}" placeholder="Image URL">
+                            <input type="text" id="edit-teri-txt" value="${escapeHTML(db.teritory.text)}" placeholder="Description">
+                            <button type="button" class="btn-red" onclick="saveTeritorySettings()">Simpan Pengaturan Teritory</button>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-race">
+                        <div class="admin-form">
+                            <h3>Edit Information Race</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Information Race. Jika ON, halaman Race akan menampilkan informasi. Jika OFF, member akan melihat "INFORMATION RACE BELUM TERSEDIA".</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="race-system-enabled" ${db.race.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF INFORMATION RACE</b><br><small style="color:#777;">ON = Race tersedia · OFF = Race belum tersedia</small></span>
+                            </label>
+                            <button type="button" class="btn-red" onclick="saveRaceSystemSettings()" style="width:max-content;">Simpan Status Race</button>
+                            <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
+                            ${db.race.top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:12px;margin-bottom:10px;background:#0b0f14;">
+                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Kotak Race 0${i+1}</label>
+                                <input type="text" id="race-top-title-${i}" value="${escapeHTML(t.title)}" placeholder="Judul Kotak ${i+1}" style="margin-top:8px;">
+                                <textarea id="race-top-txt-${i}" rows="4" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
+                            </div>`).join('')}
+                            <label style="font-size:12px;color:var(--text-muted);">Foto Race Bagian Bawah:</label>
+                            <input type="text" id="race-bot-img" value="${escapeHTML(db.race.bottom.img)}">
+                            <textarea id="race-bot-txt" rows="3">${escapeHTML(db.race.bottom.text)}</textarea>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-saas">
+                        <div class="admin-form">
+                            <h3>Edit Information SAAS</h3>
+                            ${top.map((t,i)=>`<div style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;">
+                                <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Bagian SAAS ${i+1}</label>
+                                <input type="text" id="saas-top-title-${i}" value="${escapeHTML(t.title || ('Division 0'+(i+1)))}" placeholder="Nama / Judul SAAS ${i+1}" style="margin-top:8px;">
+                                <input type="text" id="saas-top-img-${i}" value="${escapeHTML(t.img)}" placeholder="URL Foto SAAS ${i+1}" style="margin-top:8px;">
+                                <textarea id="saas-top-txt-${i}" rows="3" placeholder="Deskripsi SAAS ${i+1}" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
+                            </div>`).join('')}
+                            <h3>ALL SYNDICATE MEMBER INTI</h3>
+                            <p style="font-size:11px;color:#777;">Bagian ini tampil sebagai kartu terpisah dengan jarak antar kartu. Kamu bisa menambah kartu/member inti kapan saja dari Admin Panel.</p>
+                            <div id="saas-bottom-members-editor">
+                                ${db.saas.bottomMembers.map((m,i)=>`<div class="saas-bottom-editor" data-index="${i}" style="border:1px solid #2a3441;padding:14px;margin-bottom:12px;background:#0b0f14;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                                        <label style="color:var(--accent-red);font-weight:bold;font-size:13px;">Member Inti ${i+1}</label>
+                                        <button type="button" class="btn-red" onclick="removeSaasBottomMember(${i})">Hapus</button>
+                                    </div>
+                                    <input type="text" id="saas-bottom-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul Member Inti" style="margin-top:8px;">
+                                    <input type="text" id="saas-bottom-img-${i}" value="${escapeHTML(m.img)}" placeholder="URL Foto / Logo Member" style="margin-top:8px;">
+                                    <textarea id="saas-bottom-txt-${i}" rows="3" placeholder="Deskripsi Member Inti" style="margin-top:8px;">${escapeHTML(m.text)}</textarea>
+                                </div>`).join('')}
+                            </div>
+                            <button type="button" class="btn-red" onclick="addSaasBottomMember()">+ Tambah Member Inti</button>
+                            <h3>Button Discord SAAS</h3>
+                            <label style="font-size:12px;color:var(--text-muted);">Link Discord:</label>
+                            <input type="url" id="saas-discord-link" value="${escapeHTML(db.saas.discord.link)}" placeholder="https://discord.gg/...">
+                            <label style="font-size:12px;color:var(--text-muted);">Tulisan Button:</label>
+                            <input type="text" id="saas-discord-text" value="${escapeHTML(db.saas.discord.text)}" placeholder="DISCORD SAAS">
+                            <p style="font-size:10px;color:#777;">Link ini mengatur tombol DISCORD SAAS di bagian atas website dan tombol Discord pada Information SAAS. Gunakan link lengkap seperti https://discord.gg/MqeWH9rxZV.</p>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-saas-event">
+                        <div class="admin-form">
+                            <h3>ACARA SAAS — PENGATURAN & NOTIFIKASI</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Aktifkan pendaftaran acara SAAS. Jika OFF, member akan melihat “TIDAK ADA ACARA TERSEDIA DAHULU”.</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="saas-event-enabled" ${db.saasEvent.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF PENDAFTARAN ACARA SAAS</b><br><small style="color:#777;">ON = form pendaftaran tersedia · OFF = acara tidak tersedia</small></span>
+                            </label>
+                            <label style="font-size:12px;color:var(--text-muted);margin-top:14px;display:block;">Deskripsi Acara:</label>
+                            <textarea id="saas-event-description" rows="4" maxlength="500">${escapeHTML(db.saasEvent.description)}</textarea>
+                            <button type="button" class="btn-red" onclick="saveSaasEventSettings()">Simpan Pengaturan Acara</button>
+                            <hr style="border:1px solid #2a3441;margin:25px 0;">
+                            <button type="button" class="btn-red" onclick="renderSaasEventRequests()">Buka Daftar Pendaftaran</button>
+                            <div id="saas-event-requests-list" style="margin-top:18px;"></div>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-saas-event-clubs">
+                        <div class="admin-form">
+                            <h3>CLUB YANG TERDAFTAR DI ACARA SAAS</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Tambahkan nama dan logo club yang ingin ditampilkan di bagian bawah halaman DAFTARKAN CLUB KE ACARA SAAS. Data tersimpan ke database Supabase saat disimpan.</p>
+                            <div id="saas-event-club-admin-list"></div>
+                            <hr style="border:1px solid #2a3441;margin:25px 0;">
+                            <h4>Tambah Club Baru</h4>
+                            <input type="text" id="new-saas-event-club-name" maxlength="80" placeholder="Nama Club">
+                            <input type="url" id="new-saas-event-club-logo" placeholder="URL Logo Club (https://...)" style="margin-top:8px;">
+                            <button type="button" class="btn-red" onclick="addSaasEventClub()" style="margin-top:10px;">+ TAMBAH CLUB KE ACARA</button>
+                            <button type="button" class="btn-red" onclick="saveSaasEventClubs(); saveToDB(true).then(()=>alert('Daftar club acara SAAS berhasil disimpan ke database.'))" style="margin-top:10px;">💾 SIMPAN CLUB KE DATABASE</button>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-club-requests">
+                <div class="admin-form"></div>
+            </div>
+            <div class="admin-section" id="admin-section-create-role">
+                        <div class="admin-form">
+                            <h3>Create Role</h3>
+                            <p style="font-size:11px;color:#777;line-height:1.6;">Buat role khusus dengan warna masing-masing. Role akan tersimpan ke database Supabase saat Save & Sync.</p>
+                            <input type="text" id="new-role-name" maxlength="40" placeholder="Nama Role, contoh: Founder">
+                            <label style="font-size:12px;color:var(--text-muted);">Warna Role:</label>
+                            <div style="display:flex;gap:10px;align-items:center;">
+                                <input type="color" id="new-role-color" value="#ff2938" style="width:70px;height:42px;padding:2px;">
+                                <input type="text" id="new-role-color-text" value="#ff2938" placeholder="#RRGGBB" maxlength="7" style="flex:1;">
+                            </div>
+                            <button type="button" class="btn-red" onclick="createCustomRole()">+ Buat Role</button>
+                            <div style="margin-top:20px;">${db.roles.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #2a3441;padding:10px;margin-bottom:8px;background:#0b0f14;">
+                                <span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span>
+                                <button type="button" class="btn-red" onclick="deleteCustomRole('${encodeURIComponent(r.id)}')">Hapus</button>
+                            </div>`).join('') || '<div class="empty-state">Belum ada role khusus.</div>'}</div>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-assign-role">
+                        <div class="admin-form">
+                            <h3>Tambah Role ke Pengguna</h3>
+                            <p style="font-size:11px;color:#777;line-height:1.6;">Pilih pengguna lalu atur role. Satu pengguna dapat memiliki beberapa role.</p>
+                            <input type="text" id="role-user-search" placeholder="Cari username..." oninput="filterRoleUsers()">
+                            <div id="role-user-list">${renderRoleUserRows()}</div>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="admin-section-clubs">
+                        <div class="admin-form">
+                            <h3>Manage Official Clubs</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Atur ketersediaan Official Club. Jika ON, halaman Official Club akan menampilkan daftar club. Jika OFF, member akan melihat "OFFICIAL CLUB BELUM TERSEDIA".</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;">
+                                <input type="checkbox" id="club-system-enabled" ${db.clubSystem.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>ON / OFF OFFICIAL CLUB</b><br><small style="color:#777;">ON = Official Club tersedia · OFF = Official Club belum tersedia</small></span>
+                            </label>
+                            <button type="button" class="btn-red" onclick="saveClubSystemSettings()" style="width:max-content;">Simpan Status Official Club</button>
+                            <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
+                            ${db.club.map((c,i)=>`<div style="border:1px solid #2a3441;padding:15px;margin-bottom:20px;background:#0b0f14;">
+                                <label style="color:var(--accent-red);font-weight:bold;font-size:16px;">Club: ${escapeHTML(c.name)}</label>
+                                <input type="text" id="club-name-${i}" value="${escapeHTML(c.name)}" placeholder="Nama Club">
+                                <input type="text" id="club-img-${i}" value="${escapeHTML(c.img)}" placeholder="URL Foto Markas">
+                                <textarea id="club-txt-${i}" rows="2">${escapeHTML(c.text)}</textarea>
+                                <label style="font-size:12px;color:var(--text-muted);">Link Discord:</label>
+                                <input type="text" id="club-discord-${i}" value="${escapeHTML(c.discord_link)}">
+                                <label style="font-size:12px;color:var(--text-muted);">Pesan Join Location:</label>
+                                <input type="text" id="club-join-${i}" value="${escapeHTML(c.join_msg)}">
+                                <h4 style="color:#a07855;margin-top:15px;">Information Club</h4>
+                                ${c.info.top.map((inf,j)=>`<div style="display:flex;gap:10px;margin-top:8px;"><input type="text" id="club-info-top-img-${i}-${j}" value="${escapeHTML(inf.img)}"><input type="text" id="club-info-top-txt-${i}-${j}" value="${escapeHTML(inf.text)}" style="flex:1;"></div>`).join('')}
+                                <input type="text" id="club-info-bot-img-${i}" value="${escapeHTML(c.info.bottom.img)}" style="margin-top:8px;">
+                                <textarea id="club-info-bot-txt-${i}" rows="2" style="margin-top:8px;">${escapeHTML(c.info.bottom.text)}</textarea>
+                            </div>`).join('')}
+                            <h3>Add New Official Club</h3>
+                            <input type="text" id="new-club-name" placeholder="Nama Club Baru">
+                            <input type="text" id="new-club-img" placeholder="URL Foto Markas Utama">
+                            <textarea id="new-club-txt" rows="2" placeholder="Deskripsi Markas"></textarea>
+                            <input type="text" id="new-club-discord" placeholder="Link Invite Discord">
+                            <input type="text" id="new-club-join" placeholder="Pesan Teks Join Location">
+                            <button onclick="addClub()" class="btn-red" style="width:max-content;">+ Tambah Club</button>
+                        </div>
+                    </div>
+                    <hr style="border:1px solid #2a3441;margin:30px 0;">
+                    <button onclick="saveAllEdits()" class="btn-red" style="padding:15px;font-size:16px;">💾 SAVE & SYNC TO GITHUB</button>
+                </div>`;
+        }
+
+        function showAdminSection(section){
+            if(!adminAuthenticated) return;
+            document.querySelectorAll('.admin-section').forEach(el=>el.classList.remove('active'));
+            const target=document.getElementById('admin-section-'+section);
+            if(target) target.classList.add('active');
+            document.querySelectorAll('.admin-subnav button').forEach(btn=>btn.classList.toggle('active',btn.dataset.adminSection===section));
+            if(section==='club-requests') renderClubWebsiteRequests();
+            if(section==='saas-event') renderSaasEventRequests();
+            if(section==='saas-event-clubs'){ renderSaasEventClubAdmin(); }
+            if(section==='create-role') setTimeout(syncRoleColorInputs,0);
+            updateAdminTotalUsers();
+            updateAdminClubRequestBadge();
+            updateAdminSaasEventBadge();
+        }
+
+        async function testGithubConnection(showAlert=true){
+            const url=(document.getElementById('sb-url')?.value || sbConfig.url || '').trim().replace(/\/$/,'');
+            const key=(document.getElementById('sb-key')?.value || sbConfig.key || '').trim();
+            if(!url || !key){
+                if(showAlert) alert('Isi Project URL dan Anon Key terlebih dahulu.');
+                return false;
+            }
+            sbConfig.url=url; sbConfig.key=key;
+            githubLastError='';
+            try{
+                const res=await fetch(`${url}/rest/v1/kv_store?select=key&limit=1`,{headers: supaHeaders()});
+                if(!res.ok){
+                    githubLastError=supaErrorMessage(res.status,'Koneksi Supabase');
+                    if(showAlert) alert('❌ '+githubLastError+' (Pastikan sudah menjalankan SQL setup tabel kv_store)');
+                    return false;
+                }
+                githubLastError='';
+                if(showAlert) alert('✅ Koneksi Supabase berhasil.');
+                return true;
+            }catch(e){
+                githubLastError=`Gagal menghubungi Supabase: ${e.message || e}`;
+                if(showAlert) alert('❌ '+githubLastError);
+                return false;
+            }
+        }
+
+        async function saveGhConfig() {
+            sbConfig.url = (document.getElementById('sb-url')?.value || '').trim().replace(/\/$/,'');
+            sbConfig.key = (document.getElementById('sb-key')?.value || '').trim();
+            localStorage.setItem('sb_url', sbConfig.url);
+            localStorage.setItem('sb_key', sbConfig.key);
+            githubDatabaseReady=false; githubLastFetchOk=null; lastSyncedDbSnapshot='';
+            const ok=await testGithubConnection(false);
+            if(!ok){ alert('❌ Database belum siap: '+(githubLastError || 'Periksa Project URL dan Anon Key.')); return; }
+            const found=await fetchFromDB(true);
+            if(!found && githubLastFetchOk===null) await ensureDatabaseReady();
+            if(githubDatabaseReady){
+                startAutoDatabaseSync();
+                alert('✅ Supabase tersambung dan 4 partisi database siap digunakan.');
+            }else{
+                alert('❌ Database Supabase belum siap: '+(githubLastError || 'gagal membuat/membaca file database.'));
+            }
+        }
+
+        function addClub() {
+            const name = document.getElementById('new-club-name').value || "Unnamed Club";
+            const img = document.getElementById('new-club-img').value;
+            const txt = document.getElementById('new-club-txt').value;
+            const discordLink = document.getElementById('new-club-discord').value || "";
+            const joinMsg = document.getElementById('new-club-join').value || "Titik koordinat belum diatur.";
+
+            const infoTop = [];
+            for(let j=0; j<3; j++) {
+                infoTop.push({
+                    img: document.getElementById(`new-info-top-img-${j}`).value || "https://via.placeholder.com/400x250/141b22/e62429?text=Info",
+                    text: document.getElementById(`new-info-top-txt-${j}`).value || "Informasi Club"
+                });
+            }
+            const infoBotImg = document.getElementById('new-info-bot-img').value || "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80";
+            const infoBotTxt = document.getElementById('new-info-bot-txt').value || "Log Informasi Master Base Baru.";
+
+            if (img && txt) {
+                db.club.push({ 
+                    name: name,
+                    img: img, 
+                    text: txt,
+                    discord_link: discordLink,
+                    join_msg: joinMsg,
+                    info: {
+                        top: infoTop,
+                        bottom: {
+                            img: infoBotImg,
+                            text: infoBotTxt
+                        }
+                    }
+                });
+                alert(`Club ${name} berhasil dimasukkan ke antrean! Klik Save & Sync untuk menerapkan.`);
+                renderAdminDashboard(document.getElementById('app-content'));
+            } else {
+                alert("Lengkapi URL foto markas utama dan teks deskripsinya!");
+            }
+        }
+
+        function addSaasBottomMember(){
+            db.saas.bottomMembers = Array.isArray(db.saas.bottomMembers) ? db.saas.bottomMembers : [];
+            db.saas.bottomMembers.push({title:`ALL SYNDICATE MEMBER INTI ${String(db.saas.bottomMembers.length+1).padStart(2,'0')}`,img:'',text:''});
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('saas');
+        }
+
+        function removeSaasBottomMember(index){
+            if(db.saas.bottomMembers.length <= 3){
+                alert('Minimal harus ada 3 bagian Member Inti.');
+                return;
+            }
+            db.saas.bottomMembers.splice(index,1);
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('saas');
+        }
+
+        function getUserRoles(user){
+            if(!user) return [];
+            const ids=Array.isArray(user.roleIds)?user.roleIds:[];
+            return (db.roles||[]).filter(r=>ids.includes(r.id));
+        }
+        function renderUserRoleBadges(user){
+            const roles=getUserRoles(user);
+            return roles.length ? roles.map(r=>`<span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};box-shadow:0 0 12px ${escapeHTML(r.color)}33;">${escapeHTML(r.name)}</span>`).join('') : '';
+        }
+        function renderUserRoles(user){
+            const badges=renderUserRoleBadges(user);
+            return badges || '<span style="font-size:10px;color:#777;">No special role</span>';
+        }
+        function updateUserChipRoles(){
+            const el=document.getElementById('user-chip-roles');
+            if(!el) return;
+            const me=currentUser ? getUser(currentUser.username) : null;
+            el.innerHTML=me ? renderUserRoleBadges(me) : '';
+        }
+        function renderChatMessageRoles(message){
+            const author=getUser(message?.username);
+            const badges=renderUserRoleBadges(author);
+            return badges ? `<span class="chat-role-badges">${badges}</span>` : '';
+        }
+
+        function renderRoleUserRows(filter=''){
+            const q=String(filter||'').trim().toLowerCase();
+            const users=db.users.filter(u=>!q || u.username.toLowerCase().includes(q));
+            if(!users.length) return '<div class="empty-state">Pengguna tidak ditemukan.</div>';
+            return users.map(u=>`<div class="role-user-row" style="border:1px solid #2a3441;padding:12px;margin:8px 0;background:#0b0f14;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div><strong>@${escapeHTML(u.username)}</strong><div style="margin-top:6px;">${renderUserRoles(u)}</div></div>
+                    <button type="button" class="btn-red" onclick="openRoleAssignment('${encodeURIComponent(u.username)}')">Atur Role</button>
+                </div>
+            </div>`).join('');
+        }
+
+        function filterRoleUsers(){
+            const el=document.getElementById('role-user-search'), list=document.getElementById('role-user-list');
+            if(el&&list) list.innerHTML=renderRoleUserRows(el.value);
+        }
+
+        function createCustomRole(){
+            const name=(document.getElementById('new-role-name')?.value||'').trim();
+            const color=(document.getElementById('new-role-color-text')?.value||'').trim();
+            if(name.length<2) return alert('Nama role minimal 2 karakter.');
+            if(!/^#[0-9a-fA-F]{6}$/.test(color)) return alert('Warna harus format HEX, contoh #ff2938.');
+            if(db.roles.some(r=>r.name.toLowerCase()===name.toLowerCase())) return alert('Nama role sudah ada.');
+            db.roles.push({id:'role_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),name,color});
+            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('create-role');
+        }
+
+        function syncRoleColorInputs(){
+            const c=document.getElementById('new-role-color'), t=document.getElementById('new-role-color-text');
+            if(c&&t){ c.oninput=()=>t.value=c.value; t.oninput=()=>{if(/^#[0-9a-fA-F]{6}$/.test(t.value)) c.value=t.value;} }
+        }
+
+        function openRoleAssignment(encodedUser){
+            const username=decodeURIComponent(encodedUser), user=getUser(username); if(!user) return;
+            document.getElementById('app-content').innerHTML=`<div class="card" style="width:100%;">
+                <h2 class="card-title">Atur Role @${escapeHTML(username)}</h2>
+                <div class="admin-form">
+                    ${(db.roles||[]).map(r=>`<label style="display:flex;align-items:center;gap:10px;border:1px solid #2a3441;padding:12px;margin:7px 0;background:#0b0f14;cursor:pointer;">
+                        <input type="checkbox" class="assign-role-check" value="${escapeHTML(r.id)}" ${(Array.isArray(user.roleIds)?user.roleIds:[]).includes(r.id)?'checked':''}>
+                        <span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span>
+                    </label>`).join('') || '<div class="empty-state">Buat role terlebih dahulu.</div>'}
+                    <button class="btn-red" type="button" onclick="saveUserRoles('${encodeURIComponent(username)}')">Simpan Role</button>
+                    <button class="btn-red" type="button" onclick="renderAdminDashboard(document.getElementById('app-content'));showAdminSection('assign-role');">Kembali</button>
+                </div>
+            </div>`;
+        }
+
+        async function saveUserRoles(encodedUser){
+            const username=decodeURIComponent(encodedUser), user=getUser(username); if(!user) return;
+            user.roleIds=[...document.querySelectorAll('.assign-role-check:checked')].map(x=>x.value);
+            await saveToDB();
+            alert('Role pengguna berhasil disimpan.');
+            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('assign-role');
+        }
+
+        function deleteCustomRole(encodedId){
+            const id=decodeURIComponent(encodedId), role=db.roles.find(r=>r.id===id); if(!role) return;
+            if(!confirm(`Hapus role "${role.name}"? Role ini juga akan dilepas dari semua pengguna.`)) return;
+            db.roles=db.roles.filter(r=>r.id!==id);
+            db.users.forEach(u=>u.roleIds=(u.roleIds||[]).filter(x=>x!==id));
+            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('create-role');
+        }
+
+        async function saveTeritorySettings(){
+            const enabled=document.getElementById('teritory-enabled');
+            const image=document.getElementById('edit-teri-img');
+            const text=document.getElementById('edit-teri-txt');
+            db.teritory.enabled=!!enabled?.checked;
+            db.teritory.image=(image?.value||'').trim();
+            db.teritory.text=(text?.value||'').trim();
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan Teritory gagal disimpan ke database. Coba lagi.');
+            alert(db.teritory.enabled?'Teritory sekarang ON / tersedia.':'Teritory sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('teritory');
+        }
+
+        async function saveRaceSystemSettings(){
+            const enabled=document.getElementById('race-system-enabled');
+            db.race.enabled=!!enabled?.checked;
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Information Race gagal disimpan ke database. Coba lagi.');
+            alert(db.race.enabled?'Information Race sekarang ON / tersedia.':'Information Race sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('race');
+        }
+
+        async function saveClubSystemSettings(){
+            const enabled=document.getElementById('club-system-enabled');
+            db.clubSystem.enabled=!!enabled?.checked;
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Status Official Club gagal disimpan ke database. Coba lagi.');
+            alert(db.clubSystem.enabled?'Official Club sekarang ON / tersedia.':'Official Club sekarang OFF / belum tersedia.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('clubs');
+        }
+
+        async function saveSaasEventSettings(){
+            const enabled=document.getElementById('saas-event-enabled');
+            const description=document.getElementById('saas-event-description');
+            db.saasEvent.enabled=!!enabled?.checked;
+            db.saasEvent.description=(description?.value||'').trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke database. Coba lagi.');
+            alert(db.saasEvent.enabled?'Pendaftaran Acara SAAS sekarang ON.':'Pendaftaran Acara SAAS sekarang OFF.');
+            renderAdminDashboard(document.getElementById('app-content')); showAdminSection('saas-event');
+        }
+
+        function saveAllEdits() {
+            db.password = document.getElementById('new-pw').value;
+            const teritoryEnabled = document.getElementById('teritory-enabled');
+            db.teritory.enabled = teritoryEnabled ? !!teritoryEnabled.checked : !!db.teritory.enabled;
+            db.teritory.image = document.getElementById('edit-teri-img').value;
+            db.teritory.text = document.getElementById('edit-teri-txt').value;
+            
+            for(let i=0; i<db.saas.top.length; i++) {
+                const titleEl=document.getElementById(`saas-top-title-${i}`);
+                const imgEl=document.getElementById(`saas-top-img-${i}`);
+                const txtEl=document.getElementById(`saas-top-txt-${i}`);
+                if(titleEl) db.saas.top[i].title = titleEl.value;
+                if(imgEl) db.saas.top[i].img = imgEl.value;
+                if(txtEl) db.saas.top[i].text = txtEl.value;
+            }
+            document.querySelectorAll('.saas-bottom-editor').forEach((el, i) => {
+                if(!db.saas.bottomMembers[i]) db.saas.bottomMembers[i] = {title:'',img:'',text:''};
+                const titleEl=document.getElementById(`saas-bottom-title-${i}`);
+                const imgEl=document.getElementById(`saas-bottom-img-${i}`);
+                const txtEl=document.getElementById(`saas-bottom-txt-${i}`);
+                if(titleEl) db.saas.bottomMembers[i].title = titleEl.value.trim() || (i===0 ? 'ALL SYNDICATE MEMBER INTI' : `ALL SYNDICATE MEMBER INTI 0${i+1}`);
+                if(imgEl) db.saas.bottomMembers[i].img = imgEl.value.trim();
+                if(txtEl) db.saas.bottomMembers[i].text = txtEl.value.trim();
+            });
+            saveSaasEventClubs();
+            const discordLink=document.getElementById('saas-discord-link');
+            const discordText=document.getElementById('saas-discord-text');
+            if(discordLink) db.saas.discord.link = normalizeExternalUrl(discordLink.value, 'https://discord.gg/MqeWH9rxZV');
+            if(discordText) db.saas.discord.text = discordText.value.trim() || 'DISCORD SAAS';
+            const eventEnabled=document.getElementById('saas-event-enabled');
+            const eventDescription=document.getElementById('saas-event-description');
+            if(eventEnabled) db.saasEvent.enabled=!!eventEnabled.checked;
+            if(eventDescription) db.saasEvent.description=eventDescription.value.trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
+            updateSaasDiscordLink();
+            
+            // Save Information Race
+            const raceSystemEnabled = document.getElementById('race-system-enabled');
+            db.race.enabled = raceSystemEnabled ? !!raceSystemEnabled.checked : !!db.race.enabled;
+            for(let i = 0; i < 4; i++) {
+                db.race.top[i].title = document.getElementById(`race-top-title-${i}`).value;
+                db.race.top[i].text = document.getElementById(`race-top-txt-${i}`).value;
+            }
+            db.race.bottom.img = document.getElementById('race-bot-img').value;
+            db.race.bottom.text = document.getElementById('race-bot-txt').value;
+
+            const clubSystemEnabled = document.getElementById('club-system-enabled');
+            db.clubSystem.enabled = clubSystemEnabled ? !!clubSystemEnabled.checked : !!db.clubSystem.enabled;
+
+            db.club.forEach((c, i) => {
+                if(document.getElementById(`club-name-${i}`)) {
+                    c.name = document.getElementById(`club-name-${i}`).value;
+                    c.img = document.getElementById(`club-img-${i}`).value;
+                    c.text = document.getElementById(`club-txt-${i}`).value;
+                    c.discord_link = document.getElementById(`club-discord-${i}`).value;
+                    c.join_msg = document.getElementById(`club-join-${i}`).value;
+
+                    for(let j=0; j<3; j++) {
+                        c.info.top[j].img = document.getElementById(`club-info-top-img-${i}-${j}`).value;
+                        c.info.top[j].text = document.getElementById(`club-info-top-txt-${i}-${j}`).value;
+                    }
+
+                    c.info.bottom.img = document.getElementById(`club-info-bot-img-${i}`).value;
+                    c.info.bottom.text = document.getElementById(`club-info-bot-txt-${i}`).value;
+                }
+            });
+
+            saveToDB(true).then(saved=>{
+                if(saved){
+                    showPage('teritory');
+                    showToast('✅ Perubahan berhasil disimpan ke database.');
+                }else{
+                    showToast('⚠️ Database sedang tidak terhubung. Sistem akan mencoba sinkronisasi lagi otomatis.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

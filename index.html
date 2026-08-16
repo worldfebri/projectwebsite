@@ -206,6 +206,8 @@
         .mobile-menu:hover { border-color: var(--red); box-shadow: var(--neon-glow); }
 
         .landing{width:100%; position: relative;}
+        
+        /* ======== HERO SECTION DIRUBAH JADI TERANG ======== */
         .visual-hero{
             height:720px;
             min-height:650px;
@@ -217,16 +219,20 @@
             position:absolute;
             inset:0;
             background:url('https://i.postimg.cc/fW5z0bz0/testing-paok.png') center/cover no-repeat;
-            filter:grayscale(.85) contrast(1.15);
+            /* Filter diubah: grayscale dihilangkan, contrast ditingkatkan agar terang */
+            filter: contrast(1.15) brightness(1.2);
             transform:scale(1.04);
         }
         .hero-overlay{
             position:absolute;
             inset:0;
+            /* Gradient dibuat jauh lebih transparan agar foto aslinya dominan */
             background:
-                linear-gradient(90deg,rgba(5,6,8,.96) 0%,rgba(5,6,8,.78) 35%,rgba(5,6,8,.15) 75%,rgba(5,6,8,.62) 100%),
-                linear-gradient(0deg,#050608 0%,transparent 38%);
+                linear-gradient(90deg, rgba(5,6,8,0.7) 0%, rgba(5,6,8,0.2) 35%, rgba(5,6,8,0.05) 75%, rgba(5,6,8,0.3) 100%),
+                linear-gradient(0deg, #050608 0%, transparent 30%);
         }
+        /* =================================================== */
+        
         .hero-noise{
             position:absolute;
             inset:0;
@@ -270,7 +276,7 @@
         }
         .hero-subtitle{
             margin:23px 0 0;
-            color:#a4aab2;
+            color:#e4e7eb; /* Dibuat lebih putih dari sebelumnya */
             font-size:14px;
             max-width:440px;
             line-height:1.6;
@@ -314,7 +320,7 @@
             border-left:1px solid var(--line);
         }
         .hero-stat b{font:700 27px var(--display);color:var(--red); text-shadow: var(--neon-glow);}
-        .hero-stat span{font-size:7px;line-height:1.25;letter-spacing:1.2px;color:#888e96}
+        .hero-stat span{font-size:7px;line-height:1.25;letter-spacing:1.2px;color:#e4e7eb} /* Lebih terang */
 
         .quick-strip{
             width:90%;
@@ -486,33 +492,136 @@
         }
         hr{border-color:var(--line)!important}
 
-        /* === AUTH / SOCIAL SYSTEM === */
-        .auth-screen{
-            position:fixed; inset:0; z-index:50000; display:none; pointer-events:auto;
-            align-items:center; justify-content:center; padding:25px;
-            background:rgba(5,6,8,.98);
+        /* === ULTIMATE AUTH / SOCIAL SYSTEM === */
+        .auth-screen {
+            position: fixed; inset: 0; z-index: 50000; display: none; pointer-events: auto;
+            align-items: center; justify-content: center; padding: 25px;
+            background: rgba(5, 6, 8, 0.4); /* Transparan agar video terlihat jelas */
+            overflow: hidden;
         }
-        .auth-screen.show{display:flex}
-        .auth-box{
-            position:relative; z-index:50001; pointer-events:auto; width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
-            padding:32px; box-shadow:0 25px 80px rgba(0,0,0,.55); border-radius: 8px;
+        
+        /* VIDEO BACKGROUND ANIME COWO */
+        .auth-video-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            filter: brightness(0.65) contrast(1.1); /* Menggelapkan video sedikit agar kotak login tetap terbaca */
+            pointer-events: none;
         }
-        .auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-        .auth-logo .brand-mark{flex:none}
-        .auth-title{font:800 38px var(--display);text-transform:uppercase;margin:0 0 7px}
-        .auth-subtitle{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 22px}
-        .auth-tabs{display:flex;border:1px solid var(--line);margin-bottom:18px; border-radius: 4px; overflow: hidden;}
-        .auth-tabs button{position:relative;z-index:50002;pointer-events:auto;flex:1;border:0;background:#080a0d;color:#777;padding:13px 10px;cursor:pointer;font-weight:800;font-size:11px;letter-spacing:.5px;min-height:44px; transition:.2s;}
-        .auth-tabs button.active{background:var(--red);color:var(--black); box-shadow: var(--neon-glow);}
-        .auth-tabs button.guest-auth-tab{background:#11161c;color:#c7ccd2;border-left:1px solid var(--line)}
-        .auth-tabs button.guest-auth-tab:hover{background:#1a2028;color:#fff}
-        .auth-form{display:flex;flex-direction:column;gap:10px}
-        .auth-form input,.social-input,.social-textarea{
-            width:100%;background:#07080a;border:1px solid var(--line);color:#fff;
-            padding:13px;outline:none;font:12px var(--body); border-radius: 4px; transition: .2s;
+
+        /* OVERLAY GRADIENT HALUS UNTUK VIDEO */
+        .auth-screen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 20%, rgba(5,6,8,0.8) 120%);
+            z-index: -1;
+            pointer-events: none;
         }
-        .auth-form input:focus,.social-input:focus,.social-textarea:focus{border-color:var(--red); box-shadow: 0 0 8px rgba(255,255,255,0.2);}
-        .auth-note{font-size:10px;color:#666;line-height:1.6;margin-top:12px}
+
+        .auth-screen.show { display: flex; }
+        .auth-screen.show .auth-wrapper {
+            animation: authPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+        }
+        @keyframes authPop {
+            0% { opacity: 0; transform: translateY(50px) scale(0.85); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* WRAPPER AGAR BORDER ANIMASI BISA JALAN TANPA TERPOTONG */
+        .auth-wrapper {
+            position: relative;
+            z-index: 50001;
+            width: min(440px, 100%); 
+            padding: 2px; /* Ruang untuk border bergerak */
+            border-radius: 14px;
+            background: linear-gradient(45deg, transparent, var(--accent-red), transparent, var(--red));
+            background-size: 300% 300%;
+            animation: borderGlow 4s ease infinite;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 40px rgba(255,41,56,0.15);
+        }
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* KOTAK LOGIN DENGAN KACA GLASSMORPHISM TINGKAT TINGGI */
+        .auth-box {
+            position: relative; z-index: 50001; pointer-events: auto; 
+            background: rgba(10, 12, 16, 0.55); /* Transparan untuk memperlihatkan video di belakang */
+            backdrop-filter: blur(20px) saturate(150%); /* Efek kaca tebal */
+            padding: 40px 32px; 
+            border-radius: 12px;
+            overflow: hidden;
+            height: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .auth-logo { 
+            display: flex; align-items: center; gap: 12px; margin-bottom: 26px; 
+            animation: floatLogo 4s ease-in-out infinite; 
+        }
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .auth-logo .brand-mark { 
+            flex: none; 
+            animation: neonFlicker 3s infinite alternate; /* KEDIPAN NEON */
+        }
+        @keyframes neonFlicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; box-shadow: var(--neon-glow); }
+            20%, 24%, 55% { opacity: 0.5; box-shadow: none; }
+        }
+
+        .auth-title { font: 800 38px var(--display); text-transform: uppercase; margin: 0 0 7px; text-shadow: 0 2px 10px rgba(255,255,255,0.2); letter-spacing: 1px; }
+        .auth-subtitle { font-size: 12px; color: #e4e7eb; line-height: 1.6; margin: 0 0 24px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+
+        .auth-tabs { display: flex; margin-bottom: 22px; border-radius: 8px; overflow: hidden; background: rgba(5, 6, 8, 0.7); border: 1px solid rgba(255,255,255,0.1); }
+        .auth-tabs button { position: relative; z-index: 50002; pointer-events: auto; flex: 1; border: 0; background: transparent; color: #aaa; padding: 14px 10px; cursor: pointer; font-weight: 800; font-size: 11px; letter-spacing: .5px; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .auth-tabs button.active { background: var(--red); color: var(--black); box-shadow: var(--neon-glow); z-index: 10; font-size: 11.5px; }
+        .auth-tabs button.guest-auth-tab { border-left: 1px solid rgba(255,255,255,0.1); }
+        .auth-tabs button.guest-auth-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .auth-form { display: flex; flex-direction: column; gap: 16px; }
+        .auth-form input, .social-input, .social-textarea {
+            width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255,255,255,0.15); color: #fff;
+            padding: 15px 18px; outline: none; font: 12.5px var(--body); border-radius: 8px; 
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        /* EFEK INTERAKTIF INPUT SLIDE & GLOW */
+        .auth-form input:focus, .social-input:focus, .social-textarea:focus {
+            border-color: var(--red); 
+            box-shadow: -6px 0 20px rgba(255,255,255,0.15), inset 0 2px 5px rgba(0,0,0,0.5); 
+            background: rgba(0,0,0,0.8);
+            transform: translateX(6px);
+        }
+
+        /* EFEK PULSE SUPER PADA TOMBOL LOGIN/REGISTER */
+        #auth-submit { 
+            padding: 15px; font-size: 13px; margin-top: 8px; letter-spacing: 1px; border-radius: 8px;
+            animation: pulseSubmit 2s infinite; 
+            border: 1px solid transparent;
+        }
+        @keyframes pulseSubmit {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        #auth-submit:hover {
+            border: 1px solid var(--red);
+            background: #000;
+            color: var(--red);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(255,255,255,0.2), inset 0 0 15px rgba(255,255,255,0.3);
+            animation: none; /* Matikan pulse saat di-hover */
+        }
+
+        .auth-note { font-size: 10.5px; color: #a4aab2; line-height: 1.6; margin-top: 15px; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
         
         /* === CUSTOM ROLE BADGE DENGAN EFEK CYBER/NEON BARU === */
         .role-badge {
@@ -916,28 +1025,35 @@
     </div>
 
     <div class="auth-screen show" id="auth-screen">
-        <div class="auth-box">
-            <div class="auth-logo">
-                <div class="brand-mark">SA</div>
-                <div class="brand-copy"><strong>SAAS</strong><span>SAN ANDREAS AUTO SYNDICATE</span></div>
-            </div>
-            <h1 class="auth-title" id="auth-title">Login Account</h1>
-            <p class="auth-subtitle" id="auth-subtitle">Silakan login ke website ini dengan akun yang sudah kamu buat.</p>
+        <!-- VIDEO BACKGROUND ANIME COWO -->
+        <video class="auth-video-bg" autoplay loop muted playsinline>
+            <source src="https://i.pinimg.com/videos/thumbnails/originals/ed/df/2e/eddf2ecee51025da2ff328ab97d264fb.mp4" type="video/mp4">
+        </video>
 
-            <div class="auth-tabs">
-                <button id="auth-tab-login" class="active" onclick="switchAuth('login')">LOGIN</button>
-                <button id="auth-tab-register" onclick="switchAuth('register')">BUAT AKUN</button>
-                <button id="auth-tab-guest" class="guest-auth-tab" type="button" onclick="enterGuestMode()">GUEST</button>
-            </div>
+        <div class="auth-wrapper">
+            <div class="auth-box">
+                <div class="auth-logo">
+                    <div class="brand-mark">SA</div>
+                    <div class="brand-copy"><strong>SAAS</strong><span>SAN ANDREAS AUTO SYNDICATE</span></div>
+                </div>
+                <h1 class="auth-title" id="auth-title">Login Account</h1>
+                <p class="auth-subtitle" id="auth-subtitle">Silakan login ke website ini dengan akun yang sudah kamu buat.</p>
 
-            <form class="auth-form" onsubmit="event.preventDefault(); submitAuth();">
-                <input id="auth-username" maxlength="20" autocomplete="username" placeholder="Username" required>
-                <input id="auth-password" type="password" minlength="6" maxlength="72" autocomplete="current-password" placeholder="Password" required>
-                <input id="auth-password2" type="password" minlength="6" maxlength="72" autocomplete="new-password" placeholder="Ulangi Password" style="display:none">
-                <button class="btn-red" type="submit" id="auth-submit">LOGIN</button>
-            </form>
-            <div class="auth-note">Akun disimpan pada database Supabase yang dikonfigurasi Admin. Password tidak disimpan sebagai teks biasa.</div>
-            <div class="auth-note" id="auth-status"></div>
+                <div class="auth-tabs">
+                    <button id="auth-tab-login" class="active" onclick="switchAuth('login')">LOGIN</button>
+                    <button id="auth-tab-register" onclick="switchAuth('register')">BUAT AKUN</button>
+                    <button id="auth-tab-guest" class="guest-auth-tab" type="button" onclick="enterGuestMode()">GUEST</button>
+                </div>
+
+                <form class="auth-form" onsubmit="event.preventDefault(); submitAuth();">
+                    <input id="auth-username" maxlength="20" autocomplete="username" placeholder="Username" required>
+                    <input id="auth-password" type="password" minlength="6" maxlength="72" autocomplete="current-password" placeholder="Password" required>
+                    <input id="auth-password2" type="password" minlength="6" maxlength="72" autocomplete="new-password" placeholder="Ulangi Password" style="display:none">
+                    <button class="btn-red" type="submit" id="auth-submit">LOGIN</button>
+                </form>
+                <div class="auth-note">Akun disimpan pada database Supabase yang dikonfigurasi Admin. Password tidak disimpan sebagai teks biasa.</div>
+                <div class="auth-note" id="auth-status" style="color:var(--red); font-weight:bold; font-size:12px;"></div>
+            </div>
         </div>
     </div>
 
@@ -1023,6 +1139,7 @@
     <div class="admin-subnav" id="admin-subnav">
         <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
         <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
+        <button data-admin-section="discord" onclick="showAdminSection('discord')">Discord Bot</button>
         <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
         <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
         <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
@@ -1165,7 +1282,19 @@
                 clubs: []
             },
             saasEventRequests: [],
-            announcements: []
+            announcements: [],
+            discordBot: {
+                enabled: false,
+                guildId: '',
+                accountChannelId: '',
+                announcementChannelId: '',
+                notifyNewAccount: true,
+                accountMentionEveryone: false,
+                announcementNormalEnabled: true,
+                announcementMentionNormal: false,
+                announcementImportantEnabled: true,
+                announcementMentionImportant: true
+            }
         };
 
         const GITHUB_DB_FILES = {
@@ -1207,7 +1336,8 @@
                     club: db.club,
                     clubSystem: db.clubSystem,
                     saasEvent: db.saasEvent,
-                    announcements: db.announcements
+                    announcements: db.announcements,
+                    discordBot: db.discordBot
                 }
             };
         }
@@ -1460,6 +1590,10 @@
                         return;
                     }
                 }
+                if(sbConfig.url && sbConfig.key && saved){
+                    try{ await queueDiscordEvent('account_created',{ user:{ username:user.username, createdAt:user.createdAt } }); }
+                    catch(discordError){ console.warn('Discord notification failed:', discordError); }
+                }
                 if(status) status.textContent=sbConfig.url ? 'Akun berhasil dibuat dan disimpan ke database. Silakan login.' : 'Akun berhasil dibuat secara lokal. Hubungkan Supabase di Admin Panel agar tersimpan secara global.';
                 const u=document.getElementById('auth-username');
                 const pw=document.getElementById('auth-password');
@@ -1488,7 +1622,10 @@
             const registerBtn = document.getElementById('auth-tab-register');
             const guestBtn = document.getElementById('auth-tab-guest');
             const authScreen = document.getElementById('auth-screen');
-            if(authScreen){ authScreen.style.pointerEvents='auto'; }
+            
+            // Tampilkan login screen dulu sebelum logic window.onload berjalan
+            if(authScreen){ authScreen.style.pointerEvents='auto'; authScreen.classList.add('show'); }
+            
             if(loginBtn){
                 loginBtn.type='button';
                 loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchAuth('login'); }, true);
@@ -1518,7 +1655,12 @@
             startDbRetry();
 
             if(currentUser && (currentUser.isOwner || db.users.some(u => u.username === currentUser.username))) {
-                openApp();
+                // JANGAN LANGSUNG MASUK! Beri Cinematic Delay 2.5 detik agar bisa menikmati video anime nya
+                const status = document.getElementById('auth-status');
+                if(status) status.textContent = 'Memverifikasi sesi... Menuju halaman awal dalam 2 detik...';
+                setTimeout(() => {
+                    openApp();
+                }, 2500);
             } else {
                 currentUser = null;
                 localStorage.removeItem('saas_session');
@@ -1733,6 +1875,7 @@
                     id: db.announcement.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
                     message: db.announcement.message,
                     expiresAt: db.announcement.expiresAt || '',
+                    importance: db.announcement.importance==='important' ? 'important' : 'normal',
                     createdAt: Date.now()
                 });
                 delete db.announcement;
@@ -1741,8 +1884,20 @@
                 id: typeof a.id==='string' && a.id ? a.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())),
                 message: typeof a.message==='string' ? a.message : '',
                 expiresAt: typeof a.expiresAt==='string' ? a.expiresAt : '',
+                importance: a.importance==='important' ? 'important' : 'normal',
                 createdAt: typeof a.createdAt==='number' ? a.createdAt : Date.now()
             }));
+            if(!db.discordBot || typeof db.discordBot!=='object') db.discordBot={};
+            const discordDefaults={
+                enabled:false, guildId:'', accountChannelId:'', announcementChannelId:'',
+                notifyNewAccount:true, accountMentionEveryone:false,
+                announcementNormalEnabled:true, announcementMentionNormal:false,
+                announcementImportantEnabled:true, announcementMentionImportant:true
+            };
+            Object.keys(discordDefaults).forEach(k=>{
+                if(typeof db.discordBot[k] !== typeof discordDefaults[k]) db.discordBot[k]=discordDefaults[k];
+            });
+            ['guildId','accountChannelId','announcementChannelId'].forEach(k=>{ db.discordBot[k]=String(db.discordBot[k]||'').trim(); });
             if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
             if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
             if(typeof db.teritory.image !== 'string') db.teritory.image='';
@@ -1883,23 +2038,103 @@
             modal.setAttribute('aria-hidden','true');
         }
 
+        async function queueDiscordEvent(type, payload={}){
+            normalizeDB();
+            const cfg=db.discordBot||{};
+            if(!cfg.enabled) return {queued:false, reason:'disabled'};
+            if(!sbConfig.url || !sbConfig.key) return {queued:false, reason:'supabase_not_configured'};
+            const key='discord.event.'+(crypto.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(16).slice(2)));
+            const value={
+                id:key,
+                type,
+                status:'pending',
+                createdAt:Date.now(),
+                payload
+            };
+            const res=await fetch(`${sbConfig.url}/rest/v1/kv_store`,{
+                method:'POST',
+                headers:supaHeaders({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+                body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
+            });
+            if(!res.ok) throw new Error(supaErrorMessage(res.status,'Mengantrikan notifikasi Discord'));
+            return {queued:true,key};
+        }
+
+        async function testDiscordBot(showAlert=true){
+            normalizeDB();
+            if(!sbConfig.url || !sbConfig.key){ if(showAlert) alert('Supabase belum dikonfigurasi.'); return false; }
+            try{
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.discord.bot.status&select=value,updated_at&limit=1`,{headers:supaHeaders()});
+                if(!res.ok) throw new Error(supaErrorMessage(res.status,'Membaca status Discord Bot'));
+                const rows=await res.json();
+                const row=rows[0];
+                const value=row?.value||{};
+                const heartbeat=Date.parse(row?.updated_at||value.updatedAt||'');
+                const fresh=Number.isFinite(heartbeat) ? (Date.now()-heartbeat < 90000) : false;
+                const ok=!!value.botReady && fresh;
+                if(showAlert){
+                    alert(ok
+                        ? `✅ Discord Bot ONLINE\n\n${value.botUser||'Bot'}\nServer: ${value.guildName||value.guildId||'-'}`
+                        : `❌ Discord Bot belum terdeteksi ONLINE.\n\nTerakhir status: ${value.botUser||'belum ada heartbeat'}\nPastikan bot aktif di Pterodactyl dan SUPABASE_SERVICE_ROLE_KEY sudah benar.`);
+                }
+                return ok;
+            }catch(e){
+                if(showAlert) alert('❌ Gagal membaca status Discord Bot: '+(e.message||e));
+                return false;
+            }
+        }
+
+        async function saveDiscordBotSettings(){
+            normalizeDB();
+            const read=(id)=>String(document.getElementById(id)?.value||'').trim();
+            db.discordBot.enabled=!!document.getElementById('discord-enabled')?.checked;
+            db.discordBot.guildId=read('discord-guild-id');
+            db.discordBot.accountChannelId=read('discord-account-channel-id');
+            db.discordBot.announcementChannelId=read('discord-announcement-channel-id');
+            db.discordBot.notifyNewAccount=!!document.getElementById('discord-notify-account')?.checked;
+            db.discordBot.accountMentionEveryone=!!document.getElementById('discord-account-everyone')?.checked;
+            db.discordBot.announcementNormalEnabled=!!document.getElementById('discord-normal-enabled')?.checked;
+            db.discordBot.announcementMentionNormal=!!document.getElementById('discord-normal-everyone')?.checked;
+            db.discordBot.announcementImportantEnabled=!!document.getElementById('discord-important-enabled')?.checked;
+            db.discordBot.announcementMentionImportant=!!document.getElementById('discord-important-everyone')?.checked;
+            const saved=await saveToDB(true);
+            if(!saved && sbConfig.url && sbConfig.key) return alert('❌ Setting Discord gagal disimpan ke Supabase.');
+            alert('✅ Setting Discord berhasil disimpan ke Supabase.');
+            renderAdminDashboard(document.getElementById('app-content'));
+            showAdminSection('discord');
+        }
+
         async function addAnnouncement(){
             const message = document.getElementById('announce-message');
             const expiresAt = document.getElementById('announce-expires');
             const newMessage = (message?.value||'').trim();
+            const importance = String(document.getElementById('announce-importance')?.value || 'normal');
+            const sendToDiscord = !!document.getElementById('announce-send-discord')?.checked;
             if(!newMessage){
                 alert('Isi pesan pengumuman terlebih dahulu.');
                 return;
             }
-            db.announcements.push({
+            const announcement={
                 id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()),
                 message: newMessage,
                 expiresAt: (expiresAt?.value||'').trim(),
+                importance: importance==='important'?'important':'normal',
                 createdAt: Date.now()
-            });
+            };
+            db.announcements.push(announcement);
             const saved = await saveToDB(true);
-            if(!saved && sbConfig.url && sbConfig.key) return alert('Pengumuman gagal disimpan ke database. Coba lagi.');
-            alert('Pengumuman baru berhasil ditambahkan dan akan tampil ke pengguna.');
+            if(!saved && sbConfig.url && sbConfig.key){
+                db.announcements=db.announcements.filter(a=>a.id!==announcement.id);
+                return alert('Pengumuman gagal disimpan ke database. Coba lagi.');
+            }
+            let discordMessage='';
+            if(sendToDiscord && sbConfig.url && sbConfig.key){
+                try{
+                    const result=await queueDiscordEvent('announcement',{announcement});
+                    if(result.queued) discordMessage=' Discord: masuk antrean.';
+                }catch(e){ discordMessage=' Discord: gagal diantrikan, tetapi pengumuman website tetap tersimpan.'; console.warn(e); }
+            }
+            alert('Pengumuman baru berhasil ditambahkan dan akan tampil ke pengguna.'+discordMessage);
             renderAdminDashboard(document.getElementById('app-content'));
             showAdminSection('announcement');
         }
@@ -2987,6 +3222,31 @@
             `;
         }
 
+        // FUNGSI BARU UNTUK MERESET PASSWORD PENGGUNA
+        async function adminResetUserPassword() {
+            const username = (document.getElementById('reset-user-name')?.value || '').trim();
+            const newPw = document.getElementById('reset-user-newpw')?.value || '';
+
+            if (!username) return alert('Masukkan username pengguna.');
+            if (newPw.length < 6) return alert('Password baru minimal 6 karakter.');
+
+            const targetUser = db.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+            if (!targetUser) return alert('Username tidak ditemukan di database.');
+
+            if (!confirm(`Apakah Anda yakin ingin mereset password untuk akun @${targetUser.username}?`)) return;
+
+            targetUser.passwordHash = await sha256(newPw);
+            const saved = await saveToDB(true);
+
+            if (!saved && sbConfig.url && sbConfig.key) {
+                alert('Password berhasil diubah lokal, tetapi gagal disimpan ke Supabase.');
+            } else {
+                alert(`Password akun @${targetUser.username} berhasil direset!`);
+                document.getElementById('reset-user-name').value = '';
+                document.getElementById('reset-user-newpw').value = '';
+            }
+        }
+
         function checkAdmin() {
             const input=document.getElementById('admin-pw');
             const pw=String(input?.value||'');
@@ -3040,11 +3300,50 @@
                             <p style="font-size:10px;color:#777;line-height:1.6;">Project URL dan Anon Key didapat dari Supabase Dashboard &gt; Settings &gt; API. Semua perangkat yang membuka website ini akan membaca/menulis ke database Supabase yang sama.</p>
                         </div>
                     </div>
+                    <div class="admin-section" id="admin-section-discord">
+                        <div class="admin-form">
+                            <h3>Discord Bot — Pengaturan Terpusat</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.7;">Semua setting Discord disimpan ke Supabase. Bot Node.js di Pterodactyl membaca antrean notifikasi dan konfigurasi ini dari database. Token Discord TIDAK disimpan di website.</p>
+                            <label style="display:flex;align-items:center;gap:12px;border:1px solid #2a3441;padding:14px;background:#0b0f14;cursor:pointer;border-radius:4px;">
+                                <input type="checkbox" id="discord-enabled" ${db.discordBot.enabled?'checked':''} style="width:20px;height:20px;">
+                                <span><b>AKTIFKAN DISCORD BOT</b><br><small style="color:#777;">ON = website boleh membuat antrean notifikasi Discord.</small></span>
+                            </label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:12px;display:block;">Discord Server / Guild ID</label>
+                            <input type="text" id="discord-guild-id" maxlength="20" value="${escapeHTML(db.discordBot.guildId)}" placeholder="123456789012345678">
+                            <label style="font-size:12px;color:var(--dim);margin-top:4px;display:block;">Channel Notifikasi Akun Baru</label>
+                            <input type="text" id="discord-account-channel-id" maxlength="20" value="${escapeHTML(db.discordBot.accountChannelId)}" placeholder="ID #account-log">
+                            <label style="font-size:12px;color:var(--dim);margin-top:4px;display:block;">Channel Pengumuman</label>
+                            <input type="text" id="discord-announcement-channel-id" maxlength="20" value="${escapeHTML(db.discordBot.announcementChannelId)}" placeholder="ID #website-announcements">
+                            <hr style="border:1px solid #2a3441;margin:18px 0;width:100%;">
+                            <h3>Notifikasi Akun Baru</h3>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-notify-account" ${db.discordBot.notifyNewAccount?'checked':''}> Kirim notifikasi saat akun baru berhasil dibuat</label>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-account-everyone" ${db.discordBot.accountMentionEveryone?'checked':''}> Tag @everyone untuk akun baru</label>
+                            <hr style="border:1px solid #2a3441;margin:18px 0;width:100%;">
+                            <h3>Pengumuman Website → Discord</h3>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-normal-enabled" ${db.discordBot.announcementNormalEnabled?'checked':''}> Izinkan pengumuman NORMAL dikirim ke Discord</label>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-normal-everyone" ${db.discordBot.announcementMentionNormal?'checked':''}> NORMAL boleh tag @everyone</label>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-important-enabled" ${db.discordBot.announcementImportantEnabled?'checked':''}> Izinkan pengumuman IMPORTANT dikirim ke Discord</label>
+                            <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:12px;"><input type="checkbox" id="discord-important-everyone" ${db.discordBot.announcementMentionImportant?'checked':''}> IMPORTANT tag @everyone</label>
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+                                <button type="button" class="btn-red" onclick="saveDiscordBotSettings()">💾 SIMPAN SETTING DISCORD</button>
+                                <button type="button" class="btn-red" onclick="testDiscordBot(true)">🔌 TEST BOT ONLINE</button>
+                            </div>
+                            <small style="display:block;color:#777;line-height:1.6;margin-top:10px;">Pterodactyl hanya menyimpan DISCORD_TOKEN dan SUPABASE_SERVICE_ROLE_KEY. Jangan pernah menaruh kedua secret tersebut di HTML.</small>
+                        </div>
+                    </div>
                     <div class="admin-section" id="admin-section-security">
                         <div class="admin-form">
                             <h3>Sistem Keamanan</h3>
                             <label style="color:var(--dim);font-size:12px;">Ubah Password Admin Utama:</label>
                             <input type="text" id="new-pw" value="${escapeHTML(db.password)}">
+                            
+                            <!-- FITUR RESET PASSWORD PENGGUNA -->
+                            <hr style="border:1px solid #2a3441;margin:15px 0;width:100%;">
+                            <h3>Reset Password Pengguna</h3>
+                            <p style="color:var(--muted);font-size:11px;line-height:1.6;">Cari username pengguna dan atur password baru jika mereka lupa password. (Catatan: Password lama tidak bisa dilihat karena dienkripsi / hash).</p>
+                            <input type="text" id="reset-user-name" placeholder="Username pengguna">
+                            <input type="text" id="reset-user-newpw" placeholder="Password baru (min. 6 karakter)" style="margin-top:8px;">
+                            <button type="button" class="btn-red" onclick="adminResetUserPassword()" style="margin-top:10px; width:max-content;">Reset Password</button>
                         </div>
                     </div>
                     <div class="admin-section" id="admin-section-teritory">
@@ -3117,15 +3416,22 @@
                             <p style="color:var(--muted);font-size:11px;line-height:1.6;">Pesan ini akan tampil sebagai popup notifikasi dengan tombol OKE ke semua pengguna (termasuk Guest). Setiap pengumuman baru yang kamu tambahkan TIDAK akan menimpa pengumuman lama — semuanya tetap ada di daftar sampai kamu hapus sendiri. Pengguna yang sebelumnya mencentang "jangan tampilkan lagi" hanya tidak melihat pengumuman lama itu saja, pengumuman baru tetap akan muncul ke mereka.</p>
                             <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Isi Pesan Pengumuman:</label>
                             <textarea id="announce-message" rows="6" maxlength="1000" placeholder="Tulis pesan pengumuman di sini..."></textarea>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Prioritas Pengumuman:</label>
+                            <select id="announce-importance" style="width:100%;background:#07080a;border:1px solid var(--line);border-radius:4px;color:#fff;padding:12px;font:12px var(--body);">
+                                <option value="normal">NORMAL — tanpa @everyone secara default</option>
+                                <option value="important">IMPORTANT — pengumuman penting</option>
+                            </select>
                             <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Tampilkan Sampai Tanggal (kosongkan jika tanpa batas waktu):</label>
                             <input type="date" id="announce-expires">
+                            <label style="display:flex;align-items:center;gap:10px;margin-top:14px;color:#ddd;font-size:12px;cursor:pointer;"><input type="checkbox" id="announce-send-discord" checked> Kirim pengumuman ini ke Discord</label>
+                            <small style="display:block;color:#777;font-size:10px;line-height:1.5;margin-top:5px;">Aturan @everyone mengikuti setting Discord Bot. NORMAL dan IMPORTANT bisa dibuat berbeda.</small>
                             <button type="button" class="btn-red" onclick="addAnnouncement()" style="width:max-content;margin-top:10px;">+ Tambah Pengumuman</button>
                             <hr style="border:1px solid #2a3441;margin:22px 0;width:100%;">
                             <h3>Daftar Pengumuman Aktif</h3>
                             ${(db.announcements||[]).length ? db.announcements.slice().reverse().map(a=>`
                                 <div style="border:1px solid #2a3441;padding:14px;margin-bottom:10px;background:#0b0f14;border-radius:4px;">
                                     <p style="white-space:pre-wrap;word-break:break-word;font-size:12px;color:#e4e7eb;margin:0 0 8px;">${escapeHTML(a.message)}</p>
-                                    <small style="color:#777;display:block;margin-bottom:10px;">${a.expiresAt ? 'Tampil sampai: '+escapeHTML(a.expiresAt) : 'Tanpa batas waktu'}</small>
+                                    <small style="color:#777;display:block;margin-bottom:10px;">${a.importance==='important'?'🚨 IMPORTANT':'📢 NORMAL'} · ${a.expiresAt ? 'Tampil sampai: '+escapeHTML(a.expiresAt) : 'Tanpa batas waktu'}</small>
                                     <button type="button" class="btn-red" onclick="deleteAnnouncement('${a.id}')">🗑 Hapus Pengumuman</button>
                                 </div>
                             `).join('') : `<p style="color:#777;font-size:11px;">Belum ada pengumuman.</p>`}

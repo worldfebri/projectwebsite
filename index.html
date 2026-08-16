@@ -1255,9 +1255,9 @@
                     join_msg: "Silakan datang ke titik GPS Los Santos Midnight. Hubungi perwakilan kami saat tiba.",
                     info: {
                         top: [
-                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+1", text: "Divisi Rekrutmen Club" },
-                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+2", text: "Divisi Modifikasi Kendaraan" },
-                            { img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+3", text: "Jadwal Balap Liar" }
+                            { title: "Bagian 01", img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+1", text: "Divisi Rekrutmen Club" },
+                            { title: "Bagian 02", img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+2", text: "Divisi Modifikasi Kendaraan" },
+                            { title: "Bagian 03", img: "https://via.placeholder.com/400x250/141b22/ffffff?text=Info+3", text: "Jadwal Balap Liar" }
                         ],
                         bottom: {
                             img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
@@ -1278,6 +1278,7 @@
             clubWebsiteRequests: [],
             saasEvent: {
                 enabled: false,
+                logo: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
                 description: "ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR",
                 clubs: []
             },
@@ -1867,7 +1868,8 @@
             if(!db.privateChats || typeof db.privateChats !== 'object' || Array.isArray(db.privateChats)) db.privateChats={};
             if(!Array.isArray(db.clubWebsiteRequests)) db.clubWebsiteRequests=[];
             if(!Array.isArray(db.saasEventRequests)) db.saasEventRequests=[];
-            if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,description:'',clubs:[]};
+            if(!db.saasEvent || typeof db.saasEvent !== 'object') db.saasEvent={enabled:false,logo:'',description:'',clubs:[]};
+            if(typeof db.saasEvent.logo !== 'string') db.saasEvent.logo='';
             if(!Array.isArray(db.saasEvent.clubs)) db.saasEvent.clubs=[];
             if(!Array.isArray(db.announcements)) db.announcements=[];
             if(db.announcement && typeof db.announcement === 'object' && String(db.announcement.message||'').trim()){
@@ -1907,6 +1909,9 @@
             if(!db.race || typeof db.race !== 'object') db.race={enabled:true,top:[],bottom:{img:'',text:''}};
             if(typeof db.race.enabled !== 'boolean') db.race.enabled=true;
             if(!Array.isArray(db.race.top)) db.race.top=[];
+            while(db.race.top.length < 4) {
+                db.race.top.push({ title: `Race Information 0${db.race.top.length + 1}`, text: "Tulis informasi race di sini." });
+            }
             if(!db.race.bottom || typeof db.race.bottom !== 'object') db.race.bottom={img:'',text:''};
             if(typeof db.race.bottom.img !== 'string') db.race.bottom.img='';
             if(typeof db.race.bottom.text !== 'string') db.race.bottom.text='';
@@ -1915,6 +1920,9 @@
                 if(!c || typeof c!=='object') return;
                 if(!c.info || typeof c.info!=='object') c.info={top:[],bottom:{img:'',text:''}};
                 if(!Array.isArray(c.info.top)) c.info.top=[];
+                while(c.info.top.length < 3) {
+                    c.info.top.push({ title: `Bagian 0${c.info.top.length + 1}`, img: "", text: "" });
+                }
                 c.info.top.forEach(t=>{ if(t && typeof t==='object' && typeof t.title!=='string') t.title=''; });
                 if(!c.info.bottom || typeof c.info.bottom!=='object') c.info.bottom={img:'',text:''};
                 if(typeof c.info.bottom.img!=='string') c.info.bottom.img='';
@@ -1922,6 +1930,9 @@
             });
             if(!db.saas || typeof db.saas !== 'object') db.saas={};
             if(!Array.isArray(db.saas.top)) db.saas.top=[];
+            while(db.saas.top.length < 3) {
+                db.saas.top.push({ title: `Division 0${db.saas.top.length + 1}`, img: "", text: "" });
+            }
             if(!Array.isArray(db.saas.bottomMembers)) db.saas.bottomMembers=[];
             if(!db.saas.bottom || typeof db.saas.bottom !== 'object') db.saas.bottom={img:'',text:''};
             if(typeof db.saas.bottom.img !== 'string') db.saas.bottom.img='';
@@ -2778,8 +2789,12 @@
             const savedIC=getSavedICName(currentUser.username)||currentUser?.icName||'';
             const userClub=getUser(currentUser.username)?.club||'';
             const clubs=Array.isArray(db.saasEvent.clubs)?db.saasEvent.clubs:[];
+            
+            const eventLogoHtml = db.saasEvent.logo ? `<img src="${escapeHTML(db.saasEvent.logo)}" alt="Logo Event" style="width:100%; max-height:300px; object-fit:cover; border-radius:6px; margin-bottom:20px;">` : '';
+
             container.innerHTML=`<div class="social-layout">
                 <div class="social-panel" style="width:100%;max-width:760px;margin:0 auto;">
+                    ${eventLogoHtml}
                     <h2>DAFTARKAN CLUB KE ACARA SAAS</h2>
                     <p style="color:var(--muted);font-size:11px;line-height:1.7;">${escapeHTML(db.saasEvent.description)}</p>
                     <form class="admin-form" onsubmit="event.preventDefault();confirmSaasEventRequest();">
@@ -3124,21 +3139,22 @@
                 `;
                 return;
             }
-            let html = '';
+            let html = '<div class="saas-grid">'; 
             db.club.forEach((c, index) => {
                 html += `
-                <div class="card">
-                    <h2 class="card-title">${c.name}</h2>
-                    <img src="${c.img}" alt="Club">
-                    <p>${c.text}</p>
+                <div class="card" style="display:flex; flex-direction:column; padding:20px; min-width:0;">
+                    <h2 class="card-title" style="font-size:22px; margin-bottom:15px;">${escapeHTML(c.name)}</h2>
+                    <img src="${escapeHTML(c.img)}" alt="Club" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:15px;">
+                    <p style="flex-grow:1; font-size:12px; margin-bottom:20px;">${escapeHTML(c.text)}</p>
                     
-                    <div class="btn-group">
-                        <button class="btn-red" onclick="joinLocation(${index})">Join Location</button>
-                        <button class="btn-red" onclick="joinDiscord(${index})">Join Discord ${c.name}</button>
-                        <button class="btn-red" onclick="infoClub(${index})">Information Club</button>
+                    <div class="btn-group" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <button class="btn-red" style="padding:10px 5px;" onclick="joinLocation(${index})">Location</button>
+                        <button class="btn-red" style="padding:10px 5px;" onclick="joinDiscord(${index})">Discord</button>
+                        <button class="btn-red" style="grid-column:1/-1; padding:10px 5px;" onclick="infoClub(${index})">Information Club</button>
                     </div>
                 </div>`;
             });
+            html += '</div>';
             container.innerHTML = html;
         }
 
@@ -3445,7 +3461,9 @@
                                 <input type="checkbox" id="saas-event-enabled" ${db.saasEvent.enabled?'checked':''} style="width:20px;height:20px;">
                                 <span><b>ON / OFF PENDAFTARAN ACARA SAAS</b><br><small style="color:#777;">ON = form pendaftaran tersedia · OFF = acara tidak tersedia</small></span>
                             </label>
-                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">Deskripsi Acara:</label>
+                            <label style="font-size:12px;color:var(--dim);margin-top:14px;display:block;">URL Banner/Logo Event (Opsional):</label>
+                            <input type="text" id="saas-event-logo" value="${escapeHTML(db.saasEvent.logo || '')}" placeholder="https://...">
+                            <label style="font-size:12px;color:var(--dim);margin-top:8px;display:block;">Deskripsi Acara:</label>
                             <textarea id="saas-event-description" rows="4" maxlength="500">${escapeHTML(db.saasEvent.description)}</textarea>
                             <button type="button" class="btn-red" onclick="saveSaasEventSettings()">Simpan Pengaturan Acara</button>
                             <hr style="border:1px solid #2a3441;margin:25px 0;">
@@ -3789,7 +3807,9 @@
         async function saveSaasEventSettings(){
             const enabled=document.getElementById('saas-event-enabled');
             const description=document.getElementById('saas-event-description');
+            const logo=document.getElementById('saas-event-logo');
             db.saasEvent.enabled=!!enabled?.checked;
+            db.saasEvent.logo=(logo?.value||'').trim();
             db.saasEvent.description=(description?.value||'').trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
             const saved=await saveToDB(true);
             if(!saved && sbConfig.url && sbConfig.key) return alert('Pengaturan acara gagal disimpan ke database. Coba lagi.');
@@ -3828,7 +3848,9 @@
             if(discordText) db.saas.discord.text = discordText.value.trim() || 'DISCORD SAAS';
             const eventEnabled=document.getElementById('saas-event-enabled');
             const eventDescription=document.getElementById('saas-event-description');
+            const eventLogo=document.getElementById('saas-event-logo');
             if(eventEnabled) db.saasEvent.enabled=!!eventEnabled.checked;
+            if(eventLogo) db.saasEvent.logo=eventLogo.value.trim();
             if(eventDescription) db.saasEvent.description=eventDescription.value.trim() || 'ACARA SAAS BALAP ANTAR CLUB BERHADIAH $5.000 BUAT CLUB YANG BERTAHAN SAMPAI AKHIR';
             updateSaasDiscordLink();
             

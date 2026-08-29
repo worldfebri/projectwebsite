@@ -973,10 +973,7 @@
 
         .announce-modal-check{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
         .announce-modal-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--red);}
-            /* ===== VOICE CHAT / WEBRTC ===== */
-        .voice-shell{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}.voice-main,.voice-sidebar{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px}.voice-room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px}.voice-room-card{border:1px solid var(--line);background:#080a0d;padding:16px;border-radius:7px;transition:.2s}.voice-room-card:hover{border-color:#fff;transform:translateY(-2px)}.voice-room-card h3{font:800 22px var(--display);margin:0 0 7px}.voice-room-meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;color:#8b919a;font-size:10px}.voice-pill{border:1px solid #343a42;padding:4px 7px;border-radius:999px;font-size:9px;letter-spacing:.04em}.voice-pill.private{border-color:#ff2938;color:#ff6b73}.voice-pill.global{border-color:#fff;color:#fff}.voice-people{margin-top:12px;display:flex;flex-direction:column;gap:7px}.voice-person{display:flex;align-items:center;gap:9px;padding:8px;background:#0d1014;border:1px solid #20252c;border-radius:5px}.voice-dot{width:8px;height:8px;border-radius:50%;background:#39ff14;box-shadow:0 0 10px #39ff14;flex:0 0 auto}.voice-dot.muted{background:#ff2938;box-shadow:0 0 10px #ff2938}.voice-controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}.voice-controls button{min-width:110px}.voice-status{padding:12px;border:1px solid #252a31;background:#080a0d;border-radius:5px;font-size:11px;color:#aeb4bc}.voice-status strong{color:#fff}.voice-active-room{border-color:#fff;box-shadow:0 0 18px rgba(255,255,255,.08)}.voice-role-check{display:flex;align-items:center;gap:9px;border:1px solid #2a3441;padding:9px;margin:6px 0;background:#0b0f14;border-radius:4px}.voice-role-check input{width:18px;height:18px}.voice-empty{padding:25px;text-align:center;border:1px dashed #2a3038;color:#777;font-size:11px}.voice-meter{height:4px;background:#1c2229;border-radius:999px;overflow:hidden;margin-top:5px}.voice-meter span{display:block;height:100%;width:0;background:#39ff14;box-shadow:0 0 10px #39ff14;transition:width .08s}@media(max-width:900px){.voice-shell{grid-template-columns:1fr}}
-</style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    </style>
 </head>
 <body>
 
@@ -1115,9 +1112,6 @@
             <button id="nav-public-chat" onclick="showPage('public-chat')">
                 <span class="nav-number">04</span><span>Chat Public</span>
             </button>
-            <button id="nav-voice" onclick="showPage('voice')">
-                <span class="nav-number">05</span><span>Voice Chat</span>
-            </button>
             <button id="nav-find-user" onclick="showPage('find-user')">
                 <span class="nav-number">05</span><span>Cari Pengguna</span>
             </button>
@@ -1146,7 +1140,6 @@
         <button data-admin-section="dashboard" onclick="showAdminSection('dashboard')">Dashboard</button>
         <button data-admin-section="github" onclick="showAdminSection('github')">Database</button>
         <button data-admin-section="discord" onclick="showAdminSection('discord')">Discord Bot</button>
-        <button data-admin-section="voice" onclick="showAdminSection('voice')">Voice Rooms</button>
         <button data-admin-section="security" onclick="showAdminSection('security')">Security</button>
         <button data-admin-section="teritory" onclick="showAdminSection('teritory')">Teritory</button>
         <button data-admin-section="race" onclick="showAdminSection('race')">Race</button>
@@ -1302,8 +1295,7 @@
                 announcementMentionNormal: false,
                 announcementImportantEnabled: true,
                 announcementMentionImportant: true
-            },
-            voiceRooms: []
+            }
         };
 
         const GITHUB_DB_FILES = {
@@ -1346,8 +1338,7 @@
                     clubSystem: db.clubSystem,
                     saasEvent: db.saasEvent,
                     announcements: db.announcements,
-                    discordBot: db.discordBot,
-                    voiceRooms: db.voiceRooms
+                    discordBot: db.discordBot
                 }
             };
         }
@@ -1908,16 +1899,6 @@
             Object.keys(discordDefaults).forEach(k=>{
                 if(typeof db.discordBot[k] !== typeof discordDefaults[k]) db.discordBot[k]=discordDefaults[k];
             });
-            if(!Array.isArray(db.voiceRooms)) db.voiceRooms=[];
-            db.voiceRooms=db.voiceRooms.filter(r=>r&&typeof r==='object').map(r=>({
-                id:typeof r.id==='string'&&r.id?r.id:(crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())),
-                name:typeof r.name==='string'&&r.name.trim()?r.name.trim():'Voice Room',
-                description:typeof r.description==='string'?r.description:'',
-                type:r.type==='private'?'private':'global',
-                allowedRoles:Array.isArray(r.allowedRoles)?r.allowedRoles.map(String):[],
-                maxUsers:Math.max(2,Math.min(50,Number(r.maxUsers)||10)),
-                enabled:r.enabled!==false,createdAt:Number(r.createdAt)||Date.now(),updatedAt:Number(r.updatedAt)||Date.now()
-            }));
             ['guildId','accountChannelId','announcementChannelId'].forEach(k=>{ db.discordBot[k]=String(db.discordBot[k]||'').trim(); });
             if(!db.teritory || typeof db.teritory !== 'object') db.teritory={enabled:true,image:'',text:''};
             if(typeof db.teritory.enabled !== 'boolean') db.teritory.enabled=true;
@@ -2663,7 +2644,6 @@
         }
 
         function showPage(pageId) {
-            if(window.voiceLeaveRoom && window.voiceCurrentRoomId && pageId!=='voice') window.voiceLeaveRoom();
             if(!currentUser && !guestMode) return showAuth();
             
             // Tutup mobile header saat pindah halaman
@@ -2683,8 +2663,6 @@
             } else if(pageId==='saas-event'){
                 updateHero("ACARA SAAS", db.saasEvent.enabled ? "Daftarkan Club ke acara SAAS" : "Belum ada acara tersedia");
                 setActiveNav('nav-saas-event'); renderSaasEventForm(container);
-            } else if(pageId==='voice'){
-                if(!requireAccount()) return; updateHero("Voice Chat","Global & Private Voice · WebRTC"); setActiveNav('nav-voice'); renderVoicePage(container);
             } else if(pageId==='public-chat'){
                 updateHero("Chat Public","Pilih kategori IC atau OOC");
                 setActiveNav('nav-public-chat'); openChatCategoryChooser();
@@ -3369,7 +3347,6 @@
                             <small style="display:block;color:#777;line-height:1.6;margin-top:10px;">Pterodactyl hanya menyimpan DISCORD_TOKEN dan SUPABASE_SERVICE_ROLE_KEY. Jangan pernah menaruh kedua secret tersebut di HTML.</small>
                         </div>
                     </div>
-                    <div class="admin-section" id="admin-section-voice"><div class="admin-form"><h3>🎙️ VOICE ROOM MANAGEMENT</h3><p style="color:var(--muted);font-size:11px;line-height:1.7;">Buat Global Voice atau Private Voice. Private Voice hanya dapat dimasuki pengguna yang memiliki role yang dipilih. Audio memakai WebRTC P2P; Supabase Realtime menangani signaling/presence.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;"><input id="voice-admin-name" maxlength="60" placeholder="Nama Voice Room"><input id="voice-admin-desc" maxlength="160" placeholder="Deskripsi singkat"><select id="voice-admin-type"><option value="global">Global Voice</option><option value="private">Private Voice</option></select><input id="voice-admin-max" type="number" min="2" max="50" value="10" placeholder="Max users"></div><div style="margin-top:12px;"><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:7px;">Role yang boleh masuk (Private Voice)</label><div id="voice-admin-roles">${(db.roles||[]).map(r=>`<label class="voice-role-check"><input type="checkbox" class="voice-create-role" value="${escapeHTML(r.id)}"><span class="role-badge" style="color:${escapeHTML(r.color)};border-color:${escapeHTML(r.color)};">${escapeHTML(r.name)}</span></label>`).join('') || '<div class="empty-state">Belum ada custom role.</div>'}</div></div><button type="button" class="btn-red" onclick="createVoiceRoom()" style="margin-top:12px;">+ CREATE VOICE ROOM</button><hr style="border:1px solid #2a3441;margin:25px 0;"><div id="voice-admin-room-list"></div></div></div>
                     <div class="admin-section" id="admin-section-security">
                         <div class="admin-form">
                             <h3>Sistem Keamanan</h3>
@@ -3599,7 +3576,6 @@
             if(section==='saas-event') renderSaasEventRequests();
             if(section==='saas-event-clubs'){ renderSaasEventClubAdmin(); }
             if(section==='create-role') setTimeout(syncRoleColorInputs,0);
-            if(section==='voice') renderVoiceAdminRooms();
             updateAdminTotalUsers();
             updateAdminClubRequestBadge();
             updateAdminSaasEventBadge();
@@ -3919,27 +3895,6 @@
                 }
             });
         }
-        /* ========================================================= VOICE CHAT — WebRTC P2P + Supabase Realtime ========================================================= */
-        let voiceChannel=null, voiceLocalStream=null, voiceCurrentRoomId=null, voiceMuted=false;
-        const voicePeers=new Map(), voiceRemoteAudios=new Map();
-        const VOICE_RTC_CONFIG={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
-        function getVoiceSupabase(){if(!window.supabase?.createClient||!sbConfig.url||!sbConfig.key)return null;try{return window.supabase.createClient(sbConfig.url,sbConfig.key,{realtime:{params:{eventsPerSecond:20}}});}catch(e){return null;}}
-        function getCurrentUserRoleNames(){return getUserRoles(currentUser).map(r=>String(r.name).toLowerCase());}
-        function voiceCanJoin(room){if(!room||room.enabled===false||!currentUser)return false;if(room.type!=='private')return true;const roles=getCurrentUserRoleNames();return(room.allowedRoles||[]).some(id=>{const r=(db.roles||[]).find(x=>x.id===id);return r&&roles.includes(String(r.name).toLowerCase());});}
-        function renderVoicePage(container){normalizeDB();const rooms=db.voiceRooms||[];container.innerHTML=`<div class="voice-shell"><div class="voice-main"><div style="display:flex;justify-content:space-between;gap:15px;align-items:end;flex-wrap:wrap;"><div><span class="section-kicker">REAL-TIME AUDIO</span><h2 class="card-title" style="margin-top:5px;">VOICE CHANNELS</h2><p style="color:var(--muted);font-size:11px;line-height:1.7;max-width:760px;">Voice memakai WebRTC langsung antar browser. Supabase Realtime hanya menangani signaling dan presence; audio tidak dikirim sebagai database message.</p></div><button class="btn-red" type="button" onclick="renderVoicePage(document.getElementById('app-content'))">↻ REFRESH</button></div><div class="voice-room-grid">${rooms.filter(r=>r.enabled!==false).map(room=>{const allowed=voiceCanJoin(room);const roles=(room.allowedRoles||[]).map(id=>(db.roles||[]).find(r=>r.id===id)?.name).filter(Boolean);return `<div class="voice-room-card ${voiceCurrentRoomId===room.id?'voice-active-room':''}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start;"><h3>🎙️ ${escapeHTML(room.name)}</h3><span class="voice-pill ${room.type==='private'?'private':'global'}">${room.type==='private'?'PRIVATE':'GLOBAL'}</span></div><p style="color:var(--muted);font-size:11px;line-height:1.6;min-height:35px;">${escapeHTML(room.description||'Voice channel SAAS')}</p><div class="voice-room-meta"><span class="voice-pill">MAX ${room.maxUsers}</span>${roles.map(x=>`<span class="voice-pill">${escapeHTML(x)}</span>`).join('')}</div>${voiceCurrentRoomId===room.id?`<div class="voice-status">🟢 Terhubung sebagai <strong>@${escapeHTML(currentUser.username)}</strong><div class="voice-meter"><span id="voice-local-meter"></span></div></div><div class="voice-controls"><button class="btn-red" onclick="toggleVoiceMute()">${voiceMuted?'🔇 UNMUTE':'🎤 MUTE'}</button><button class="btn-red" onclick="voiceLeaveRoom()">🚪 LEAVE</button></div>`:`<button class="btn-red" ${allowed?'':'disabled'} onclick="joinVoiceRoom('${encodeURIComponent(room.id)}')">${allowed?'🎙️ JOIN VOICE':'🔒 ROLE TIDAK DIIZINKAN'}</button>`}<div id="voice-people-${escapeHTML(room.id)}" class="voice-people"></div></div>`}).join('')||'<div class="voice-empty" style="grid-column:1/-1;">Belum ada voice room. Admin dapat membuat room dari Admin Control → Voice Rooms.</div>'}</div></div><aside class="voice-sidebar"><h3 style="font:800 24px var(--display);margin:0 0 12px;">VOICE INFO</h3><div class="voice-status">Status: <strong>${voiceCurrentRoomId?'CONNECTED':'READY'}</strong></div><div style="margin-top:12px;color:var(--muted);font-size:11px;line-height:1.8;">• Izinkan microphone saat browser meminta permission.<br>• Gunakan HTTPS saat deploy.<br>• P2P mesh cocok untuk room kecil.<br>• Jika jaringan tertentu memblokir P2P, diperlukan TURN server.</div></aside></div>`;if(voiceCurrentRoomId)setTimeout(updateVoicePeople,0);}
-        async function createVoicePeer(username,initiator){if(!voiceChannel||username===currentUser.username)return;if(voicePeers.has(username))return voicePeers.get(username);const pc=new RTCPeerConnection(VOICE_RTC_CONFIG);voicePeers.set(username,pc);voiceLocalStream?.getTracks().forEach(t=>pc.addTrack(t,voiceLocalStream));pc.onicecandidate=e=>{if(e.candidate)voiceChannel.send({type:'broadcast',event:'voice-signal',payload:{kind:'candidate',from:currentUser.username,to:username,candidate:e.candidate}})};pc.ontrack=e=>attachVoiceRemote(username,e.streams[0]);pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))removeVoicePeer(username)};if(initiator){const offer=await pc.createOffer();await pc.setLocalDescription(offer);await voiceChannel.send({type:'broadcast',event:'voice-signal',payload:{kind:'offer',from:currentUser.username,to:username,description:pc.localDescription}})}return pc;}
-        async function handleVoiceSignal(p){if(!p||p.to!==currentUser.username||p.from===currentUser.username)return;let pc=voicePeers.get(p.from);if(p.kind==='offer'){pc=pc||await createVoicePeer(p.from,false);await pc.setRemoteDescription(p.description);const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await voiceChannel.send({type:'broadcast',event:'voice-signal',payload:{kind:'answer',from:currentUser.username,to:p.from,description:pc.localDescription}})}else if(p.kind==='answer'&&pc){await pc.setRemoteDescription(p.description)}else if(p.kind==='candidate'&&pc){try{await pc.addIceCandidate(p.candidate)}catch(e){console.warn(e)}}else if(p.kind==='hello'){if(p.from&&p.from!==currentUser.username)await createVoicePeer(p.from,currentUser.username.localeCompare(p.from)<0)}}
-        function attachVoiceRemote(username,stream){let audio=voiceRemoteAudios.get(username);if(!audio){audio=document.createElement('audio');audio.autoplay=true;audio.playsInline=true;audio.dataset.voiceUser=username;audio.style.display='none';document.body.appendChild(audio);voiceRemoteAudios.set(username,audio)}audio.srcObject=stream;audio.play?.().catch(()=>{});}
-        function removeVoicePeer(username){const pc=voicePeers.get(username);if(pc){try{pc.close()}catch(e){}voicePeers.delete(username)}const a=voiceRemoteAudios.get(username);if(a){a.remove();voiceRemoteAudios.delete(username)}updateVoicePeople()}
-        async function updateVoicePeople(){const room=db.voiceRooms.find(r=>r.id===voiceCurrentRoomId);if(!room||!voiceChannel)return;const state=voiceChannel.presenceState();const users=[];Object.values(state||{}).forEach(arr=>arr.forEach(x=>{const u=x.user||x.username;if(u&&!users.some(y=>y.username===u))users.push({username:u,muted:!!x.muted})}));const box=document.getElementById('voice-people-'+room.id);if(!box)return;box.innerHTML=users.map(u=>`<div class="voice-person"><span class="voice-dot ${u.muted?'muted':''}"></span><span style="font-size:11px;font-weight:700;">@${escapeHTML(u.username)}</span>${u.username===currentUser.username?'<small style="color:#777;margin-left:auto;">YOU</small>':''}</div>`).join('')||'<div style="color:#777;font-size:10px;">Belum ada user lain.</div>'}
-        async function joinVoiceRoom(encodedId){if(!requireAccount())return;const id=decodeURIComponent(encodedId),room=db.voiceRooms.find(r=>r.id===id);if(!room||!voiceCanJoin(room))return alert('Kamu tidak memiliki akses ke voice room ini.');if(voiceCurrentRoomId)await voiceLeaveRoom();if(!sbConfig.url||!sbConfig.key)return alert('Supabase belum dikonfigurasi. Isi Project URL dan Anon Key di Admin Panel → Database.');try{voiceLocalStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});const client=getVoiceSupabase();if(!client)throw new Error('Supabase Realtime client gagal dibuat.');voiceCurrentRoomId=id;voiceMuted=false;voiceChannel=client.channel('saas-voice-'+id,{config:{presence:{key:currentUser.username}}});voiceChannel.on('presence',{event:'sync'},updateVoicePeople).on('presence',{event:'join'},updateVoicePeople).on('presence',{event:'leave'},payload=>{(payload.leftPresences||[]).forEach(x=>{const u=x.user||x.username;if(u)removeVoicePeer(u)});updateVoicePeople()}).on('broadcast',{event:'voice-signal'},({payload})=>handleVoiceSignal(payload));const status=await new Promise((resolve,reject)=>{let settled=false;voiceChannel.subscribe(async st=>{if(st==='SUBSCRIBED'&&!settled){settled=true;resolve(st);await voiceChannel.track({user:currentUser.username,muted:false,joinedAt:Date.now()});await new Promise(r=>setTimeout(r,350));const state=voiceChannel.presenceState();let count=0;Object.values(state||{}).forEach(a=>count+=a.length);if(count>room.maxUsers){alert('Voice room penuh.');await voiceLeaveRoom();return}Object.values(state||{}).flat().forEach(x=>{const u=x.user||x.username;if(u&&u!==currentUser.username)createVoicePeer(u,currentUser.username.localeCompare(u)<0)});await voiceChannel.send({type:'broadcast',event:'voice-signal',payload:{kind:'hello',from:currentUser.username}});renderVoicePage(document.getElementById('app-content'))}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(st)&&!settled){settled=true;reject(new Error(st))}})});if(status!=='SUBSCRIBED')throw new Error('Gagal terhubung ke Supabase Realtime: '+status)}catch(e){console.error(e);voiceCurrentRoomId=null;if(voiceLocalStream){voiceLocalStream.getTracks().forEach(t=>t.stop());voiceLocalStream=null}if(voiceChannel){try{await voiceChannel.unsubscribe()}catch(_){}voiceChannel=null}alert('Gagal masuk voice: '+(e.message||e))}}
-        async function voiceLeaveRoom(){if(!voiceCurrentRoomId&&!voiceLocalStream)return;for(const u of Array.from(voicePeers.keys()))removeVoicePeer(u);if(voiceChannel){try{await voiceChannel.untrack();await voiceChannel.unsubscribe()}catch(e){}}voiceChannel=null;voiceCurrentRoomId=null;if(voiceLocalStream){voiceLocalStream.getTracks().forEach(t=>t.stop());voiceLocalStream=null}voiceMuted=false;if(document.getElementById('app-content')){try{renderVoicePage(document.getElementById('app-content'))}catch(e){}}}
-        window.voiceLeaveRoom=voiceLeaveRoom;
-        function toggleVoiceMute(){if(!voiceLocalStream||!voiceChannel)return;voiceMuted=!voiceMuted;voiceLocalStream.getAudioTracks().forEach(t=>t.enabled=!voiceMuted);voiceChannel.track({user:currentUser.username,muted:voiceMuted,joinedAt:Date.now()});renderVoicePage(document.getElementById('app-content'))}
-        async function createVoiceRoom(){if(!adminAuthenticated)return alert('Login Admin terlebih dahulu.');normalizeDB();const name=(document.getElementById('voice-admin-name')?.value||'').trim(),desc=(document.getElementById('voice-admin-desc')?.value||'').trim(),type=document.getElementById('voice-admin-type')?.value==='private'?'private':'global',max=Math.max(2,Math.min(50,Number(document.getElementById('voice-admin-max')?.value)||10)),allowed=[...document.querySelectorAll('.voice-create-role:checked')].map(x=>x.value);if(!name)return alert('Nama voice room wajib diisi.');if(type==='private'&&!allowed.length)return alert('Private Voice minimal pilih 1 role.');db.voiceRooms.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),name,description:desc,type,allowedRoles:type==='private'?allowed:[],maxUsers:max,enabled:true,createdAt:Date.now(),updatedAt:Date.now()});const saved=await saveToDB(true);if(!saved)return alert('Voice room dibuat lokal tetapi gagal disimpan ke Supabase. Cek RLS tabel kv_store.');document.getElementById('voice-admin-name').value='';document.getElementById('voice-admin-desc').value='';renderAdminDashboard(document.getElementById('app-content'));showAdminSection('voice')}
-        function renderVoiceAdminRooms(){const box=document.getElementById('voice-admin-room-list');if(!box)return;normalizeDB();const roles=db.roles||[];box.innerHTML=(db.voiceRooms||[]).map(r=>{const allowed=(r.allowedRoles||[]).map(id=>roles.find(x=>x.id===id)?.name).filter(Boolean);return `<div style="border:1px solid #2a3441;background:#0b0f14;border-radius:6px;padding:14px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap;"><div><h3 style="font:800 21px var(--display);margin:0;">🎙️ ${escapeHTML(r.name)}</h3><p style="color:#777;font-size:10px;margin:5px 0;">${escapeHTML(r.description||'')}</p><div class="voice-room-meta"><span class="voice-pill ${r.type==='private'?'private':'global'}">${r.type.toUpperCase()}</span><span class="voice-pill">MAX ${r.maxUsers}</span>${allowed.map(x=>`<span class="voice-pill">${escapeHTML(x)}</span>`).join('')}</div></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button type="button" class="btn-red" onclick="toggleVoiceRoom('${encodeURIComponent(r.id)}')">${r.enabled===false?'ENABLE':'DISABLE'}</button><button type="button" class="btn-red" onclick="deleteVoiceRoom('${encodeURIComponent(r.id)}')">HAPUS</button></div></div></div>`}).join('')||'<div class="voice-empty">Belum ada voice room.</div>'}
-        async function toggleVoiceRoom(encoded){const id=decodeURIComponent(encoded),r=db.voiceRooms.find(x=>x.id===id);if(!r)return;r.enabled=r.enabled===false;r.updatedAt=Date.now();const ok=await saveToDB(true);if(!ok)return alert('Gagal menyimpan perubahan voice room.');renderAdminDashboard(document.getElementById('app-content'));showAdminSection('voice')}
-        async function deleteVoiceRoom(encoded){const id=decodeURIComponent(encoded),r=db.voiceRooms.find(x=>x.id===id);if(!r||!confirm('Hapus voice room "'+r.name+'"?'))return;db.voiceRooms=db.voiceRooms.filter(x=>x.id!==id);const ok=await saveToDB(true);if(!ok)return alert('Gagal menghapus voice room.');if(voiceCurrentRoomId===id)await voiceLeaveRoom();renderAdminDashboard(document.getElementById('app-content'));showAdminSection('voice')}
     </script>
 </body>
 </html>

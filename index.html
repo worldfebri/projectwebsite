@@ -5140,14 +5140,55 @@ function rtcUnlockAudio(){ while(rtcBlocked.length){ const a=rtcBlocked.pop(); t
 const rtcMeta=S=>({user:S.me,ts:Date.now(),muted:!!S.muted,deaf:!!S.deaf});
 /* ambil meta terbaru dari payload presence Supabase ({metas:[...]}) */
 const rtcPick=v=>{ const a=v&&v.metas; return (a&&a.length)?(a[a.length-1]||{}):{}; };
+/* ---- JALUR CADANGAN: suara dikirim lewat WebSocket Supabase bila WebRTC langsung gagal (tidak butuh TURN) ---- */
+const RLY_SR=16000;
+function rlyMu(x){ const s=x<0?128:0; x=Math.min(1,Math.abs(x)); return s|Math.round(Math.log(1+255*x)/Math.log(256)*127); }
+function rlyUnmu(b){ const y=(b&127)/127; return ((b&128)?-1:1)*((Math.pow(256,y)-1)/255); }
+/* relay dianggap aktif untuk peserta n bila koneksi langsung belum tersambung setelah 6 detik */
+function rtcRelayOn(S,n){
+ const pc=S.peers[n];
+ if(pc) return pc.connectionState!=='connected'&&Date.now()-pc._t>6000;
+ return Date.now()-(S._jt||0)>6000;
+}
+function rlyStart(S,X){
+ const ctx=S._ac; if(!ctx||!ctx.createScriptProcessor) return;
+ const ratio=ctx.sampleRate/RLY_SR;
+ const sp=ctx.createScriptProcessor(8192,1,1), src=ctx.createMediaStreamSource(S.stream), mute=ctx.createGain();
+ mute.gain.value=0; src.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
+ sp.onaudioprocess=e=>{
+  if(!X.alive()||!X.ready()||S.muted) return;
+  if(!X.roster().some(n=>n!==S.me&&rtcRelayOn(S,n))) return;        /* semua sudah tersambung langsung: tidak perlu relay */
+  const inp=e.inputBuffer.getChannelData(0), n=Math.floor(inp.length/ratio);
+  const out=new Uint8Array(n); let e2=0;
+  for(let i=0;i<n;i++){ const a=Math.floor(i*ratio), b=Math.max(a+1,Math.floor((i+1)*ratio)); let t=0; for(let j=a;j<b&&j<inp.length;j++) t+=inp[j]; const v=t/(b-a); e2+=v*v; out[i]=rlyMu(v); }
+  if(Math.sqrt(e2/n)<0.006) return;                                   /* hening: tidak dikirim (hemat kuota realtime) */
+  X.sig({t:'aud',from:S.me,d:btoa(String.fromCharCode.apply(null,out))});
+ };
+ S._sp=sp; S._spSrc=src; S._spMute=mute; S._pt={}; S._rx={};
+}
+function rlyStop(S){ try{ S._sp&&(S._sp.onaudioprocess=null,S._sp.disconnect()); S._spSrc&&S._spSrc.disconnect(); S._spMute&&S._spMute.disconnect(); }catch(_){} S._sp=S._spSrc=S._spMute=null; }
+function rlyPlay(X,m){
+ const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
+ const pc=S.peers[m.from]; if(pc&&pc.connectionState==='connected') return;   /* sudah ada jalur langsung: abaikan relay */
+ let bin; try{ bin=atob(m.d); }catch(_){ return; }
+ const buf=ctx.createBuffer(1,bin.length,RLY_SR), ch=buf.getChannelData(0);
+ for(let i=0;i<bin.length;i++) ch[i]=rlyUnmu(bin.charCodeAt(i));
+ const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination);
+ const now=ctx.currentTime; let t=S._pt[m.from]||0;
+ if(t<now+0.03) t=now+0.2;                                            /* jitter buffer 200ms */
+ src.start(t); S._pt[m.from]=t+buf.duration; S._rx[m.from]=Date.now();
+ if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+}
 /* ---- meter suara mikrofon sendiri (untuk tanda "bicara" di diri sendiri) ---- */
-function rtcMeter(S){
+function rtcMeter(S,X){
+ S._jt=Date.now();
  try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
   const ctx=new AC(); const src=ctx.createMediaStreamSource(S.stream); const an=ctx.createAnalyser(); an.fftSize=512; src.connect(an);
   S._ac=ctx; S._an=an; S._buf=new Uint8Array(an.fftSize); if(ctx.resume) ctx.resume().catch(()=>{});
+  if(X) rlyStart(S,X);
  }catch(e){ console.warn('[voice] meter',e); }
 }
-function rtcMeterStop(S){ try{ S._ac&&S._ac.close(); }catch(_){} S._ac=null; S._an=null; S._lv=0; }
+function rtcMeterStop(S){ rlyStop(S); try{ S._ac&&S._ac.close(); }catch(_){} S._ac=null; S._an=null; S._lv=0; }
 function rtcSelfLevel(S){
  if(!S._an||S.muted) return 0;
  S._an.getByteTimeDomainData(S._buf); let s=0;
@@ -5202,6 +5243,7 @@ async function rtcFlush(pc){ const q=pc._q.splice(0); for(const c of q){ try{ aw
 function rtcHandle(X,m){
  const S=X.S;
  if(!X.alive()||!S.stream||!m||m.from===S.me||(m.to&&m.to!==S.me)) return;
+ if(m.t==='aud'){ rlyPlay(X,m); return; }
  const u=m.from; S.chain=S.chain||{};
  S.chain[u]=(S.chain[u]||Promise.resolve()).then(()=>rtcStep(X,m)).catch(e=>console.warn('voice',e));
 }
@@ -5262,16 +5304,17 @@ function rtcText(k,u,c){
    const others=X.roster().filter(n=>n!==S.me);
    if(!others.length) s='✅ tersambung · menunggu peserta lain';
    else{
-    const ok=others.filter(n=>S.peers[n]&&S.peers[n].connectionState==='connected').length;
-    s=ok===others.length?'✅ tersambung ke '+ok+' peserta':'⏳ menyambung ('+ok+'/'+others.length+')';
+    const ok=others.filter(n=>(S.peers[n]&&S.peers[n].connectionState==='connected')||rtcRelayOn(S,n)).length;
+    s=ok===others.length?'✅ tersambung ke '+ok+' peserta'+(others.some(n=>rtcRelayOn(S,n))?' (via relay)':''):'⏳ menyambung ('+ok+'/'+others.length+')';
    }
   }
   if(!S.muted&&(S._lv||0)>0.04) s='🔊 kamu bicara';
   return s+ic;
  }
- const pc=S.peers[u]; if(!pc) return '⏳ menunggu'+ic;
+ const pc=S.peers[u]; if(!pc) return (rtcRelayOn(S,u)?'🔁 tersambung (via relay)':'⏳ menunggu')+ic;
  const st=pc.connectionState;
  if(st==='connected') return (pc._lv>0.01?'🔊 bicara':'✅ tersambung')+ic;
+ if(rtcRelayOn(S,u)){ const live=Date.now()-((S._rx||{})[u]||0)<600; return (live?'🔊 bicara':'🔁 tersambung')+' (via relay)'+ic; }
  const rl=pc._ct.relay||0, info=` [relay:${rl} diterima:${pc._rc}]`;
  if(st==='failed') return '❌ gagal'+(rl?'':' (TURN tidak terjangkau)')+info+ic;
  const lama=Date.now()-pc._t>15000?' — lama, jaringan mungkin memblokir (butuh TURN)':'';
@@ -5382,7 +5425,7 @@ async function joinVoice(){
  try{ VC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
  VC.inCall=true; VC.muted=false; VC.deaf=false; VC.me=currentUser.username;
- rtcMeter(VC);
+ rtcMeter(VC,VCX);
  if(!VC.ws) vcConnect();
  const waitJoin=setInterval(()=>{
   if(!VC.inCall){ clearInterval(waitJoin); return; }
@@ -5719,7 +5762,7 @@ async function gvJoin(id){
  if(GV.cur) gvLeave(true);
  try{ GV.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
- GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV);
+ GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV,GVX);
  gvConnect();
  if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); }
  else if(GV.ws&&GV.ws.readyState===1) gvSync();

@@ -5106,23 +5106,44 @@ async function hubAbsenSend(){
 /* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
    TURN relay, antrian ICE, perfect-negotiation, ICE dikirim per-batch (hindari rate-limit Supabase Realtime),
    retry otomatis, unlock autoplay, tombol matikan/nyalakan audio, dan indikator status per peserta. */
-const RTC_CFG={iceServers:[
- {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
- /* TURN publik gratis untuk uji coba. Untuk produksi ganti dengan akun TURN sendiri (metered.ca / Cloudflare / coturn). */
- {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turns:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}
-]};
+/* >>> Punya akun TURN sendiri? Isi di sini (paling stabil). Contoh:
+   const TURN_CUSTOM={urls:['turn:xxx.metered.live:80','turn:xxx.metered.live:443','turns:xxx.metered.live:443?transport=tcp'],username:'USER',credential:'PASS'}; */
+const TURN_CUSTOM={urls:[],username:'',credential:''};
+const STUN_URLS=['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun.cloudflare.com:3478'];
+let RTC_ICE=[{urls:STUN_URLS}];
+let rtcPrep=null, rtcPrepT=0;
+function rtcPrepare(){
+ if(rtcPrep&&Date.now()-rtcPrepT<3600000) return rtcPrep;
+ rtcPrepT=Date.now();
+ rtcPrep=(async()=>{
+  const list=[{urls:STUN_URLS}];
+  if(TURN_CUSTOM.urls.length) list.push({urls:TURN_CUSTOM.urls,username:TURN_CUSTOM.username,credential:TURN_CUSTOM.credential});
+  /* TURN gratis Open Relay (static-auth: kredensial dibuat dari secret publik, berlaku 24 jam) */
+  try{
+   const u=String(Math.floor(Date.now()/1000)+86400);
+   const k=await crypto.subtle.importKey('raw',new TextEncoder().encode('openrelayprojectsecret'),{name:'HMAC',hash:'SHA-1'},false,['sign']);
+   const sg=await crypto.subtle.sign('HMAC',k,new TextEncoder().encode(u));
+   list.push({urls:['turn:staticauth.openrelay.metered.ca:80','turn:staticauth.openrelay.metered.ca:443','turn:staticauth.openrelay.metered.ca:443?transport=tcp','turns:staticauth.openrelay.metered.ca:443?transport=tcp'],username:u,credential:btoa(String.fromCharCode(...new Uint8Array(sg)))});
+  }catch(e){ console.warn('[voice] static TURN gagal dibuat',e); }
+  list.push({urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turns:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'});
+  RTC_ICE=list;
+ })();
+ return rtcPrep;
+}
+rtcPrepare();
 const rtcBlocked=[];
 function rtcUnlockAudio(){ while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
 ['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,rtcUnlockAudio,{passive:true}));
 function rtcMk(X,u){
  const S=X.S;
  if(S.peers[u]) return S.peers[u];
- const pc=new RTCPeerConnection(RTC_CFG);
- pc._q=[]; pc._ib=[]; pc._it=0; pc._ignore=false; pc._t=Date.now(); pc._lv=0;
+ const pc=new RTCPeerConnection({iceServers:RTC_ICE});
+ pc._q=[]; pc._ct={}; pc._rc=0; pc._ib=[]; pc._it=0; pc._ignore=false; pc._t=Date.now(); pc._lv=0;
  S.stream.getTracks().forEach(t=>pc.addTrack(t,S.stream));
  pc.onicecandidate=e=>{
   if(!e.candidate) return;
   pc._ib.push(e.candidate);
+  const ty=(e.candidate.candidate.match(/ typ (\w+)/)||[])[1]; pc._ct[ty]=(pc._ct[ty]||0)+1;
   if(!pc._it) pc._it=setTimeout(()=>{ pc._it=0; const c=pc._ib.splice(0); if(c.length&&S.peers[u]===pc) X.sig({t:'ice',from:S.me,to:u,c}); },300);
  };
  pc.ontrack=e=>{
@@ -5132,9 +5153,10 @@ function rtcMk(X,u){
   a.muted=!!S.deaf;
   const p=a.play(); if(p&&p.catch) p.catch(()=>{ if(!rtcBlocked.includes(a)) rtcBlocked.push(a); });
  };
+ pc.onicecandidateerror=e=>console.warn('[voice] ICE error',e.errorCode,e.url,e.errorText);
  pc.onconnectionstatechange=()=>{
   const st=pc.connectionState;
-  console.log('[voice]',u,st);
+  console.log('[voice]',u,st,'lokal:',JSON.stringify(pc._ct),'masuk:',pc._rc);
   if(st==='failed'||st==='closed'){
    if(S.peers[u]!==pc) return;
    X.drop(u);
@@ -5151,6 +5173,8 @@ function rtcHandle(X,m){
 }
 async function rtcStep(X,m){
  const S=X.S, u=m.from;
+ if(!X.alive()||!S.stream) return;
+ await rtcPrepare();
  if(!X.alive()||!S.stream) return;
  if(m.t==='bye'){ X.drop(u); return; }
  if(m.t==='hello'){
@@ -5174,7 +5198,7 @@ async function rtcStep(X,m){
  }
  if(m.t==='ice'){
   const pc=S.peers[u]; if(!pc||pc._ignore) return;
-  const arr=Array.isArray(m.c)?m.c:[m.c];
+  const arr=Array.isArray(m.c)?m.c:[m.c]; pc._rc=(pc._rc||0)+arr.length;
   if(pc.remoteDescription&&pc.remoteDescription.type){ for(const c of arr){ try{ await pc.addIceCandidate(c); }catch(e){ console.warn('ice',e); } } }
   else arr.forEach(c=>pc._q.push(c));
  }
@@ -5188,8 +5212,9 @@ function rtcText(k,u){
  const pc=S.peers[u]; if(!pc) return '⏳ menunggu';
  const st=pc.connectionState;
  if(st==='connected') return S.deaf?'🔇 audio mati':(pc._lv>0.01?'🔊 bicara':'✅ tersambung');
- if(st==='failed') return '❌ gagal';
- return '⏳ menyambung';
+ const rl=pc._ct.relay||0, info=` [relay:${rl} masuk:${pc._rc}]`;
+ if(st==='failed') return '❌ gagal'+(rl?'':' (TURN tidak terjangkau)')+info;
+ return '⏳ menyambung'+info;
 }
 const rtcBadge=(k,u)=>`<small class="rtc-b" data-k="${k}" data-u="${escapeHTML(u)}" style="margin-left:6px;opacity:.85">${rtcText(k,u)}</small>`;
 const VCX={get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall,ready:()=>VC.joined,roster:()=>Object.keys(VC.roster)};
@@ -5204,7 +5229,7 @@ setInterval(()=>{ [VCX,GVX].forEach(X=>{
   if(n===S.me) return;
   const pc=S.peers[n];
   if(pc&&pc.connectionState==='connected'){ S.tries[n]=0; return; }
-  if(!pc||Date.now()-(pc._t||0)>8000){ if((S.tries[n]=(S.tries[n]||0)+1)<=6) X.sig({t:'hello',from:S.me,to:n}); }
+  if(!pc||(S.me>n&&Date.now()-(pc._t||0)>15000)){ if((S.tries[n]=(S.tries[n]||0)+1)<=6) X.sig({t:'hello',from:S.me,to:n}); }
  });
 }); },3000);
 /* level suara masuk + update label status */

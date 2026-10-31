@@ -5105,6 +5105,25 @@ async function hubAbsenSend(){
  await saveToDB(true); hubAbsenUI(document.getElementById('hub-body'));
 }
 
+/* ---------- SERVER VOICE (Node.js / Pterodactyl) ----------
+   Isi VOICE_SERVER_URL dengan alamat server voice kamu (wss:// bila website HTTPS), contoh:
+     const VOICE_SERVER_URL='wss://voice.domainkamu.com';
+   VOICE_SERVER_TOKEN = nilai VOICE_TOKEN di server (kosongkan bila server tanpa token).
+   Bisa juga diatur tanpa edit file: di Console browser ketik
+     localStorage.setItem('voice_url','wss://voice.domainkamu.com'); localStorage.setItem('voice_token','TOKEN');
+   Bila kosong semua -> voice tetap memakai Supabase Realtime seperti sebelumnya. */
+const VOICE_SERVER_URL='wss://cleaners-more-precipitation-rear.trycloudflare.com';
+const VOICE_SERVER_TOKEN='NJmWqigFsCYNjKP-WAy548jWrfE6xLJ9';
+function voiceWsUrl(){
+ let u=''; try{ u=(localStorage.getItem('voice_url')||VOICE_SERVER_URL||'').trim(); }catch(_){ u=VOICE_SERVER_URL; }
+ if(u){
+  let t=VOICE_SERVER_TOKEN; try{ t=localStorage.getItem('voice_token')||t; }catch(_){}
+  u=u.replace(/\/+$/,'').replace(/^http/,'ws');
+  return u+'/realtime/v1/websocket?apikey='+encodeURIComponent(t||'public')+'&vsn=1.0.0';
+ }
+ if(!sbConfig.url) return '';
+ return sbConfig.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(sbConfig.key)+'&vsn=1.0.0';
+}
 /* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
    TURN relay, antrian ICE, perfect-negotiation, ICE dikirim per-batch (hindari rate-limit Supabase Realtime),
    retry otomatis, unlock autoplay, tombol matikan/nyalakan audio, dan indikator status per peserta. */
@@ -5434,10 +5453,10 @@ function vsend(ev,p,topic){ if(VC.ws&&VC.ws.readyState===1) VC.ws.send(JSON.stri
 function vsig(m){ vsend('broadcast',{type:'broadcast',event:'sig',payload:m}); }
 /* koneksi Realtime (dibuka saat halaman voice dilihat, agar daftar peserta tampil walau belum gabung) */
 function vcConnect(){
- if(VC.ws||!canHub('voice')||!currentUser||!sbConfig.url) return;
+ if(VC.ws||!canHub('voice')||!currentUser||!voiceWsUrl()) return;
  VC.me=currentUser.username; VC.joined=false; VC.roster={};
  let ws;
- try{ ws=VC.ws=new WebSocket(sbConfig.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(sbConfig.key)+'&vsn=1.0.0'); }catch(e){ VC.ws=null; return; }
+ try{ ws=VC.ws=new WebSocket(voiceWsUrl()); }catch(e){ VC.ws=null; return; }
  ws.onopen=()=>{
   vsend('phx_join',{config:{broadcast:{self:false,ack:false},presence:{key:VC.me},postgres_changes:[]}});
   VC.hb=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(VC.ref++)})); },25000);
@@ -5478,7 +5497,7 @@ async function joinVoice(){
   if(!VC.inCall){ clearInterval(waitJoin); return; }
   if(VC.joined){ clearInterval(waitJoin); vcTrack(); vsig({t:'hello',from:VC.me}); vcRoster(); }
  },200);
- setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ alert('Gagal masuk voice (Realtime Supabase belum aktif?).'); leaveVoice(true); } },8000);
+ setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); leaveVoice(true); } },8000);
  vcActions(); vcRoster();
 }
 function vmk(u){ return rtcMk(VCX,u); }
@@ -5770,10 +5789,10 @@ async function gvDelete(id){
 function gvSendRaw(topic,ev,p){ if(GV.ws&&GV.ws.readyState===1) GV.ws.send(JSON.stringify({topic,event:ev,payload:p,ref:String(GV.ref++)})); }
 function gvSig(m){ gvSendRaw(gvTopic(GV.cur),'broadcast',{type:'broadcast',event:'sig',payload:m}); }
 function gvConnect(){
- if(GV.ws||!currentUser||!sbConfig.url) return;
+ if(GV.ws||!currentUser||!voiceWsUrl()) return;
  GV.me=gvMe(); GV.joined={}; GV.roster={};
  let ws;
- try{ ws=GV.ws=new WebSocket(sbConfig.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(sbConfig.key)+'&vsn=1.0.0'); }catch(e){ GV.ws=null; return; }
+ try{ ws=GV.ws=new WebSocket(voiceWsUrl()); }catch(e){ GV.ws=null; return; }
  ws.onopen=()=>{ gvSync(); GV.hb=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(GV.ref++)})); },25000); };
  ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;}
   if(!m.topic||!m.topic.startsWith('realtime:gvoice-')) return;
@@ -5813,7 +5832,7 @@ async function gvJoin(id){
  gvConnect();
  if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); }
  else if(GV.ws&&GV.ws.readyState===1) gvSync();
- setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ alert('Gagal masuk voice (Realtime Supabase belum aktif?).'); gvLeave(true); } },8000);
+ setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); gvLeave(true); } },8000);
  gvRender();
 }
 function gvPeer(u){ return rtcMk(GVX,u); }

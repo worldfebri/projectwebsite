@@ -1764,7 +1764,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         </div>
     </div>
 
-    <div class="auth-screen show" id="auth-screen">
+    <div class="auth-screen" id="auth-screen">
         <!-- VIDEO BACKGROUND ANIME COWO -->
         <video class="auth-video-bg" autoplay loop muted playsinline>
             <source src="https://i.pinimg.com/videos/thumbnails/originals/ed/df/2e/eddf2ecee51025da2ff328ab97d264fb.mp4" type="video/mp4">
@@ -2173,6 +2173,10 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
     </main>
 
     <script>
+        /* Penanda "halaman sedang di-refresh/ditutup". Dipasang paling awal supaya jalan SEBELUM handler beforeunload voice. */
+        window.__SAAS_UNLOADING=false;
+        window.addEventListener('beforeunload',()=>{ window.__SAAS_UNLOADING=true; });
+        window.addEventListener('pagehide',()=>{ window.__SAAS_UNLOADING=true; });
         // Database utama di memori. Di GitHub, data dipisahkan menjadi beberapa file agar tidak menumpuk.
         let db = {
             password: "world132",
@@ -2335,6 +2339,49 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         };
 
         let currentUser = JSON.parse(localStorage.getItem('saas_session') || 'null');
+
+        /* ===== TAHAN HALAMAN & VOICE SAAT REFRESH ===== */
+        const SAAS_NAV_KEY='saas_last_page', SAAS_GUEST_KEY='saas_guest_resume', SAAS_VOICE_KEY='saas_voice_resume', SAAS_CHATUSER_KEY='saas_last_chat_user';
+        const SAAS_BOOT={restore:false};
+        function ssGet(k){ try{ return sessionStorage.getItem(k); }catch(_){ return null; } }
+        function ssSet(k,v){ try{ sessionStorage.setItem(k,v); }catch(_){} }
+        function ssDel(k){ try{ sessionStorage.removeItem(k); }catch(_){} }
+        function saasPageOk(id){
+            if(typeof id!=='string' || !/^[a-z0-9-]+$/i.test(id)) return false;
+            if(guestMode){
+                if(id.startsWith('hub') || id==='games') return false;
+                if(['public-chat-ooc','public-chat-ic','private-chat','my-chats','find-user','profile','admin','club-request'].includes(id)) return false;
+            }
+            return true;
+        }
+        function saasRestorePage(){
+            const id=ssGet(SAAS_NAV_KEY);
+            if(!id || !saasPageOk(id)) return 'teritory';
+            if(id==='private-chat'){ const u=ssGet(SAAS_CHATUSER_KEY); if(u) selectedChatUser=u; }
+            return id;
+        }
+        function saasVoiceSave(o){ try{ o.user=currentUser&&currentUser.username; ssSet(SAAS_VOICE_KEY,JSON.stringify(o)); }catch(_){} }
+        function saasVoiceClear(k){
+            if(window.__SAAS_UNLOADING) return;   /* refresh bukan "keluar voice" -> jangan hapus */
+            try{ const o=JSON.parse(ssGet(SAAS_VOICE_KEY)||'null'); if(!o || o.k===k) ssDel(SAAS_VOICE_KEY); }catch(_){ ssDel(SAAS_VOICE_KEY); }
+        }
+        async function saasVoiceResume(){
+            let o=null; try{ o=JSON.parse(ssGet(SAAS_VOICE_KEY)||'null'); }catch(_){}
+            if(!o || !currentUser || o.user!==currentUser.username) return;
+            window.__SAAS_VOICE_AUTO=true;
+            try{
+                if(o.k==='vc' && typeof canHub==='function' && canHub('voice')) await joinVoice();
+                else if(o.k==='gv' && o.id) await gvJoin(o.id);
+            }catch(e){ console.warn('[voice] auto-rejoin gagal',e); }
+            finally{ window.__SAAS_VOICE_AUTO=false; }
+            const ok=(o.k==='vc')?VC.inCall:!!GV.cur;
+            if(ok){
+                try{ if(!(navigator.userActivation && navigator.userActivation.hasBeenActive)) showToast('Voice tersambung lagi. Klik/tap sekali di halaman bila suara belum terdengar.'); }catch(_){}
+            }else{
+                ssDel(SAAS_VOICE_KEY);
+                showToast('Voice terputus karena refresh. Klik Gabung untuk masuk lagi.');
+            }
+        }
         let guestMode = false;
         let adminAuthenticated = false;
         let authMode = 'login';
@@ -2389,12 +2436,13 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
 
         function showAuth(){
             guestMode=false;
+            ssDel(SAAS_GUEST_KEY);
             document.getElementById('auth-screen')?.classList.add('show');
             document.getElementById('user-chip')?.classList.remove('show');
             closeGuestPrompt();
         }
 
-        function enterGuestMode(){
+        function enterGuestMode(resume){
             guestMode=true;
             if(typeof playCatScene==='function') playCatScene();
             currentUser=null;
@@ -2414,7 +2462,8 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             const count=document.getElementById('notif-count');
             if(count){ count.textContent='0'; count.classList.remove('show'); }
             closeGuestPrompt();
-            showPage('teritory');
+            ssSet(SAAS_GUEST_KEY,'1');
+            showPage(resume===true ? saasRestorePage() : 'teritory');
             checkAndShowAnnouncement();
         }
 
@@ -2476,12 +2525,16 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             if(avatar) avatar.innerHTML=getAvatarContent(currentUser.username);
             if(typeof updateUserChipRoles==='function') updateUserChipRoles();
             updateNotificationBadge();
-            showPage('teritory');
+            ssDel(SAAS_GUEST_KEY);
+            showPage(SAAS_BOOT.restore ? saasRestorePage() : 'teritory');
+            SAAS_BOOT.restore=false;
             startPolling();
             checkAndShowAnnouncement();
         }
 
         function logout(){
+            try{ if(typeof VC!=='undefined'&&VC.inCall) leaveVoice(true); if(typeof GV!=='undefined'&&GV.cur) gvLeave(true); }catch(_){}
+            ssDel(SAAS_NAV_KEY); ssDel(SAAS_GUEST_KEY); ssDel(SAAS_VOICE_KEY); ssDel(SAAS_CHATUSER_KEY);
             guestMode=false;
             localStorage.removeItem('saas_session');
             currentUser=null;
@@ -2596,7 +2649,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             const authScreen = document.getElementById('auth-screen');
             
             // Tampilkan login screen dulu sebelum logic window.onload berjalan
-            if(authScreen){ authScreen.style.pointerEvents='auto'; authScreen.classList.add('show'); }
+            if(authScreen){ authScreen.style.pointerEvents='auto'; if(!currentUser && ssGet(SAAS_GUEST_KEY)!=='1') authScreen.classList.add('show'); }
             
             if(loginBtn){
                 loginBtn.type='button';
@@ -2613,6 +2666,11 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         });
 
         window.onload = async () => {
+            const wantGuest = !currentUser && ssGet(SAAS_GUEST_KEY)==='1';
+            if(currentUser || wantGuest){
+                const ac=document.getElementById('app-content');
+                if(ac && !ac.innerHTML.trim()) ac.innerHTML='<div style="padding:60px 20px;text-align:center;opacity:.7">Memuat…</div>';
+            }
             const loaded = await fetchFromDB();
             normalizeDB();
             if(!githubDatabaseReady && githubLastFetchOk === null){
@@ -2629,13 +2687,13 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             // Tampilkan pengumuman SELALU saat website baru dibuka, sebelum halaman login/daftar
             showAnnouncementBeforeAuth();
 
-            if(currentUser && (currentUser.isOwner || db.users.some(u => u.username === currentUser.username))) {
-                // JANGAN LANGSUNG MASUK! Beri Cinematic Delay 2.5 detik agar bisa menikmati video anime nya
-                const status = document.getElementById('auth-status');
-                if(status) status.textContent = 'Memverifikasi sesi... Menuju halaman awal dalam 2 detik...';
-                setTimeout(() => {
-                    openApp();
-                }, 2500);
+            if(currentUser && (currentUser.isOwner || db.users.some(u => u.username === currentUser.username) || !githubDatabaseReady)){
+                /* Sesi masih ada -> langsung ke halaman terakhir (JANGAN lewat login). Sesi hanya dibuang kalau database berhasil dimuat dan akun memang sudah tidak ada. */
+                const go=()=>{ SAAS_BOOT.restore=true; openApp(); saasVoiceResume(); };
+                if(document.getElementById('intro-scene')) setTimeout(go, 2500);   /* video intro sedang main (buka pertama) */
+                else go();
+            } else if(wantGuest){
+                enterGuestMode(true);
             } else {
                 currentUser = null;
                 localStorage.removeItem('saas_session');
@@ -5512,6 +5570,7 @@ async function micPick(){
   const prev=lsGet('saas_mic_id','');
   try{ await open(prev,lsGet('saas_mic_ec','1')==='1'); }
   catch(e){ if(prev){ lsSet('saas_mic_id',''); await open('',lsGet('saas_mic_ec','1')==='1'); } else throw e; }
+  if(window.__SAAS_VOICE_AUTO && cur){ const s0=cur; cur=null; return s0; }   /* auto-rejoin setelah refresh: pakai mikrofon terakhir, tanpa dialog */
   const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
   const activeId=(cur.getAudioTracks()[0].getSettings()||{}).deviceId||'';
   return await new Promise(resolve=>{
@@ -5855,8 +5914,9 @@ async function joinVoice(){
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(VC.inCall) return;
  try{ VC.stream=await micPick(); if(!VC.stream) return; }
- catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
+ catch(e){ if(window.__SAAS_VOICE_AUTO) return; return alert('Mikrofon tidak bisa diakses: '+e.message); }
  VC.inCall=true; VC.muted=false; VC.deaf=false; VC.me=currentUser.username;
+ saasVoiceSave({k:'vc'});
  rtcMeter(VC,VCX);
  if(!VC.ws) vcConnect();
  const waitJoin=setInterval(()=>{
@@ -5871,6 +5931,7 @@ function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; docu
 function vhandle(m){ rtcHandle(VCX,m); }
 function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); vcTrack(); vcActions(); vcRoster(); }
 function leaveVoice(silent){
+ saasVoiceClear('vc');
  vidStopAll('vc');
  if(VC.ws&&VC.joined){ vsig({t:'bye',from:VC.me}); vsend('presence',{type:'presence',event:'untrack'}); }
  Object.keys(VC.peers).forEach(vdrop);
@@ -6197,8 +6258,9 @@ async function gvJoin(id){
  if(GV.cur===id) return;
  if(GV.cur) gvLeave(true);
  try{ GV.stream=await micPick(); if(!GV.stream) return; }
- catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
+ catch(e){ if(window.__SAAS_VOICE_AUTO) return; return alert('Mikrofon tidak bisa diakses: '+e.message); }
  GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV,GVX);
+ saasVoiceSave({k:'gv',id});
  gvConnect();
  if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); }
  else if(GV.ws&&GV.ws.readyState===1) gvSync();
@@ -6210,6 +6272,7 @@ function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; doc
 function gvHandle(m){ rtcHandle(GVX,m); }
 function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); gvTrack(); gvRender(); }
 function gvLeave(silent){
+ saasVoiceClear('gv');
  vidStopAll('gv');
  if(GV.cur&&GV.ws&&GV.joined[GV.cur]===true){ gvSig({t:'bye',from:GV.me}); gvSendRaw(gvTopic(GV.cur),'presence',{type:'presence',event:'untrack'}); }
  Object.keys(GV.peers).forEach(gvDrop);
@@ -6712,6 +6775,21 @@ showPage=function(id){
  const c=document.getElementById('app-content');if(!c)return;
  c.innerHTML='';setActiveNav('nav-more');movieRoute(c);
 };
+
+/* ===== catat halaman terakhir supaya refresh tidak melempar ke Teritory / login ===== */
+(function(){
+ const _spLast=showPage;
+ showPage=function(id){
+  const r=_spLast.apply(this,arguments);
+  try{
+   if((currentUser||guestMode) && saasPageOk(id)){
+    ssSet(SAAS_NAV_KEY,id);
+    if(id==='private-chat' && selectedChatUser) ssSet(SAAS_CHATUSER_KEY,selectedChatUser);
+   }
+  }catch(_){}
+  return r;
+ };
+})();
 </script>
 </body>
 </html>

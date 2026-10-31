@@ -5430,6 +5430,78 @@ setInterval(()=>{
 function vcDeaf(){ rtcSetDeaf(VCX,!VC.deaf); vcTrack(); vcActions(); vcRoster(); }
 function gvDeaf(){ rtcSetDeaf(GVX,!GV.deaf); gvTrack(); gvRender(); }
 
+/* ---------- PILIH MIKROFON (muncul setiap kali masuk voice) ----------
+   Menampilkan daftar mikrofon + meter level untuk tes + opsi peredam gema.
+   Mengembalikan MediaStream mikrofon terpilih, atau null bila dibatalkan. */
+let _micBusy=false;
+async function micPick(){
+ if(_micBusy) return null; _micBusy=true;
+ let cur=null, ctx=null, raf=0, ov=null;
+ const lsGet=(k,d)=>{ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(_){ return d; } };
+ const lsSet=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){} };
+ const stopAll=()=>{ cancelAnimationFrame(raf); try{ ctx&&ctx.close(); }catch(_){} ctx=null; };
+ const stopStream=()=>{ try{ cur&&cur.getTracks().forEach(t=>t.stop()); }catch(_){} cur=null; };
+ const open=async(id,ec)=>{
+  stopAll(); stopStream();
+  const a={echoCancellation:ec,noiseSuppression:true,autoGainControl:true,channelCount:1};
+  if(id) a.deviceId={exact:id};
+  cur=await navigator.mediaDevices.getUserMedia({audio:a});
+  return cur;
+ };
+ try{
+  /* izin dulu supaya nama perangkat tampil */
+  const prev=lsGet('saas_mic_id','');
+  try{ await open(prev,lsGet('saas_mic_ec','1')==='1'); }
+  catch(e){ if(prev){ lsSet('saas_mic_id',''); await open('',lsGet('saas_mic_ec','1')==='1'); } else throw e; }
+  const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
+  const activeId=(cur.getAudioTracks()[0].getSettings()||{}).deviceId||'';
+  return await new Promise(resolve=>{
+   ov=document.createElement('div');
+   ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(3,20,60,.75);display:flex;align-items:center;justify-content:center;padding:16px';
+   const opts=devs.map((d,i)=>`<option value="${escapeHTML(d.deviceId)}"${d.deviceId===activeId?' selected':''}>${escapeHTML(d.label||('Mikrofon '+(i+1)))}</option>`).join('');
+   ov.innerHTML=`<div style="width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;color:var(--white);font-family:var(--body);box-shadow:0 10px 40px rgba(0,0,0,.45)">
+    <div style="font-weight:700;font-size:18px;margin-bottom:4px">🎙️ Pilih Mikrofon</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Pilih mikrofon yang benar, lalu bicara untuk tes. Bila suaramu terdengar dobel, coba mikrofon lain dan pakai headset.</div>
+    <select id="mp-sel" style="width:100%;padding:10px;border-radius:8px;background:var(--black);color:var(--white);border:1px solid var(--line);font-size:14px">${opts}</select>
+    <div style="margin:12px 0 4px;font-size:12px;color:var(--muted)">Level suara (bicara untuk tes):</div>
+    <div style="height:10px;background:var(--black);border-radius:6px;overflow:hidden;border:1px solid var(--line)"><div id="mp-bar" style="height:100%;width:0;background:var(--accent-red);transition:width .08s"></div></div>
+    <label style="display:flex;gap:8px;align-items:center;margin:12px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="mp-ec" style="width:16px;height:16px"> Peredam gema (echo cancellation)</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+     <button id="mp-no" class="btn-red" style="opacity:.85">Batal</button>
+     <button id="mp-ok" class="btn-red">Masuk Voice</button>
+    </div></div>`;
+   document.body.appendChild(ov);
+   const sel=ov.querySelector('#mp-sel'), ecb=ov.querySelector('#mp-ec'), bar=ov.querySelector('#mp-bar');
+   ecb.checked=lsGet('saas_mic_ec','1')==='1';
+   const meter=()=>{
+    try{
+     const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+     const an=ctx.createAnalyser(); an.fftSize=512; ctx.createMediaStreamSource(cur).connect(an);
+     const buf=new Uint8Array(an.fftSize);
+     const tick=()=>{ an.getByteTimeDomainData(buf); let m=0; for(let i=0;i<buf.length;i++){ const v=Math.abs(buf[i]-128)/128; if(v>m) m=v; } bar.style.width=Math.min(100,Math.round(m*220))+'%'; raf=requestAnimationFrame(tick); };
+     tick();
+    }catch(_){}
+   };
+   const change=async()=>{
+    try{ await open(sel.value,ecb.checked); meter(); }
+    catch(e){ alert('Mikrofon ini tidak bisa dipakai: '+e.message); }
+   };
+   sel.onchange=change; ecb.onchange=change;
+   const done=(ok)=>{
+    stopAll();
+    if(ov){ ov.remove(); ov=null; }
+    if(ok&&cur){
+     const st=cur.getAudioTracks()[0].getSettings()||{};
+     lsSet('saas_mic_id',sel.value||st.deviceId||''); lsSet('saas_mic_ec',ecb.checked?'1':'0');
+     const s2=cur; cur=null; resolve(s2);
+    } else { stopStream(); resolve(null); }
+   };
+   ov.querySelector('#mp-ok').onclick=()=>done(true);
+   ov.querySelector('#mp-no').onclick=()=>done(false);
+   meter();
+  });
+ } finally { if(ov){ ov.remove(); } stopAll(); _micBusy=false; }
+}
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,deaf:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
 function vcAvatar(u){
@@ -5496,7 +5568,7 @@ async function joinVoice(){
  if(!canHub('voice')) return alert('Kamu tidak punya role untuk masuk SAAS VOICE.');
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(VC.inCall) return;
- try{ VC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}}); }
+ try{ VC.stream=await micPick(); if(!VC.stream) return; }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
  VC.inCall=true; VC.muted=false; VC.deaf=false; VC.me=currentUser.username;
  rtcMeter(VC,VCX);
@@ -5834,7 +5906,7 @@ async function gvJoin(id){
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(GV.cur===id) return;
  if(GV.cur) gvLeave(true);
- try{ GV.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}}); }
+ try{ GV.stream=await micPick(); if(!GV.stream) return; }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
  GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV,GVX);
  gvConnect();

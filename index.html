@@ -1447,6 +1447,63 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
 .vc-user.speaking .vc-av{box-shadow:0 0 0 3px #4ade80,0 0 12px #4ade80}
 .vc-user .rtc-b{font-weight:500;font-size:11px}
 .vc-av.noimg{background:#dbe8ff}
+/* ---- STAGE VOICE ala Discord (grid peserta + kamera + share screen) ---- */
+.vs{display:flex;flex-direction:column;gap:10px;background:#000;border-radius:14px;padding:12px;color:#fff;font-family:var(--body);position:relative;user-select:none}
+.vs:fullscreen{border-radius:0;padding:14px;height:100%}
+.vs:-webkit-full-screen{border-radius:0;padding:14px;height:100%}
+.vs-top{display:flex;align-items:center;gap:10px;min-height:34px}
+.vs-top svg{opacity:.8;flex-shrink:0}
+.vs-top b{display:block;font:700 15px var(--body);letter-spacing:.3px;text-transform:uppercase;line-height:1.1}
+.vs-top small{display:block;font-size:10.5px;color:#9aa0a6;margin-top:2px}
+.vs-top .rtc-b{margin:0!important}
+.vs-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-content:center;height:clamp(260px,56vh,560px);overflow:hidden}
+.vs:fullscreen .vs-grid{height:auto;flex:1;min-height:0}
+.vs:-webkit-full-screen .vs-grid{height:auto;flex:1;min-height:0}
+.vs-grid.focus{flex-direction:column;flex-wrap:nowrap;align-items:center;justify-content:center}
+.vs-main{display:flex;justify-content:center;align-items:center;max-width:100%}
+.vs-strip{display:flex;gap:8px;justify-content:center;margin-top:8px;max-width:100%;overflow:hidden}
+.vs-tile{position:relative;border-radius:12px;overflow:hidden;background:var(--tc,#444);cursor:pointer;flex:0 0 auto;display:grid;place-items:center;transition:filter .15s}
+.vs-tile:hover{filter:brightness(1.07)}
+.vs-tile::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 62%,rgba(0,0,0,.34) 100%);z-index:1;pointer-events:none}
+.vs-tile.speaking::before{content:"";position:absolute;inset:0;border-radius:inherit;border:3px solid #4ade80;z-index:3;pointer-events:none}
+.vs-tile.scr{background:#0b0b0b}
+.vs-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#000}
+.vs-tile.scr .vs-vid{object-fit:contain}
+.vs-vid.mir{transform:scaleX(-1)}
+.vs-tile.live .vs-vid{display:block}
+.vs-tile.live .vs-avwrap,.vs-tile.live .vs-wait{display:none}
+.vs-avwrap .vc-av{width:clamp(44px,9vw,92px);height:clamp(44px,9vw,92px);font-size:clamp(18px,3.2vw,38px);border:3px solid rgba(255,255,255,.4)}
+.vs-strip .vs-avwrap .vc-av{width:44px;height:44px;font-size:17px}
+.vs-wait{display:none}
+.vs-avwrap .vc-av{width:clamp(44px,34%,92px);height:auto;aspect-ratio:1;font-size:clamp(18px,3.2vw,38px);border:3px solid rgba(255,255,255,.4);box-sizing:content-box;width:clamp(44px,9vw,92px);height:clamp(44px,9vw,92px)}
+.vs-strip .vs-avwrap .vc-av,.vs-tile[style*="height:1"] .vs-avwrap .vc-av{width:46px;height:46px;font-size:18px}
+.vs-wait{color:#8b9097;font-size:12px}
+.vs-lbl{position:absolute;left:8px;bottom:8px;z-index:2;display:flex;gap:6px;align-items:center;max-width:calc(100% - 16px)}
+.vs-name{background:rgba(0,0,0,.52);padding:3px 9px;border-radius:7px;font:600 12.5px var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-live{background:#ed4245;border-radius:6px;padding:3px 7px;font:800 10px var(--body);letter-spacing:.6px}
+.vs-mi{background:rgba(0,0,0,.52);border-radius:7px;width:24px;height:24px;display:grid;place-items:center;color:#ff7b7b;flex-shrink:0}
+.vs-mi svg{width:14px;height:14px}
+.vs .rtc-b{display:none}
+.vs-top .rtc-b{display:inline}
+.vs-bar{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;position:relative;padding:2px 44px}
+.vs-grp{display:flex;gap:2px;background:#161616;border:1px solid #2c2c2c;border-radius:12px;padding:4px}
+.vs-b{width:40px;height:40px;border-radius:8px;background:transparent;border:0;color:#f2f3f5;cursor:pointer;display:grid;place-items:center;padding:0}
+.vs-b:hover{background:#2b2b2b}
+.vs-b.off{color:#ff6b6b}
+.vs-b.on{background:#fff;color:#111}
+.vs-b.on:hover{background:#e6e6e6}
+.vs-chev{width:22px;margin-left:-4px}
+.vs-chev svg{width:14px;height:14px}
+.vs-hang{width:68px;height:48px;border-radius:12px;background:#d92f3d;border:0;color:#fff;cursor:pointer;display:grid;place-items:center;padding:0}
+.vs-hang:hover{background:#f03e4c}
+.vs-hang svg{transform:rotate(135deg)}
+.vs-fs{position:absolute;right:0;top:50%;transform:translateY(-50%)}
+.vs-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);min-width:230px;background:#1c1c1e;border:1px solid #333;border-radius:12px;padding:8px;z-index:20;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.6)}
+.vs-pop .vs-pt{font:700 10.5px var(--body);letter-spacing:.8px;text-transform:uppercase;color:#9aa0a6;padding:4px 8px}
+.vs-pop button{background:transparent;border:0;color:#fff;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 13px var(--body)}
+.vs-pop button:hover{background:#2e2e31}
+.vs-pop small{color:#80868b;font-size:10.5px;padding:4px 8px;line-height:1.4}
+@media(max-width:640px){.vs{padding:8px}.vs-bar{gap:8px;padding:2px 0 38px}.vs-fs{top:auto;bottom:0;right:0;transform:none}.vs-b{width:38px;height:38px}}
 .vc-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:12px}
 
 /* ================= ADEGAN KUCING DITANGKAP POLISI ================= */
@@ -5160,7 +5217,7 @@ const rtcBlocked=[];
 function rtcUnlockAudio(){ try{ [VC,GV].forEach(S=>{ if(S._ac&&S._ac.state==='suspended') S._ac.resume(); }); }catch(_){}  while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
 ['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,rtcUnlockAudio,{passive:true}));
 /* status yang disiarkan lewat presence supaya peserta lain bisa melihat mute / audio mati kita */
-const rtcMeta=S=>({user:S.me,ts:Date.now(),muted:!!S.muted,deaf:!!S.deaf});
+const rtcMeta=S=>({user:S.me,ts:Date.now(),muted:!!S.muted,deaf:!!S.deaf,cam:!!S.camOn,scr:!!S.scrOn});
 /* ambil meta terbaru dari payload presence Supabase ({metas:[...]}) */
 const rtcPick=v=>{ const a=v&&v.metas; return (a&&a.length)?(a[a.length-1]||{}):{}; };
 /* ---- PEREDAM NOISE (noise gate adaptif + highpass) & JALUR CADANGAN lewat WebSocket Supabase ---- */
@@ -5169,7 +5226,7 @@ const NS_NAMES=['Mati','Ringan','Sedang','Kuat'];
 const NS_P=[null,{mul:2.0,floor:0.35},{mul:2.8,floor:0.12},{mul:4.0,floor:0.03}];
 let NS_LVL=2; try{ const v=parseInt(localStorage.getItem('saas_ns')); if(v>=0&&v<=3) NS_LVL=v; }catch(_){}
 const nsBtn=k=>`<button class="btn-red" onclick="rtcNoise('${k}')">🔕 Peredam: ${NS_NAMES[NS_LVL]}</button>`;
-function rtcNoise(k){ NS_LVL=(NS_LVL+1)%4; try{ localStorage.setItem('saas_ns',String(NS_LVL)); }catch(_){} if(k==='vc') vcActions(); else gvRender(); }
+function rtcNoise(k){ NS_LVL=(NS_LVL+1)%4; try{ localStorage.setItem('saas_ns',String(NS_LVL)); }catch(_){} if(k==='vc') vcActions(); else gvRender(); vsUpdate(k); }
 function rlyMu(x){ const s=x<0?128:0; x=Math.min(1,Math.abs(x)); return s|Math.round(Math.log(1+255*x)/Math.log(256)*127); }
 function rlyUnmu(b){ const y=(b&127)/127; return ((b&128)?-1:1)*((Math.pow(256,y)-1)/255); }
 /* koneksi langsung dianggap stabil bila sudah 'connected' lebih dari 3 detik */
@@ -5185,6 +5242,7 @@ function rtcRelayOn(S,n){
 /* rantai audio: mic -> highpass -> noise gate -> (stream keluar untuk WebRTC) + (paket relay) */
 function rtcMeter(S,X){
  S._jt=Date.now(); S._pj={}; S._rx={}; S._seq=0;
+ S._vf={}; S._vt={}; S._vc={}; S._focus=''; S._pop=''; S.camOn=false; S.scrOn=false;
  try{
   const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
   const ctx=new AC(); S._ac=ctx; if(ctx.resume) ctx.resume().catch(()=>{});
@@ -5313,6 +5371,7 @@ function rtcHandle(X,m){
  const S=X.S;
  if(!X.alive()||!S.stream||!m||m.from===S.me||(m.to&&m.to!==S.me)) return;
  if(m.t==='aud'){ rlyPlay(X,m); return; }
+ if(m.t==='vid'){ vidRecv(X,m); return; }
  const u=m.from; S.chain=S.chain||{};
  S.chain[u]=(S.chain[u]||Promise.resolve()).then(()=>rtcStep(X,m)).catch(e=>console.warn('voice',e));
 }
@@ -5393,8 +5452,8 @@ function rtcText(k,u,c){
  return '⏳ menyambung'+lama+info+ic;
 }
 const rtcBadge=(k,u,c)=>`<small class="rtc-b" data-k="${k}" data-u="${escapeHTML(u)}" data-c="${escapeHTML(c||'')}" style="margin-left:6px;opacity:.9">${rtcText(k,u,c)}</small>`;
-const VCX={get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall,ready:()=>VC.joined,roster:()=>Object.keys(VC.roster)};
-const GVX={get S(){return GV;},pre:'ga-',sig:m=>gvSig(m),drop:u=>gvDrop(u),alive:()=>!!GV.cur,ready:()=>GV.joined[GV.cur]===true,roster:()=>Object.keys(GV.roster[GV.cur]||{})};
+const VCX={k:'vc',ws:()=>VC.ws,get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall,ready:()=>VC.joined,roster:()=>Object.keys(VC.roster)};
+const GVX={k:'gv',ws:()=>GV.ws,get S(){return GV;},pre:'ga-',sig:m=>gvSig(m),drop:u=>gvDrop(u),alive:()=>!!GV.cur,ready:()=>GV.joined[GV.cur]===true,roster:()=>Object.keys(GV.roster[GV.cur]||{})};
 /* retry: peserta ada di channel tapi belum tersambung -> bangun ulang koneksi (maks 5x per peserta) */
 setInterval(()=>{ [VCX,GVX].forEach(X=>{
  const S=X.S;
@@ -5424,7 +5483,7 @@ setInterval(()=>{
  document.querySelectorAll('.rtc-b').forEach(el=>{
   const t=rtcText(el.dataset.k,el.dataset.u,el.dataset.c);
   if(el.textContent!==t) el.textContent=t;
-  const row=el.closest('.vc-user'); if(row) row.classList.toggle('speaking',t.indexOf('🔊')===0);
+  const row=el.closest('.vc-user,.vs-tile'); if(row) row.classList.toggle('speaking',t.indexOf('🔊')===0);
  });
 },400);
 function vcDeaf(){ rtcSetDeaf(VCX,!VC.deaf); vcTrack(); vcActions(); vcRoster(); }
@@ -5502,6 +5561,232 @@ async function micPick(){
   });
  } finally { if(ov){ ov.remove(); } stopAll(); _micBusy=false; }
 }
+/* ======================= KAMERA + SHARE SCREEN + TAMPILAN STAGE ala Discord =======================
+   Video dikirim sebagai frame JPEG lewat server voice yang SAMA dengan audio (tipe pesan 'vid'), jadi tidak butuh STUN/TURN.
+   Dipakai bersama oleh SAAS VOICE (k='vc') dan Global Voice (k='gv'). */
+const VID_NAMES=['Hemat','Normal','Jernih'];
+const VID_P=[{cam:[320,8,.55],scr:[960,3,.5]},{cam:[480,8,.6],scr:[1280,5,.6]},{cam:[640,10,.68],scr:[1600,6,.68]}];  /* [lebar maks, fps, kualitas JPEG] */
+let VID_LVL=1; try{ const v=parseInt(localStorage.getItem('saas_vq')); if(v>=0&&v<=2) VID_LVL=v; }catch(_){}
+const VID_MAXB=80000;   /* batas ukuran 1 frame (byte) supaya muat di batas pesan server */
+const VS_COL=['#e2b6b6','#4b4b4b','#dfc6ad','#b9cbe3','#c4dcb8','#d8c1e8','#e9d6a2','#a7d6d1','#e6b8d0','#c9c9c9'];
+const vsColor=u=>{ let h=0; for(const ch of String(u)) h=(h*31+ch.charCodeAt(0))>>>0; return VS_COL[h%VS_COL.length]; };
+const vsS=k=>k==='vc'?VC:GV, vsX=k=>k==='vc'?VCX:GVX;
+const vsIn=k=>k==='vc'?(VC.inCall&&!!VC.me):!!GV.cur;
+const vsLive=(S,key)=>Date.now()-((S._vt&&S._vt[key])||0)<2500;
+const VI=p=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const VSL='<line x1="3" y1="3" x2="21" y2="21"/>';
+const VIC={
+ mic:VI('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>'),
+ micoff:VI('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>'+VSL),
+ cam:VI('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>'),
+ camoff:VI('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>'+VSL),
+ scr:VI('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="m9 10 3-3 3 3"/><line x1="12" y1="7" x2="12" y2="13"/>'),
+ head:VI('<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>'),
+ headoff:VI('<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>'+VSL),
+ hang:VI('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>').replace('width="20" height="20"','width="26" height="26"'),
+ fs:VI('<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>'),
+ chev:VI('<path d="m6 9 6 6 6-6"/>'),
+ spk:VI('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>')
+};
+function vsNames(k){
+ const S=vsS(k), ros=k==='vc'?VC.roster:(GV.roster[GV.cur]||{}), set=new Set(Object.keys(ros));
+ if(S.me) set.add(S.me);
+ return {ros,names:[S.me,...[...set].filter(n=>n!==S.me).sort((a,b)=>a.localeCompare(b))].filter(Boolean)};
+}
+function vsTiles(k){
+ const S=vsS(k), {ros,names}=vsNames(k), tiles=[];
+ names.forEach(u=>{
+  const me=u===S.me, m=me?{muted:S.muted,deaf:S.deaf,scr:S.scrOn}:(ros[u]||{});
+  tiles.push({key:u+'|cam',u,kind:'cam',me,muted:!!m.muted,deaf:!!m.deaf});
+  if(me?!!S.scrOn:(!!m.scr||vsLive(S,u+'|scr'))) tiles.push({key:u+'|scr',u,kind:'scr',me});
+ });
+ return tiles;
+}
+function vsFocusKey(k,tiles){
+ const S=vsS(k);
+ if(S._focus==='-'&&!tiles.some(t=>t.kind==='scr')) S._focus='';
+ if(S._focus==='-') return '';
+ if(S._focus&&tiles.some(t=>t.key===S._focus)) return S._focus;
+ const a=tiles.find(t=>t.kind==='scr'&&!t.me);       /* ada yang share layar -> otomatis jadi layar besar */
+ return a?a.key:'';
+}
+function vsTileHTML(k,t){
+ const S=vsS(k), cid=k==='gv'?GV.cur:'';
+ const media=t.me?`<video class="vs-vid${t.kind==='cam'?' mir':''}" muted playsinline autoplay></video>`:`<img class="vs-vid" alt=""${S._vf&&S._vf[t.key]?` src="${S._vf[t.key]}"`:''}>`;
+ const inner=t.kind==='cam'?`<div class="vs-avwrap">${vcAvatar(t.u)}</div>`:'<div class="vs-wait">Memuat layar…</div>';
+ const lbl=`<div class="vs-lbl"><span class="vs-name">${escapeHTML(t.u)}${t.me?' (kamu)':''}${t.kind==='scr'?' · layar':''}</span>${t.kind==='scr'?'<span class="vs-live">LIVE</span>':''}${t.kind==='cam'&&t.muted?`<span class="vs-mi">${VIC.micoff}</span>`:''}${t.kind==='cam'&&t.deaf?`<span class="vs-mi">${VIC.headoff}</span>`:''}</div>`;
+ return `<div class="vs-tile ${t.kind}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}</div>`;
+}
+function vsMount(k,host){
+ const S=vsS(k); if(!host||!vsIn(k)) return;
+ if(!S._stage){
+  const st=S._stage=document.createElement('div'); st.className='vs'; S._sig='';
+  st.addEventListener('click',e=>vsClick(k,e));
+  if(window.ResizeObserver) new ResizeObserver(()=>vsFit(k)).observe(st);
+ }
+ if(S._stage.parentNode!==host){ host.innerHTML=''; host.appendChild(S._stage); S._sig=''; }
+ vsUpdate(k);
+}
+function vsUpdate(k){
+ const S=vsS(k), st=S._stage; if(!st||!vsIn(k)) return;
+ const tiles=vsTiles(k), fk=vsFocusKey(k,tiles), cid=k==='gv'?GV.cur:'';
+ const title=k==='vc'?'SAAS VOICE':((typeof gvFind==='function'&&gvFind(GV.cur)||{}).name||'Voice');
+ const full=document.fullscreenElement===st;
+ const sig=JSON.stringify([tiles.map(t=>[t.key,t.muted,t.deaf]),fk,!!S.muted,!!S.deaf,!!S.camOn,!!S.scrOn,NS_LVL,VID_LVL,S._pop||'',title,full]);
+ if(sig===S._sig) return; S._sig=sig;
+ const canShare=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
+ let grid;
+ if(fk){
+  const mt=tiles.find(t=>t.key===fk), rest=tiles.filter(t=>t.key!==fk);
+  grid=`<div class="vs-grid focus"><div class="vs-main">${vsTileHTML(k,mt)}</div>${rest.length?`<div class="vs-strip">${rest.map(t=>vsTileHTML(k,t)).join('')}</div>`:''}</div>`;
+ } else grid=`<div class="vs-grid">${tiles.map(t=>vsTileHTML(k,t)).join('')}</div>`;
+ let pop='';
+ if(S._pop==='mic') pop=`<div class="vs-pop"><div class="vs-pt">Mikrofon</div><button data-a="ns">🔕 Peredam noise: <b>${NS_NAMES[NS_LVL]}</b> (klik untuk ganti)</button></div>`;
+ else if(S._pop==='cam') pop=`<div class="vs-pop"><div class="vs-pt">Kualitas kamera &amp; layar</div>${VID_NAMES.map((n,i)=>`<button data-a="vq" data-v="${i}">${i===VID_LVL?'✓ ':'&nbsp;&nbsp;&nbsp;'}${n}</button>`).join('')}<small>Video dikirim lewat server voice. Makin jernih = makin berat untuk internet semua orang.</small></div>`;
+ st.innerHTML=`<div class="vs-top">${VIC.spk}<div><b>${escapeHTML(title)}</b><small>${rtcBadge(k,S.me,cid)}</small></div></div>${grid}
+ <div class="vs-bar">${pop}
+  <div class="vs-grp"><button class="vs-b ${S.muted?'off':''}" data-a="mic" title="${S.muted?'Unmute':'Mute'}">${S.muted?VIC.micoff:VIC.mic}</button><button class="vs-b vs-chev" data-a="pop-mic" title="Pengaturan mikrofon">${VIC.chev}</button>
+   <button class="vs-b ${S.camOn?'on':''}" data-a="cam" title="${S.camOn?'Matikan kamera':'Nyalakan kamera'}">${S.camOn?VIC.cam:VIC.camoff}</button><button class="vs-b vs-chev" data-a="pop-cam" title="Kualitas video">${VIC.chev}</button></div>
+  <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button></div>
+  <button class="vs-hang" data-a="hang" title="Keluar dari voice">${VIC.hang}</button>
+  <button class="vs-b vs-fs" data-a="fs" title="Layar penuh">${VIC.fs}</button>
+ </div>`;
+ st.querySelectorAll('.vs-tile').forEach(el=>{
+  const t=tiles.find(x=>x.key===el.dataset.key), c=t&&t.me&&S._vc&&S._vc[t.kind], v=el.querySelector('video');
+  if(v&&c){ v.srcObject=c.stream; const p=v.play(); if(p&&p.catch) p.catch(()=>{}); }
+ });
+ vsTick(k); vsFit(k);
+}
+function vsTick(k){      /* tandai tile yang sedang menampilkan video */
+ const S=vsS(k); if(!S._stage) return;
+ S._stage.querySelectorAll('.vs-tile').forEach(el=>{
+  const key=el.dataset.key, kind=key.endsWith('|scr')?'scr':'cam', me=key.slice(0,-4)===S.me;
+  el.classList.toggle('live',me?!!(S._vc&&S._vc[kind]):vsLive(S,key));
+ });
+}
+function vsFit(k){      /* ukuran tile pas di area (rasio 16:9, seperti Discord) */
+ const S=vsS(k), st=S._stage; if(!st) return;
+ const g=st.querySelector('.vs-grid'); if(!g||!g.clientWidth||!g.clientHeight) return;
+ const W=g.clientWidth, H=g.clientHeight, gap=8, set=(el,w,h)=>{ el.style.width=Math.max(20,Math.floor(w))+'px'; el.style.height=Math.max(20,Math.floor(h))+'px'; };
+ const main=g.querySelector('.vs-main .vs-tile'), strip=[...g.querySelectorAll('.vs-strip .vs-tile')];
+ if(main){
+  const sh=strip.length?Math.min(110,H*0.25):0, mh=H-(sh?sh+gap+8:0);
+  let w=W, h=w*9/16; if(h>mh){ h=mh; w=h*16/9; }
+  set(main,w,h); strip.forEach(el=>set(el,sh*16/9,sh)); return;
+ }
+ const tl=[...g.querySelectorAll('.vs-tile')], n=tl.length; if(!n) return;
+ let best={w:0,h:0};
+ for(let c=1;c<=n;c++){
+  const r=Math.ceil(n/c); let w=(W-gap*(c-1))/c, h=w*9/16;
+  if(h*r+gap*(r-1)>H){ h=(H-gap*(r-1))/r; w=h*16/9; }
+  if(w>best.w) best={w,h};
+ }
+ tl.forEach(el=>set(el,best.w,best.h));
+}
+function vsClick(k,e){
+ const S=vsS(k), b=e.target.closest('[data-a]'), a=b&&b.dataset.a;
+ if(!b){ if(S._pop){ S._pop=''; vsUpdate(k); } return; }
+ if(a==='focus'){
+  S._pop='';
+  const key=b.dataset.key, cur=vsFocusKey(k,vsTiles(k));
+  S._focus=(cur===key)?'-':key; vsUpdate(k); return;
+ }
+ if(a==='pop-mic'||a==='pop-cam'){ const p=a.slice(4); S._pop=S._pop===p?'':p; vsUpdate(k); return; }
+ if(a==='vq'){ VID_LVL=+b.dataset.v||0; try{ localStorage.setItem('saas_vq',String(VID_LVL)); }catch(_){} vsUpdate(k); return; }
+ S._pop='';
+ if(a==='mic') k==='vc'?vcMute():gvMute();
+ else if(a==='deaf') k==='vc'?vcDeaf():gvDeaf();
+ else if(a==='ns') rtcNoise(k);
+ else if(a==='cam') vidToggle(k,'cam');
+ else if(a==='scr') vidToggle(k,'scr');
+ else if(a==='hang') k==='vc'?leaveVoice():gvLeave();
+ else if(a==='fs'){
+  const st=S._stage;
+  if(document.fullscreenElement===st) document.exitFullscreen&&document.exitFullscreen();
+  else if(st.requestFullscreen) st.requestFullscreen().catch(()=>{});
+  else if(st.webkitRequestFullscreen) st.webkitRequestFullscreen();
+ }
+ vsUpdate(k);
+}
+function vsDestroy(k){
+ const S=vsS(k);
+ try{ if(S._stage&&document.fullscreenElement===S._stage) document.exitFullscreen(); }catch(_){}
+ if(S._stage) S._stage.remove();
+ S._stage=null; S._sig=''; S._vf={}; S._vt={}; S._focus=''; S._pop='';
+}
+/* ---------- kirim video (kamera / layar) ---------- */
+async function vidToggle(k,kind){
+ const S=vsS(k); if(!vsIn(k)) return;
+ if(S._vc&&S._vc[kind]) return vidStop(k,kind);
+ let st;
+ try{
+  if(kind==='cam') st=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:15}},audio:false});
+  else st=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:10}},audio:false});
+ }catch(e){
+  if(kind==='cam') alert('Kamera tidak bisa diakses: '+(e.message||e.name));
+  else if(e.name!=='NotAllowedError'&&e.name!=='AbortError') alert('Share layar gagal: '+(e.message||e.name));
+  return;
+ }
+ if(!vsIn(k)){ st.getTracks().forEach(t=>t.stop()); return; }
+ const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.srcObject=st;
+ v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none'; document.body.appendChild(v);
+ try{ await v.play(); }catch(_){}
+ S._vc=S._vc||{};
+ const c=S._vc[kind]={stream:st,video:v,cv:document.createElement('canvas'),qq:VID_P[VID_LVL][kind][2],sc:1,lvl:VID_LVL,t:0};
+ st.getVideoTracks()[0].addEventListener('ended',()=>{ if(S._vc&&S._vc[kind]===c) vidStop(k,kind); });
+ S[kind==='cam'?'camOn':'scrOn']=true;
+ if(kind==='scr') S._focus='';
+ k==='vc'?vcTrack():gvTrack();
+ vidLoop(k,kind); vsUpdate(k);
+}
+function vidStop(k,kind,quiet){
+ const S=vsS(k), c=S._vc&&S._vc[kind]; if(!c) return;
+ clearTimeout(c.t); S._vc[kind]=null;
+ try{ c.stream.getTracks().forEach(t=>t.stop()); }catch(_){}
+ try{ c.video.srcObject=null; c.video.remove(); }catch(_){}
+ S[kind==='cam'?'camOn':'scrOn']=false;
+ if(quiet) return;
+ try{ vsX(k).sig({t:'vid',from:S.me,k:kind,off:1}); }catch(_){}
+ k==='vc'?vcTrack():gvTrack();
+ vsUpdate(k);
+}
+function vidStopAll(k){ vidStop(k,'cam',true); vidStop(k,'scr',true); }
+function vidLoop(k,kind){
+ const S=vsS(k), X=vsX(k), c=S._vc&&S._vc[kind]; if(!c) return;
+ const P=VID_P[VID_LVL][kind], t0=performance.now();
+ if(c.lvl!==VID_LVL){ c.lvl=VID_LVL; c.qq=P[2]; c.sc=1; }
+ const next=()=>{ if(S._vc&&S._vc[kind]===c) c.t=setTimeout(()=>vidLoop(k,kind),Math.max(40,1000/P[1]-(performance.now()-t0))); };
+ const v=c.video, ws=X.ws();
+ if(!X.alive()||!X.ready()||!ws||ws.readyState!==1||ws.bufferedAmount>300000||!v.videoWidth||v.readyState<2||!X.roster().some(n=>n!==S.me)) return next();
+ const sc=Math.min(1,P[0]*c.sc/v.videoWidth), w=Math.max(16,Math.round(v.videoWidth*sc)), h=Math.max(16,Math.round(v.videoHeight*sc));
+ const cv=c.cv; if(cv.width!==w) cv.width=w; if(cv.height!==h) cv.height=h;
+ try{ cv.getContext('2d').drawImage(v,0,0,w,h); }catch(_){ return next(); }
+ cv.toBlob(b=>{
+  if(!b||!S._vc||S._vc[kind]!==c) return next();
+  if(b.size>VID_MAXB){ if(c.qq>0.32) c.qq=Math.max(0.3,c.qq-0.1); else c.sc=Math.max(0.35,c.sc*0.8); return next(); }   /* terlalu besar: buang frame, turunkan kualitas */
+  if(b.size<VID_MAXB*0.4){ if(c.sc<1) c.sc=Math.min(1,c.sc*1.06); else if(c.qq<P[2]) c.qq=Math.min(P[2],c.qq+0.03); }
+  const fr=new FileReader();
+  fr.onload=()=>{ const d=String(fr.result).split(',')[1]; if(d&&S._vc&&S._vc[kind]===c&&X.alive()) X.sig({t:'vid',from:S.me,k:kind,q:S._vseq=(S._vseq||0)+1,d}); next(); };
+  fr.onerror=next; fr.readAsDataURL(b);
+ },'image/jpeg',c.qq);
+}
+/* ---------- terima video ---------- */
+function vidRecv(X,m){
+ const S=X.S, key=m.from+'|'+(m.k==='scr'?'scr':'cam');
+ S._vf=S._vf||{}; S._vt=S._vt||{};
+ if(m.off){ delete S._vf[key]; delete S._vt[key]; vsTick(X.k); vsUpdate(X.k); return; }
+ if(typeof m.d!=='string'||m.d.length>200000) return;
+ const fresh=!vsLive(S,key), url='data:image/jpeg;base64,'+m.d;
+ S._vf[key]=url; S._vt[key]=Date.now();
+ const el=S._stage&&[...S._stage.querySelectorAll('.vs-tile')].find(e=>e.dataset.key===key);
+ if(el){ const img=el.querySelector('img.vs-vid'); if(img) img.src=url; if(fresh) el.classList.add('live'); }
+ if(fresh||!el) vsUpdate(X.k);
+}
+function vidDropUser(k,u){ const S=vsS(k); ['cam','scr'].forEach(x=>{ if(S._vf) delete S._vf[u+'|'+x]; if(S._vt) delete S._vt[u+'|'+x]; }); }
+document.addEventListener('fullscreenchange',()=>{ ['vc','gv'].forEach(k=>{ const S=vsS(k); if(S._stage){ S._sig=''; vsUpdate(k); } }); });
+window.addEventListener('resize',()=>{ ['vc','gv'].forEach(vsFit); });
+setInterval(()=>{ ['vc','gv'].forEach(k=>{ if(vsS(k)._stage&&vsIn(k)){ vsTick(k); vsUpdate(k); } }); },500);
+
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,deaf:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
 function vcAvatar(u){
@@ -5518,7 +5803,7 @@ function hubVoiceUI(body){
 function vcActions(){
  const el=document.getElementById('vc-actions'); if(!el) return;
  el.innerHTML=VC.inCall
-  ?`<button class="btn-red" onclick="vcMute()">${VC.muted?'🔇 Unmute':'🎙 Mute'}</button> <button class="btn-red" onclick="vcDeaf()">${VC.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button> ${nsBtn('vc')} <button class="btn-red" onclick="leaveVoice()">Keluar</button>`
+  ?''
   :`<button class="btn-red" onclick="joinVoice()">🎧 Gabung</button>`;
 }
 function vcRoster(){
@@ -5527,6 +5812,7 @@ function vcRoster(){
  if(VC.inCall&&VC.me) set.add(VC.me);                      /* diri sendiri selalu tampil, walau presence belum masuk */
  const names=[...set].sort((a,b)=>a.localeCompare(b));
  if(cnt) cnt.textContent=names.length+' di channel';
+ if(VC.inCall&&VC.me){ vsMount('vc',el); return; }
  el.innerHTML=names.length?names.map(n=>`<div class="vc-user" title="@${escapeHTML(n)}">${vcAvatar(n)}<span>${escapeHTML(n)}${n===VC.me&&VC.inCall?' (kamu)':''}${rtcBadge('vc',n)}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>';
 }
 function vsend(ev,p,topic){ if(VC.ws&&VC.ws.readyState===1) VC.ws.send(JSON.stringify({topic:topic||VC.topic,event:ev,payload:p,ref:String(VC.ref++)})); }
@@ -5581,15 +5867,17 @@ async function joinVoice(){
  vcActions(); vcRoster();
 }
 function vmk(u){ return rtcMk(VCX,u); }
-function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; document.getElementById('va-'+u)?.remove(); }
+function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; document.getElementById('va-'+u)?.remove(); vidDropUser('vc',u); }
 function vhandle(m){ rtcHandle(VCX,m); }
 function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); vcTrack(); vcActions(); vcRoster(); }
 function leaveVoice(silent){
+ vidStopAll('vc');
  if(VC.ws&&VC.joined){ vsig({t:'bye',from:VC.me}); vsend('presence',{type:'presence',event:'untrack'}); }
  Object.keys(VC.peers).forEach(vdrop);
  VC.stream?.getTracks().forEach(t=>t.stop());
  rtcMeterStop(VC);
  VC.stream=null; VC.inCall=false; VC.muted=false; VC.deaf=false;
+ vsDestroy('vc');
  if(HUB.page==='voice'){ vcActions(); vcRoster(); } else vcClose();
 }
 window.addEventListener('beforeunload',()=>{ if(VC.inCall) leaveVoice(true); });
@@ -5829,6 +6117,7 @@ function gvParseFriends(txt){
  return {ok,bad};
 }
 function gvRender(){
+ if(GV._stage&&document.fullscreenElement===GV._stage){ vsUpdate('gv'); return; }   /* jangan bongkar DOM saat layar penuh */
  const el=document.getElementById('gv-list'); if(!el) return;
  const list=gvChannels().sort((a,b)=>b.ts-a.ts);
  el.innerHTML=list.map(c=>{
@@ -5837,11 +6126,12 @@ function gvRender(){
   const mine=c.owner===gvMe()||(currentUser&&currentUser.isOwner);
   const here=GV.cur===c.id;
   return `<div class="card vc-card"><div class="vc-head"><div class="vc-ico">${c.locked?'🔒':'🔊'}</div><div class="vc-meta"><b>${escapeHTML(c.name)}</b><small>dibuat @${escapeHTML(c.owner)} · ${c.locked?'Terkunci ('+(c.members||[]).length+' teman)':'Terbuka untuk semua'}</small></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?`<button class="btn-red" onclick="gvMute()">${GV.muted?'🔇 Unmute':'🎙 Mute'}</button><button class="btn-red" onclick="gvDeaf()">${GV.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button>${nsBtn('gv')}<button class="btn-red" onclick="gvLeave()">Keluar</button>`:`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?'':`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
   <div class="vc-sub">${names.length} di channel</div>
-  <div class="vc-roster">${names.length?names.map(n=>`<div class="vc-user">${vcAvatar(n)}<span>${escapeHTML(n)}${n===gvMe()&&here?' (kamu)':''}${rtcBadge('gv',n,c.id)}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>'}</div>
+  ${here?'<div class="vs-host"></div>':`<div class="vc-roster">${names.length?names.map(n=>`<div class="vc-user">${vcAvatar(n)}<span>${escapeHTML(n)}${rtcBadge('gv',n,c.id)}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>'}</div>`}
   ${mine?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn-red" onclick="gvToggleLock('${c.id}')">${c.locked?'🔓 Buka Kunci':'🔒 Kunci'}</button>${c.locked?`<button class="btn-red" onclick="gvEditFriends('${c.id}')">👥 Atur Teman</button>`:''}<button class="btn-red" onclick="gvDelete('${c.id}')">🗑 Hapus</button></div>`:''}</div>`;
  }).join('')||'<div class="empty-state">Belum ada channel yang bisa kamu lihat. Buat satu di atas!</div>';
+ if(GV.cur){ const h=el.querySelector('.vs-host'); if(h) vsMount('gv',h); }
 }
 function gvFind(id){ return (db.globalVoice||[]).find(c=>c.id===id); }
 async function gvToggleLock(id){
@@ -5916,15 +6206,17 @@ async function gvJoin(id){
  gvRender();
 }
 function gvPeer(u){ return rtcMk(GVX,u); }
-function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; document.getElementById('ga-'+u)?.remove(); }
+function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; document.getElementById('ga-'+u)?.remove(); vidDropUser('gv',u); }
 function gvHandle(m){ rtcHandle(GVX,m); }
 function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); gvTrack(); gvRender(); }
 function gvLeave(silent){
+ vidStopAll('gv');
  if(GV.cur&&GV.ws&&GV.joined[GV.cur]===true){ gvSig({t:'bye',from:GV.me}); gvSendRaw(gvTopic(GV.cur),'presence',{type:'presence',event:'untrack'}); }
  Object.keys(GV.peers).forEach(gvDrop);
  GV.stream?.getTracks().forEach(t=>t.stop());
  rtcMeterStop(GV);
  GV.stream=null; GV.cur=''; GV.muted=false; GV.deaf=false;
+ vsDestroy('gv');
  gvRender();
  if(!GV.on) gvClose();
 }

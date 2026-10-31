@@ -1502,6 +1502,10 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
 .vs-pop .vs-pt{font:700 10.5px var(--body);letter-spacing:.8px;text-transform:uppercase;color:#9aa0a6;padding:4px 8px}
 .vs-pop button{background:transparent;border:0;color:#fff;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 13px var(--body)}
 .vs-pop button:hover{background:#2e2e31}
+.vs-tile.scr.mine .vs-wait{display:flex!important;align-items:center;justify-content:center;color:#cfd3d8;font-size:14px;text-align:center;padding:10px}
+.vs-tfs{position:absolute;top:8px;right:8px;z-index:4;width:34px;height:34px;border-radius:8px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:18px;cursor:pointer;opacity:0;transition:opacity .15s}
+.vs-tile:hover .vs-tfs,.vs-tfs:focus{opacity:1}
+@media(hover:none){.vs-tfs{opacity:.85}}
 .vs-pop small{color:#80868b;font-size:10.5px;padding:4px 8px;line-height:1.4}
 @media(max-width:640px){.vs{padding:8px}.vs-bar{gap:8px;padding:2px 0 38px}.vs-fs{top:auto;bottom:0;right:0;transform:none}.vs-b{width:38px;height:38px}}
 .vc-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:12px}
@@ -5526,6 +5530,7 @@ async function rtcStep(X,m){
 function rtcSetDeaf(X,v){ X.S.deaf=v; document.querySelectorAll('audio[id^="'+X.pre+'"]').forEach(a=>{ a.muted=v; if(!v){ try{ a.play().catch(()=>{}); }catch(_){} } }); }
 /* teks status per peserta (termasuk diri sendiri) + tanda mute / audio mati */
 function rtcText(k,u,c){
+ if(u==='SAAS MUSIC'){ const mu=vsS(k)._mu||{}; return mu.now?(mu.paused?'⏸ dijeda':'🔊 '+String(mu.now.title||'memutar musik').slice(0,42)):''; }
  const X=k==='vc'?VCX:GVX, S=X.S;
  const inHere=X.alive()&&(k==='vc'||GV.cur===c);
  const meta=((k==='vc'?VC.roster:(GV.roster[c]||{}))[u])||{};
@@ -5698,7 +5703,9 @@ const VIC={
 function vsNames(k){
  const S=vsS(k), ros=k==='vc'?VC.roster:(GV.roster[GV.cur]||{}), set=new Set(Object.keys(ros));
  if(S.me) set.add(S.me);
- return {ros,names:[S.me,...[...set].filter(n=>n!==S.me).sort((a,b)=>a.localeCompare(b))].filter(Boolean)};
+ const names=[S.me,...[...set].filter(n=>n!==S.me).sort((a,b)=>a.localeCompare(b))].filter(Boolean);
+ if(S._mu&&S._mu.now&&!names.includes('SAAS MUSIC')) names.push('SAAS MUSIC');
+ return {ros,names};
 }
 function vsTiles(k){
  const S=vsS(k), {ros,names}=vsNames(k), tiles=[];
@@ -5719,16 +5726,17 @@ function vsFocusKey(k,tiles){
 }
 function vsTileHTML(k,t){
  const S=vsS(k), cid=k==='gv'?GV.cur:'';
- const media=t.me?`<video class="vs-vid${t.kind==='cam'?' mir':''}" muted playsinline autoplay></video>`:`<img class="vs-vid" alt=""${S._vf&&S._vf[t.key]?` src="${S._vf[t.key]}"`:''}>`;
- const inner=t.kind==='cam'?`<div class="vs-avwrap">${vcAvatar(t.u)}</div>`:'<div class="vs-wait">Memuat layar…</div>';
+ const media=(t.me&&t.kind==='scr')?'':t.me?`<video class="vs-vid${t.kind==='cam'?' mir':''}" muted playsinline autoplay></video>`:`<img class="vs-vid" alt=""${S._vf&&S._vf[t.key]?` src="${S._vf[t.key]}"`:''}>`;
+ const inner=t.kind==='cam'?`<div class="vs-avwrap">${vcAvatar(t.u)}</div>`:(t.me?'<div class="vs-wait">🖥️ Layarmu sedang dibagikan</div>':'<div class="vs-wait">Memuat layar…</div>');
  const lbl=`<div class="vs-lbl"><span class="vs-name">${escapeHTML(t.u)}${t.me?' (kamu)':''}${t.kind==='scr'?' · layar':''}</span>${t.kind==='scr'?'<span class="vs-live">LIVE</span>':''}${t.kind==='cam'&&t.muted?`<span class="vs-mi">${VIC.micoff}</span>`:''}${t.kind==='cam'&&t.deaf?`<span class="vs-mi">${VIC.headoff}</span>`:''}</div>`;
- return `<div class="vs-tile ${t.kind}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}</div>`;
+ return `<div class="vs-tile ${t.kind}${t.me?' mine':''}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}${t.kind==='scr'?`<button class="vs-tfs" data-a="tilefs" data-key="${escapeHTML(t.key)}" title="Perbesar / layar penuh">⛶</button>`:''}</div>`;
 }
 function vsMount(k,host){
  const S=vsS(k); if(!host||!vsIn(k)) return;
  if(!S._stage){
   const st=S._stage=document.createElement('div'); st.className='vs'; S._sig='';
   st.addEventListener('click',e=>vsClick(k,e));
+  st.addEventListener('dblclick',e=>{ const t=e.target.closest('.vs-tile.scr'); if(t) vsBig(k,t.dataset.key); });
   if(window.ResizeObserver) new ResizeObserver(()=>vsFit(k)).observe(st);
  }
  if(S._stage.parentNode!==host){ host.innerHTML=''; host.appendChild(S._stage); S._sig=''; }
@@ -5791,6 +5799,12 @@ function vsFit(k){      /* ukuran tile pas di area (rasio 16:9, seperti Discord)
  }
  tl.forEach(el=>set(el,best.w,best.h));
 }
+function vsBig(k,key){
+ const S=vsS(k), st=S._stage; if(!st) return;
+ if(document.fullscreenElement===st){ document.exitFullscreen&&document.exitFullscreen(); return; }
+ S._focus=key; S._pop=''; vsUpdate(k);
+ if(st.requestFullscreen) st.requestFullscreen().catch(()=>{}); else if(st.webkitRequestFullscreen) st.webkitRequestFullscreen();
+}
 function vsClick(k,e){
  const S=vsS(k), b=e.target.closest('[data-a]'), a=b&&b.dataset.a;
  if(!b){ if(S._pop){ S._pop=''; vsUpdate(k); } return; }
@@ -5799,6 +5813,7 @@ function vsClick(k,e){
   const key=b.dataset.key, cur=vsFocusKey(k,vsTiles(k));
   S._focus=(cur===key)?'-':key; vsUpdate(k); return;
  }
+ if(a==='tilefs'){ vsBig(k,b.dataset.key); return; }
  if(a==='music'){ S._pop=''; musToggle(k); vsUpdate(k); return; }
  if(a==='pop-mic'||a==='pop-cam'){ const p=a.slice(4); S._pop=S._pop===p?'':p; vsUpdate(k); return; }
  if(a==='vq'){ VID_LVL=+b.dataset.v||0; try{ localStorage.setItem('saas_vq',String(VID_LVL)); }catch(_){} vsUpdate(k); return; }
@@ -5905,11 +5920,12 @@ function musCan(){
  const r=voiceCfg().musicRoles||[]; if(!r.length) return true;
  const mine=(getUser(currentUser.username)?.roleIds)||[]; return r.some(x=>mine.includes(x));
 }
+const MUSIC_BOT='SAAS MUSIC';
 let _mk='';
 const muS=k=>{ const S=vsS(k); return S._mu||(S._mu={now:null,queue:[],paused:false,pos:0,at:0,msg:'',pj:{t:0}}); };
 const musVol=()=>{ let v=0.8; try{ const x=parseFloat(localStorage.getItem('saas_mvol')); if(x>=0&&x<=1) v=x; }catch(_){} return v; };
 const fmtT=s=>{ s=Math.max(0,Math.floor(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-function musState(X,m){ const u=muS(X.k); u.now=m.now||null; u.queue=m.queue||[]; u.paused=!!m.paused; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0; vsUpdate(X.k); musRender(); }
+function musState(X,m){ const u=muS(X.k), was=!!u.now; u.now=m.now||null; try{ if(!was&&u.now) saasVoiceFx(MUSIC_BOT,true,X.S); else if(was&&!u.now) saasVoiceFx(MUSIC_BOT,false,X.S); }catch(_){} u.queue=m.queue||[]; u.paused=!!m.paused; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0; vsUpdate(X.k); musRender(); }
 function musMsg(X,m){ const u=muS(X.k); u.msg=m.text||''; if(document.getElementById('mu-panel')) musRender(); else if(typeof showToast==='function') showToast(u.msg); }
 function musPlay(X,m){
  const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
@@ -6027,6 +6043,7 @@ async function saveAdminNav(){
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,deaf:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
 function vcAvatar(u){
+ if(u==='SAAS MUSIC') return '<div class="vc-av noimg" style="background:#1db954;color:#06210f;font-size:22px">🎵</div>';
  const user=getUser(u);
  const has=user&&user.profilePic;
  return `<div class="vc-av ${has?'':'noimg'}">${getAvatarContent(u)}</div>`;

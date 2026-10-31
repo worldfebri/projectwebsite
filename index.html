@@ -5114,6 +5114,9 @@ async function hubAbsenSend(){
    Bila kosong semua -> voice tetap memakai Supabase Realtime seperti sebelumnya. */
 const VOICE_SERVER_URL='wss://cleaners-more-precipitation-rear.trycloudflare.com';
 const VOICE_SERVER_TOKEN='NJmWqigFsCYNjKP-WAy548jWrfE6xLJ9';
+/* VOICE_RELAY_ONLY=true -> SELURUH suara dikirim lewat server voice (Pterodactyl). Tidak memakai WebRTC langsung, STUN, maupun TURN pihak luar.
+   Ubah ke false bila ingin kembali ke WebRTC langsung (relay hanya cadangan). */
+const VOICE_RELAY_ONLY=true;
 function voiceWsUrl(){
  let u=''; try{ u=(localStorage.getItem('voice_url')||VOICE_SERVER_URL||'').trim(); }catch(_){ u=VOICE_SERVER_URL; }
  if(u){
@@ -5134,6 +5137,7 @@ const STUN_URLS=['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302',
 let RTC_ICE=[{urls:STUN_URLS}];
 let rtcPrep=null, rtcPrepT=0;
 function rtcPrepare(){
+ if(VOICE_RELAY_ONLY) return Promise.resolve();
  if(rtcPrep&&Date.now()-rtcPrepT<3600000) return rtcPrep;
  rtcPrepT=Date.now();
  rtcPrep=(async()=>{
@@ -5172,6 +5176,7 @@ function rlyUnmu(b){ const y=(b&127)/127; return ((b&128)?-1:1)*((Math.pow(256,y
 const rtcStable=pc=>!!pc&&pc.connectionState==='connected'&&Date.now()-(pc._cs||0)>3000;
 /* relay aktif untuk peserta n bila koneksi langsung belum stabil (setelah 6 detik mencoba) atau sering putus */
 function rtcRelayOn(S,n){
+ if(VOICE_RELAY_ONLY) return true;
  if((S.noDirect||{})[n]>Date.now()) return true;
  const pc=S.peers[n];
  if(pc) return !rtcStable(pc)&&(pc.connectionState!=='connected'?Date.now()-pc._t>6000:true);
@@ -5314,6 +5319,7 @@ function rtcHandle(X,m){
 async function rtcStep(X,m){
  const S=X.S, u=m.from;
  if(!X.alive()||!S.stream) return;
+ if(VOICE_RELAY_ONLY){ if(m.t==='bye') X.drop(u); return; }
  await rtcPrepare();
  if(!X.alive()||!S.stream) return;
  if(m.t==='bye'){ X.drop(u); return; }
@@ -5370,12 +5376,13 @@ function rtcText(k,u,c){
    if(!others.length) s='✅ tersambung · menunggu peserta lain';
    else{
     const ok=others.filter(n=>(S.peers[n]&&S.peers[n].connectionState==='connected')||rtcRelayOn(S,n)).length;
-    s=ok===others.length?'✅ tersambung ke '+ok+' peserta'+(others.some(n=>rtcRelayOn(S,n))?' (via relay)':''):'⏳ menyambung ('+ok+'/'+others.length+')';
+    s=ok===others.length?'✅ tersambung ke '+ok+' peserta'+(!VOICE_RELAY_ONLY&&others.some(n=>rtcRelayOn(S,n))?' (via relay)':''):'⏳ menyambung ('+ok+'/'+others.length+')';
    }
   }
   if(!S.muted&&(S._lv||0)>0.02) s='🔊 kamu bicara';
   return s+ic;
  }
+ if(VOICE_RELAY_ONLY){ const live=Date.now()-((S._rx||{})[u]||0)<900; return (live?'🔊 bicara':'✅ tersambung')+ic; }
  const pc=S.peers[u]; if(!pc) return (rtcRelayOn(S,u)?'🔁 tersambung (via relay)':'⏳ menunggu')+ic;
  const st=pc.connectionState;
  if(st==='connected') return (pc._lv>0.01?'🔊 bicara':'✅ tersambung')+ic;
@@ -5396,6 +5403,7 @@ setInterval(()=>{ [VCX,GVX].forEach(X=>{
  S.tries=S.tries||{};
  X.roster().forEach(n=>{
   if(n===S.me) return;
+  if(VOICE_RELAY_ONLY) return;
   if((S.noDirect||{})[n]>Date.now()) return;
   const pc=S.peers[n];
   if(pc&&pc.connectionState==='connected'){ S.tries[n]=0; return; }

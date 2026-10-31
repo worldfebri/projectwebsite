@@ -5134,66 +5134,106 @@ function rtcPrepare(){
 }
 rtcPrepare();
 const rtcBlocked=[];
-function rtcUnlockAudio(){ while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
+function rtcUnlockAudio(){ try{ [VC,GV].forEach(S=>{ if(S._ac&&S._ac.state==='suspended') S._ac.resume(); }); }catch(_){}  while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
 ['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,rtcUnlockAudio,{passive:true}));
 /* status yang disiarkan lewat presence supaya peserta lain bisa melihat mute / audio mati kita */
 const rtcMeta=S=>({user:S.me,ts:Date.now(),muted:!!S.muted,deaf:!!S.deaf});
 /* ambil meta terbaru dari payload presence Supabase ({metas:[...]}) */
 const rtcPick=v=>{ const a=v&&v.metas; return (a&&a.length)?(a[a.length-1]||{}):{}; };
-/* ---- JALUR CADANGAN: suara dikirim lewat WebSocket Supabase bila WebRTC langsung gagal (tidak butuh TURN) ---- */
+/* ---- PEREDAM NOISE (noise gate adaptif + highpass) & JALUR CADANGAN lewat WebSocket Supabase ---- */
 const RLY_SR=16000;
+const NS_NAMES=['Mati','Ringan','Sedang','Kuat'];
+const NS_P=[null,{mul:2.0,floor:0.35},{mul:2.8,floor:0.12},{mul:4.0,floor:0.03}];
+let NS_LVL=2; try{ const v=parseInt(localStorage.getItem('saas_ns')); if(v>=0&&v<=3) NS_LVL=v; }catch(_){}
+const nsBtn=k=>`<button class="btn-red" onclick="rtcNoise('${k}')">🔕 Peredam: ${NS_NAMES[NS_LVL]}</button>`;
+function rtcNoise(k){ NS_LVL=(NS_LVL+1)%4; try{ localStorage.setItem('saas_ns',String(NS_LVL)); }catch(_){} if(k==='vc') vcActions(); else gvRender(); }
 function rlyMu(x){ const s=x<0?128:0; x=Math.min(1,Math.abs(x)); return s|Math.round(Math.log(1+255*x)/Math.log(256)*127); }
 function rlyUnmu(b){ const y=(b&127)/127; return ((b&128)?-1:1)*((Math.pow(256,y)-1)/255); }
-/* relay dianggap aktif untuk peserta n bila koneksi langsung belum tersambung setelah 6 detik */
+/* koneksi langsung dianggap stabil bila sudah 'connected' lebih dari 3 detik */
+const rtcStable=pc=>!!pc&&pc.connectionState==='connected'&&Date.now()-(pc._cs||0)>3000;
+/* relay aktif untuk peserta n bila koneksi langsung belum stabil (setelah 6 detik mencoba) atau sering putus */
 function rtcRelayOn(S,n){
+ if((S.noDirect||{})[n]>Date.now()) return true;
  const pc=S.peers[n];
- if(pc) return pc.connectionState!=='connected'&&Date.now()-pc._t>6000;
+ if(pc) return !rtcStable(pc)&&(pc.connectionState!=='connected'?Date.now()-pc._t>6000:true);
  return Date.now()-(S._jt||0)>6000;
 }
-function rlyStart(S,X){
- const ctx=S._ac; if(!ctx||!ctx.createScriptProcessor) return;
- const ratio=ctx.sampleRate/RLY_SR;
- const sp=ctx.createScriptProcessor(8192,1,1), src=ctx.createMediaStreamSource(S.stream), mute=ctx.createGain();
- mute.gain.value=0; src.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
- sp.onaudioprocess=e=>{
-  if(!X.alive()||!X.ready()||S.muted) return;
-  if(!X.roster().some(n=>n!==S.me&&rtcRelayOn(S,n))) return;        /* semua sudah tersambung langsung: tidak perlu relay */
-  const inp=e.inputBuffer.getChannelData(0), n=Math.floor(inp.length/ratio);
-  const out=new Uint8Array(n); let e2=0;
-  for(let i=0;i<n;i++){ const a=Math.floor(i*ratio), b=Math.max(a+1,Math.floor((i+1)*ratio)); let t=0; for(let j=a;j<b&&j<inp.length;j++) t+=inp[j]; const v=t/(b-a); e2+=v*v; out[i]=rlyMu(v); }
-  if(Math.sqrt(e2/n)<0.006) return;                                   /* hening: tidak dikirim (hemat kuota realtime) */
-  X.sig({t:'aud',from:S.me,d:btoa(String.fromCharCode.apply(null,out))});
- };
- S._sp=sp; S._spSrc=src; S._spMute=mute; S._pt={}; S._rx={};
+/* rantai audio: mic -> highpass -> noise gate -> (stream keluar untuk WebRTC) + (paket relay) */
+function rtcMeter(S,X){
+ S._jt=Date.now(); S._pj={}; S._rx={}; S._seq=0;
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  const ctx=new AC(); S._ac=ctx; if(ctx.resume) ctx.resume().catch(()=>{});
+  if(!ctx.createScriptProcessor) return;
+  const sr=ctx.sampleRate, ratio=sr/RLY_SR, holdMax=Math.floor(0.18*sr);
+  const src=ctx.createMediaStreamSource(S.stream), hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=100;
+  const sp=ctx.createScriptProcessor(2048,1,1), dest=ctx.createMediaStreamDestination(), zero=ctx.createGain(); zero.gain.value=0;
+  src.connect(hp); hp.connect(sp); sp.connect(dest); sp.connect(zero); zero.connect(ctx.destination);
+  let g=1, hold=0, env=0, m=0, grp=[], vgrp=false, hang=0, prev=null;
+  sp.onaudioprocess=e=>{
+   const inp=e.inputBuffer.getChannelData(0), out=e.outputBuffer.getChannelData(0), n=inp.length, P=NS_P[NS_LVL];
+   if(S.muted){ out.fill(0); S._outLv=0; }
+   else if(!P){ out.set(inp); }
+   else{
+    let sq=0; for(let i=0;i<n;i++) sq+=inp[i]*inp[i];
+    const rms=Math.sqrt(sq/n);
+    m=m?Math.min(rms,m*1.004+1e-6):Math.max(rms,0.002);              /* minimum-statistics: perkiraan level noise latar */
+    const thr=Math.max(m*P.mul,0.008);
+    for(let i=0;i<n;i++){
+     const a=Math.abs(inp[i]); env=a>env?a:env*0.9995;
+     if(env>thr) hold=holdMax; else if(hold>0) hold--;
+     const tg=hold>0?1:P.floor; g+=(tg>g?0.02:0.0003)*(tg-g);
+     out[i]=inp[i]*g;
+    }
+   }
+   if(!S.muted){ let q=0; for(let i=0;i<n;i++) q+=out[i]*out[i]; S._outLv=Math.sqrt(q/n); }
+   /* ---- paket relay ---- */
+   if(!X.alive()||!X.ready()||S.muted){ grp=[]; vgrp=false; return; }
+   if(!X.roster().some(k=>k!==S.me&&rtcRelayOn(S,k))){ grp=[]; vgrp=false; hang=0; prev=null; return; }
+   const k2=Math.floor(n/ratio), bl=new Uint8Array(k2);
+   for(let i=0;i<k2;i++){ const a=Math.floor(i*ratio), b=Math.max(a+1,Math.floor((i+1)*ratio)); let t=0; for(let j=a;j<b&&j<n;j++) t+=out[j]; bl[i]=rlyMu(t/(b-a)); }
+   grp.push(bl); if(S._outLv>0.01) vgrp=true;
+   if(grp.length>=3){                                                     /* ±128 ms per paket */
+    const tot=grp.reduce((s,x)=>s+x.length,0), buf=new Uint8Array(tot); let o=0; grp.forEach(x=>{ buf.set(x,o); o+=x.length; });
+    grp=[];
+    if(vgrp){ hang=5; } 
+    const send=vgrp||hang>0;
+    if(send){
+     if(prev){ X.sig({t:'aud',from:S.me,q:S._seq++,d:btoa(String.fromCharCode.apply(null,prev))}); prev=null; }   /* pre-roll */
+     X.sig({t:'aud',from:S.me,q:S._seq++,d:btoa(String.fromCharCode.apply(null,buf))});
+     if(!vgrp) hang--;
+    } else prev=buf;
+    vgrp=false;
+   }
+  };
+  S._sp=sp; S._spNodes=[src,hp,sp,dest,zero]; S.out=dest.stream;
+ }catch(e){ console.warn('[voice] audio chain',e); S.out=null; }
 }
-function rlyStop(S){ try{ S._sp&&(S._sp.onaudioprocess=null,S._sp.disconnect()); S._spSrc&&S._spSrc.disconnect(); S._spMute&&S._spMute.disconnect(); }catch(_){} S._sp=S._spSrc=S._spMute=null; }
+function rtcMeterStop(S){
+ try{ S._sp&&(S._sp.onaudioprocess=null); (S._spNodes||[]).forEach(n=>{ try{n.disconnect();}catch(_){} }); }catch(_){}
+ try{ S._ac&&S._ac.close(); }catch(_){}
+ S._sp=null; S._spNodes=null; S._ac=null; S.out=null; S._outLv=0; S._lv=0;
+}
+const rtcSelfLevel=S=>S.muted?0:(S._outLv||0);
+/* pemutar relay: jitter buffer adaptif, urutan paket, fade-in di awal bicara */
 function rlyPlay(X,m){
  const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
- const pc=S.peers[m.from]; if(pc&&pc.connectionState==='connected') return;   /* sudah ada jalur langsung: abaikan relay */
+ const pc=S.peers[m.from]; if(pc&&pc.connectionState==='connected') return;     /* audio sudah lewat jalur langsung */
  let bin; try{ bin=atob(m.d); }catch(_){ return; }
+ const st=S._pj[m.from]||(S._pj[m.from]={t:0,tg:0.28,q:-1,at:0});
+ if(m.q!=null){ if(m.q<=st.q&&st.q-m.q<200) return; st.q=m.q; }
  const buf=ctx.createBuffer(1,bin.length,RLY_SR), ch=buf.getChannelData(0);
  for(let i=0;i<bin.length;i++) ch[i]=rlyUnmu(bin.charCodeAt(i));
- const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination);
- const now=ctx.currentTime; let t=S._pt[m.from]||0;
- if(t<now+0.03) t=now+0.2;                                            /* jitter buffer 200ms */
- src.start(t); S._pt[m.from]=t+buf.duration; S._rx[m.from]=Date.now();
+ const nowT=ctx.currentTime, nowMs=Date.now();
+ let fade=false;
+ if(st.t<nowT+0.02){                                                           /* buffer habis / awal bicara */
+  if(st.at&&nowMs-st.at<500) st.tg=Math.min(0.7,st.tg+0.06);                  /* putus saat bicara: perbesar buffer */
+  st.t=nowT+st.tg; fade=true;
+ }else if(st.t>nowT+1.5){ st.t=nowT+st.tg; fade=true; }                        /* terlalu tertunda: sinkron ulang */
+ if(fade){ const f=Math.min(ch.length,80); for(let i=0;i<f;i++) ch[i]*=i/f; }
+ const s2=ctx.createBufferSource(); s2.buffer=buf; s2.connect(ctx.destination);
+ s2.start(st.t); st.t+=buf.duration; st.at=nowMs; S._rx[m.from]=nowMs;
  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
-}
-/* ---- meter suara mikrofon sendiri (untuk tanda "bicara" di diri sendiri) ---- */
-function rtcMeter(S,X){
- S._jt=Date.now();
- try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
-  const ctx=new AC(); const src=ctx.createMediaStreamSource(S.stream); const an=ctx.createAnalyser(); an.fftSize=512; src.connect(an);
-  S._ac=ctx; S._an=an; S._buf=new Uint8Array(an.fftSize); if(ctx.resume) ctx.resume().catch(()=>{});
-  if(X) rlyStart(S,X);
- }catch(e){ console.warn('[voice] meter',e); }
-}
-function rtcMeterStop(S){ rlyStop(S); try{ S._ac&&S._ac.close(); }catch(_){} S._ac=null; S._an=null; S._lv=0; }
-function rtcSelfLevel(S){
- if(!S._an||S.muted) return 0;
- S._an.getByteTimeDomainData(S._buf); let s=0;
- for(let i=0;i<S._buf.length;i++){ const d=(S._buf[i]-128)/128; s+=d*d; }
- return Math.sqrt(s/S._buf.length);
 }
 /* ---- koneksi per peserta: "perfect negotiation" (tabrakan offer ditangani otomatis, tidak menyambung-nyambung terus) ---- */
 function rtcMk(X,u){
@@ -5202,7 +5242,7 @@ function rtcMk(X,u){
  const pc=new RTCPeerConnection({iceServers:RTC_ICE});
  pc._q=[]; pc._ct={}; pc._rc=0; pc._ib=[]; pc._it=0; pc._t=Date.now(); pc._lv=0;
  pc._polite=S.me>u; pc._making=false; pc._ignore=false; pc._rst=0;
- S.stream.getTracks().forEach(t=>pc.addTrack(t,S.stream));
+ { const so=S.out||S.stream; so.getTracks().forEach(t=>pc.addTrack(t,so)); }
  pc.onnegotiationneeded=async()=>{
   try{
    pc._making=true;
@@ -5232,7 +5272,12 @@ function rtcMk(X,u){
   const st=pc.connectionState;
   console.log('[voice]',u,st,'lokal:',JSON.stringify(pc._ct),'diterima:',pc._rc);
   if(S.peers[u]!==pc) return;
-  if(st==='connected'){ pc._rst=0; clearTimeout(pc._dt); }
+  if(st==='connected'){ pc._rst=0; pc._cs=Date.now(); clearTimeout(pc._dt); }
+  if(pc._was==='connected'&&(st==='disconnected'||st==='failed')){                /* koneksi langsung naik-turun: menyerah, pakai relay */
+   S.flap=S.flap||{}; S.noDirect=S.noDirect||{};
+   if((S.flap[u]=(S.flap[u]||0)+1)>=2){ S.noDirect[u]=Date.now()+120000; S.flap[u]=0; pc._was=st; X.drop(u); return; }
+  }
+  pc._was=st;
   if(st==='failed'&&pc._rst<2&&pc.restartIce){ pc._rst++; try{ pc.restartIce(); }catch(_){} }
   if(st==='disconnected'){ clearTimeout(pc._dt); pc._dt=setTimeout(()=>{ if(S.peers[u]===pc&&pc.connectionState==='disconnected'&&pc.restartIce){ try{ pc.restartIce(); }catch(_){} } },4000); }
   if(st==='closed') X.drop(u);
@@ -5253,6 +5298,7 @@ async function rtcStep(X,m){
  await rtcPrepare();
  if(!X.alive()||!S.stream) return;
  if(m.t==='bye'){ X.drop(u); return; }
+ if((S.noDirect||{})[u]>Date.now()) return;                         /* jalur langsung ditinggalkan sementara */
  if(m.t==='hello'){
   const old=S.peers[u];
   if(old){
@@ -5308,13 +5354,13 @@ function rtcText(k,u,c){
     s=ok===others.length?'✅ tersambung ke '+ok+' peserta'+(others.some(n=>rtcRelayOn(S,n))?' (via relay)':''):'⏳ menyambung ('+ok+'/'+others.length+')';
    }
   }
-  if(!S.muted&&(S._lv||0)>0.04) s='🔊 kamu bicara';
+  if(!S.muted&&(S._lv||0)>0.02) s='🔊 kamu bicara';
   return s+ic;
  }
  const pc=S.peers[u]; if(!pc) return (rtcRelayOn(S,u)?'🔁 tersambung (via relay)':'⏳ menunggu')+ic;
  const st=pc.connectionState;
  if(st==='connected') return (pc._lv>0.01?'🔊 bicara':'✅ tersambung')+ic;
- if(rtcRelayOn(S,u)){ const live=Date.now()-((S._rx||{})[u]||0)<600; return (live?'🔊 bicara':'🔁 tersambung')+' (via relay)'+ic; }
+ if(rtcRelayOn(S,u)){ const live=Date.now()-((S._rx||{})[u]||0)<900; return (live?'🔊 bicara':'🔁 tersambung')+' (via relay)'+ic; }
  const rl=pc._ct.relay||0, info=` [relay:${rl} diterima:${pc._rc}]`;
  if(st==='failed') return '❌ gagal'+(rl?'':' (TURN tidak terjangkau)')+info+ic;
  const lama=Date.now()-pc._t>15000?' — lama, jaringan mungkin memblokir (butuh TURN)':'';
@@ -5331,6 +5377,7 @@ setInterval(()=>{ [VCX,GVX].forEach(X=>{
  S.tries=S.tries||{};
  X.roster().forEach(n=>{
   if(n===S.me) return;
+  if((S.noDirect||{})[n]>Date.now()) return;
   const pc=S.peers[n];
   if(pc&&pc.connectionState==='connected'){ S.tries[n]=0; return; }
   if(!pc||Date.now()-(pc._t||0)>20000){
@@ -5372,7 +5419,7 @@ function hubVoiceUI(body){
 function vcActions(){
  const el=document.getElementById('vc-actions'); if(!el) return;
  el.innerHTML=VC.inCall
-  ?`<button class="btn-red" onclick="vcMute()">${VC.muted?'🔇 Unmute':'🎙 Mute'}</button> <button class="btn-red" onclick="vcDeaf()">${VC.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button> <button class="btn-red" onclick="leaveVoice()">Keluar</button>`
+  ?`<button class="btn-red" onclick="vcMute()">${VC.muted?'🔇 Unmute':'🎙 Mute'}</button> <button class="btn-red" onclick="vcDeaf()">${VC.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button> ${nsBtn('vc')} <button class="btn-red" onclick="leaveVoice()">Keluar</button>`
   :`<button class="btn-red" onclick="joinVoice()">🎧 Gabung</button>`;
 }
 function vcRoster(){
@@ -5422,7 +5469,7 @@ async function joinVoice(){
  if(!canHub('voice')) return alert('Kamu tidak punya role untuk masuk SAAS VOICE.');
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(VC.inCall) return;
- try{ VC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+ try{ VC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}}); }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
  VC.inCall=true; VC.muted=false; VC.deaf=false; VC.me=currentUser.username;
  rtcMeter(VC,VCX);
@@ -5691,7 +5738,7 @@ function gvRender(){
   const mine=c.owner===gvMe()||(currentUser&&currentUser.isOwner);
   const here=GV.cur===c.id;
   return `<div class="card vc-card"><div class="vc-head"><div class="vc-ico">${c.locked?'🔒':'🔊'}</div><div class="vc-meta"><b>${escapeHTML(c.name)}</b><small>dibuat @${escapeHTML(c.owner)} · ${c.locked?'Terkunci ('+(c.members||[]).length+' teman)':'Terbuka untuk semua'}</small></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?`<button class="btn-red" onclick="gvMute()">${GV.muted?'🔇 Unmute':'🎙 Mute'}</button><button class="btn-red" onclick="gvDeaf()">${GV.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button><button class="btn-red" onclick="gvLeave()">Keluar</button>`:`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?`<button class="btn-red" onclick="gvMute()">${GV.muted?'🔇 Unmute':'🎙 Mute'}</button><button class="btn-red" onclick="gvDeaf()">${GV.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button>${nsBtn('gv')}<button class="btn-red" onclick="gvLeave()">Keluar</button>`:`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
   <div class="vc-sub">${names.length} di channel</div>
   <div class="vc-roster">${names.length?names.map(n=>`<div class="vc-user">${vcAvatar(n)}<span>${escapeHTML(n)}${n===gvMe()&&here?' (kamu)':''}${rtcBadge('gv',n,c.id)}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>'}</div>
   ${mine?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn-red" onclick="gvToggleLock('${c.id}')">${c.locked?'🔓 Buka Kunci':'🔒 Kunci'}</button>${c.locked?`<button class="btn-red" onclick="gvEditFriends('${c.id}')">👥 Atur Teman</button>`:''}<button class="btn-red" onclick="gvDelete('${c.id}')">🗑 Hapus</button></div>`:''}</div>`;
@@ -5760,7 +5807,7 @@ async function gvJoin(id){
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(GV.cur===id) return;
  if(GV.cur) gvLeave(true);
- try{ GV.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+ try{ GV.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}}); }
  catch(e){ return alert('Mikrofon tidak bisa diakses: '+e.message); }
  GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV,GVX);
  gvConnect();

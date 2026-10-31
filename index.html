@@ -5104,14 +5104,13 @@ async function hubAbsenSend(){
 }
 
 /* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
-   Perbaikan: TURN relay (tanpa ini suara gagal di banyak jaringan seluler/CGNAT),
-   antrian ICE candidate, perfect-negotiation (anti tabrakan offer), serialisasi sinyal per peer,
-   auto-retry saat koneksi gagal, dan unlock autoplay audio. */
+   TURN relay, antrian ICE, perfect-negotiation, ICE dikirim per-batch (hindari rate-limit Supabase Realtime),
+   retry otomatis, unlock autoplay, tombol matikan/nyalakan audio, dan indikator status per peserta. */
 const RTC_CFG={iceServers:[
  {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
- /* TURN publik gratis untuk uji coba. Untuk produksi, ganti dengan akun TURN sendiri (metered.ca / Cloudflare / coturn). */
- {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp','turns:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}
-],iceCandidatePoolSize:4};
+ /* TURN publik gratis untuk uji coba. Untuk produksi ganti dengan akun TURN sendiri (metered.ca / Cloudflare / coturn). */
+ {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turns:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}
+]};
 const rtcBlocked=[];
 function rtcUnlockAudio(){ while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
 ['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,rtcUnlockAudio,{passive:true}));
@@ -5119,25 +5118,26 @@ function rtcMk(X,u){
  const S=X.S;
  if(S.peers[u]) return S.peers[u];
  const pc=new RTCPeerConnection(RTC_CFG);
- pc._q=[]; pc._ignore=false;
+ pc._q=[]; pc._ib=[]; pc._it=0; pc._ignore=false; pc._t=Date.now(); pc._lv=0;
  S.stream.getTracks().forEach(t=>pc.addTrack(t,S.stream));
- pc.onicecandidate=e=>{ if(e.candidate) X.sig({t:'ice',from:S.me,to:u,c:e.candidate}); };
+ pc.onicecandidate=e=>{
+  if(!e.candidate) return;
+  pc._ib.push(e.candidate);
+  if(!pc._it) pc._it=setTimeout(()=>{ pc._it=0; const c=pc._ib.splice(0); if(c.length&&S.peers[u]===pc) X.sig({t:'ice',from:S.me,to:u,c}); },300);
+ };
  pc.ontrack=e=>{
   let a=document.getElementById(X.pre+u);
   if(!a){ a=document.createElement('audio'); a.id=X.pre+u; a.autoplay=true; a.playsInline=true; document.body.appendChild(a); }
   a.srcObject=(e.streams&&e.streams[0])||new MediaStream([e.track]);
+  a.muted=!!S.deaf;
   const p=a.play(); if(p&&p.catch) p.catch(()=>{ if(!rtcBlocked.includes(a)) rtcBlocked.push(a); });
  };
  pc.onconnectionstatechange=()=>{
   const st=pc.connectionState;
-  if(st==='connected'){ if(S.retry) S.retry[u]=0; }
-  else if(st==='failed'||st==='closed'){
+  console.log('[voice]',u,st);
+  if(st==='failed'||st==='closed'){
    if(S.peers[u]!==pc) return;
    X.drop(u);
-   if(st==='failed'&&X.alive()){
-    S.retry=S.retry||{}; S.retry[u]=(S.retry[u]||0)+1;
-    if(S.retry[u]<=3) setTimeout(()=>{ if(X.alive()&&!S.peers[u]) X.sig({t:'hello',from:S.me,to:u}); },1500+Math.random()*1500);
-   }
   }
  };
  S.peers[u]=pc; return pc;
@@ -5174,12 +5174,52 @@ async function rtcStep(X,m){
  }
  if(m.t==='ice'){
   const pc=S.peers[u]; if(!pc||pc._ignore) return;
-  if(pc.remoteDescription&&pc.remoteDescription.type){ try{ await pc.addIceCandidate(m.c); }catch(e){ console.warn('ice',e); } }
-  else pc._q.push(m.c);
+  const arr=Array.isArray(m.c)?m.c:[m.c];
+  if(pc.remoteDescription&&pc.remoteDescription.type){ for(const c of arr){ try{ await pc.addIceCandidate(c); }catch(e){ console.warn('ice',e); } } }
+  else arr.forEach(c=>pc._q.push(c));
  }
 }
-const VCX={get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall};
-const GVX={get S(){return GV;},pre:'ga-',sig:m=>gvSig(m),drop:u=>gvDrop(u),alive:()=>!!GV.cur};
+/* tombol audio (matikan/nyalakan suara orang lain) */
+function rtcSetDeaf(X,v){ X.S.deaf=v; document.querySelectorAll('audio[id^="'+X.pre+'"]').forEach(a=>{ a.muted=v; if(!v){ try{ a.play().catch(()=>{}); }catch(_){} } }); }
+/* status per peserta */
+function rtcText(k,u){
+ const X=k==='vc'?VCX:GVX, S=X.S;
+ if(!X.alive()||u===S.me) return '';
+ const pc=S.peers[u]; if(!pc) return '⏳ menunggu';
+ const st=pc.connectionState;
+ if(st==='connected') return S.deaf?'🔇 audio mati':(pc._lv>0.01?'🔊 bicara':'✅ tersambung');
+ if(st==='failed') return '❌ gagal';
+ return '⏳ menyambung';
+}
+const rtcBadge=(k,u)=>`<small class="rtc-b" data-k="${k}" data-u="${escapeHTML(u)}" style="margin-left:6px;opacity:.85">${rtcText(k,u)}</small>`;
+const VCX={get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall,ready:()=>VC.joined,roster:()=>Object.keys(VC.roster)};
+const GVX={get S(){return GV;},pre:'ga-',sig:m=>gvSig(m),drop:u=>gvDrop(u),alive:()=>!!GV.cur,ready:()=>GV.joined[GV.cur]===true,roster:()=>Object.keys(GV.roster[GV.cur]||{})};
+/* retry: bila peserta ada di channel tapi belum tersambung, kirim hello lagi (maks 6x) */
+setInterval(()=>{ [VCX,GVX].forEach(X=>{
+ const S=X.S;
+ if(!X.alive()){ S.tries={}; return; }
+ if(!X.ready()) return;
+ S.tries=S.tries||{};
+ X.roster().forEach(n=>{
+  if(n===S.me) return;
+  const pc=S.peers[n];
+  if(pc&&pc.connectionState==='connected'){ S.tries[n]=0; return; }
+  if(!pc||Date.now()-(pc._t||0)>8000){ if((S.tries[n]=(S.tries[n]||0)+1)<=6) X.sig({t:'hello',from:S.me,to:n}); }
+ });
+}); },3000);
+/* level suara masuk + update label status */
+setInterval(()=>{
+ [VCX,GVX].forEach(X=>{ if(!X.alive()) return;
+  Object.values(X.S.peers).forEach(pc=>{
+   if(pc.connectionState!=='connected'||pc._pl) return; pc._pl=1;
+   pc.getStats().then(r=>{ let lv=0; r.forEach(s=>{ if(s.type==='inbound-rtp'&&s.kind==='audio') lv=Math.max(lv,s.audioLevel||0); }); pc._lv=lv; }).catch(()=>{}).finally(()=>{ pc._pl=0; });
+  });
+ });
+ document.querySelectorAll('.rtc-b').forEach(el=>{ el.textContent=rtcText(el.dataset.k,el.dataset.u); });
+},700);
+function vcDeaf(){ rtcSetDeaf(VCX,!VC.deaf); vcActions(); }
+function gvDeaf(){ rtcSetDeaf(GVX,!GV.deaf); gvRender(); }
+
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
 function vcAvatar(u){
@@ -5196,14 +5236,14 @@ function hubVoiceUI(body){
 function vcActions(){
  const el=document.getElementById('vc-actions'); if(!el) return;
  el.innerHTML=VC.inCall
-  ?`<button class="btn-red" onclick="vcMute()">${VC.muted?'🔇 Unmute':'🎙 Mute'}</button> <button class="btn-red" onclick="leaveVoice()">Keluar</button>`
+  ?`<button class="btn-red" onclick="vcMute()">${VC.muted?'🔇 Unmute':'🎙 Mute'}</button> <button class="btn-red" onclick="vcDeaf()">${VC.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button> <button class="btn-red" onclick="leaveVoice()">Keluar</button>`
   :`<button class="btn-red" onclick="joinVoice()">🎧 Gabung</button>`;
 }
 function vcRoster(){
  const el=document.getElementById('vc-roster'), cnt=document.getElementById('vc-count'); if(!el) return;
  const names=Object.keys(VC.roster).sort((a,b)=>a.localeCompare(b));
  if(cnt) cnt.textContent=names.length+' di channel';
- el.innerHTML=names.length?names.map(n=>`<div class="vc-user" title="@${escapeHTML(n)}">${vcAvatar(n)}<span>${escapeHTML(n)}${n===VC.me&&VC.inCall?' (kamu)':''}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>';
+ el.innerHTML=names.length?names.map(n=>`<div class="vc-user" title="@${escapeHTML(n)}">${vcAvatar(n)}<span>${escapeHTML(n)}${n===VC.me&&VC.inCall?' (kamu)':''}${n!==VC.me&&VC.inCall?rtcBadge('vc',n):''}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>';
 }
 function vsend(ev,p,topic){ if(VC.ws&&VC.ws.readyState===1) VC.ws.send(JSON.stringify({topic:topic||VC.topic,event:ev,payload:p,ref:String(VC.ref++)})); }
 function vsig(m){ vsend('broadcast',{type:'broadcast',event:'sig',payload:m}); }
@@ -5263,7 +5303,7 @@ function leaveVoice(silent){
  if(VC.ws&&VC.joined){ vsig({t:'bye',from:VC.me}); vsend('presence',{type:'presence',event:'untrack'}); }
  Object.keys(VC.peers).forEach(vdrop);
  VC.stream?.getTracks().forEach(t=>t.stop());
- VC.stream=null; VC.inCall=false; VC.muted=false;
+ VC.stream=null; VC.inCall=false; VC.muted=false; VC.deaf=false;
  if(HUB.page==='voice'){ vcActions(); vcRoster(); } else vcClose();
 }
 window.addEventListener('beforeunload',()=>{ if(VC.inCall) leaveVoice(true); });
@@ -5510,9 +5550,9 @@ function gvRender(){
   const mine=c.owner===gvMe()||(currentUser&&currentUser.isOwner);
   const here=GV.cur===c.id;
   return `<div class="card vc-card"><div class="vc-head"><div class="vc-ico">${c.locked?'🔒':'🔊'}</div><div class="vc-meta"><b>${escapeHTML(c.name)}</b><small>dibuat @${escapeHTML(c.owner)} · ${c.locked?'Terkunci ('+(c.members||[]).length+' teman)':'Terbuka untuk semua'}</small></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?`<button class="btn-red" onclick="gvMute()">${GV.muted?'🔇 Unmute':'🎙 Mute'}</button><button class="btn-red" onclick="gvLeave()">Keluar</button>`:`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${here?`<button class="btn-red" onclick="gvMute()">${GV.muted?'🔇 Unmute':'🎙 Mute'}</button><button class="btn-red" onclick="gvDeaf()">${GV.deaf?'🔊 Nyalakan Audio':'🔈 Matikan Audio'}</button><button class="btn-red" onclick="gvLeave()">Keluar</button>`:`<button class="btn-red" onclick="gvJoin('${c.id}')">🎧 Gabung</button>`}</div></div>
   <div class="vc-sub">${names.length} di channel</div>
-  <div class="vc-roster">${names.length?names.map(n=>`<div class="vc-user">${vcAvatar(n)}<span>${escapeHTML(n)}${n===gvMe()&&here?' (kamu)':''}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>'}</div>
+  <div class="vc-roster">${names.length?names.map(n=>`<div class="vc-user">${vcAvatar(n)}<span>${escapeHTML(n)}${n===gvMe()&&here?' (kamu)':''}${n!==gvMe()&&here?rtcBadge('gv',n):''}</span></div>`).join(''):'<div class="vc-empty">Belum ada yang bergabung.</div>'}</div>
   ${mine?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><button class="btn-red" onclick="gvToggleLock('${c.id}')">${c.locked?'🔓 Buka Kunci':'🔒 Kunci'}</button>${c.locked?`<button class="btn-red" onclick="gvEditFriends('${c.id}')">👥 Atur Teman</button>`:''}<button class="btn-red" onclick="gvDelete('${c.id}')">🗑 Hapus</button></div>`:''}</div>`;
  }).join('')||'<div class="empty-state">Belum ada channel yang bisa kamu lihat. Buat satu di atas!</div>';
 }
@@ -5596,7 +5636,7 @@ function gvLeave(silent){
  if(GV.cur&&GV.ws&&GV.joined[GV.cur]===true){ gvSig({t:'bye',from:GV.me}); gvSendRaw(gvTopic(GV.cur),'presence',{type:'presence',event:'untrack'}); }
  Object.keys(GV.peers).forEach(gvDrop);
  GV.stream?.getTracks().forEach(t=>t.stop());
- GV.stream=null; GV.cur=''; GV.muted=false;
+ GV.stream=null; GV.cur=''; GV.muted=false; GV.deaf=false;
  gvRender();
  if(!GV.on) gvClose();
 }

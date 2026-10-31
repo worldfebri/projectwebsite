@@ -1993,7 +1993,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             <button onclick="moreGo('saas')"><span class="ico">ℹ️</span>Info SAAS</button>
             <button onclick="moreGo('profile')"><span class="ico">👤</span>Profile</button>
             <button onclick="moreGo('my-chats')"><span class="ico">✉️</span>Chat Saya</button>
-            <button onclick="moreGo('admin')"><span class="ico">🛡️</span>Admin</button>
+            <button id="more-admin" onclick="moreGo('admin')"><span class="ico">🛡️</span>Admin</button>
         </div>
     </div>
 
@@ -2014,6 +2014,8 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         <button data-admin-section="assign-role" onclick="showAdminSection('assign-role')">Tambah Role</button>
         <button data-admin-section="hub" onclick="showAdminSection('hub')">Hub SAAS</button>
         <button data-admin-section="track" onclick="showAdminSection('track')">Track Official SAAS</button>
+        <button data-admin-section="voicecfg" onclick="showAdminSection('voicecfg')">Server &amp; Musik</button>
+        <button data-admin-section="navacc" onclick="showAdminSection('navacc')">Akses Navigasi</button>
         <div class="admin-total-users" id="admin-total-users">
             <span class="admin-total-users-label">Total Akun Terdaftar</span>
             <span class="admin-total-users-count" id="admin-total-users-count">0</span>
@@ -2311,7 +2313,9 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                     discordBot: db.discordBot,
                     hub: db.hub,
                     globalVoice: db.globalVoice,
-                    track: db.track
+ voiceCfg: db.voiceCfg,
+ adminNav: db.adminNav,
+ track: db.track
                 }
             };
         }
@@ -3671,7 +3675,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                             <button class="btn-red" onclick="saveBio()">Simpan Bio</button>
 
                             <h3>Ganti Foto Profil</h3>
-                            <p style="color:var(--muted);font-size:11px;margin-top:-5px;margin-bottom:5px;">Masukkan URL (Link) gambar yang berakhiran .jpg atau .png.</p>
+                            <p style="color:var(--muted);font-size:11px;margin-top:-5px;margin-bottom:5px;">Tempel URL (link) gambar, atau upload langsung dari perangkat (galeri / file) lewat tombol di bawah.</p>
                             <input class="social-input" id="change-profile-pic" placeholder="Contoh: https://i.imgur.com/foto.jpg" value="${escapeHTML(me.profilePic || '')}">
                             <button class="btn-red" onclick="changeProfilePic()">Simpan Foto Profil</button>
                             
@@ -3757,6 +3761,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
 
 
         function toggleMore(force){
+ updateAdminEntry();
             const sh=document.getElementById('more-sheet'), sc=document.getElementById('more-scrim');
             const on = typeof force==='boolean' ? force : !sh.classList.contains('show');
             sh.classList.toggle('show',on); sc.classList.toggle('show',on);
@@ -4386,11 +4391,13 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             }
             try{
                 normalizeDB();
-                adminAuthenticated=true;
+ if(!ADMIN_NAV.some(x=>adminNavOk(x[0]))){ alert('Role kamu tidak punya akses ke navigasi admin.'); return; }
+ adminAuthenticated=true;
                 document.getElementById('admin-subnav')?.classList.add('show');
                 document.querySelectorAll('.admin-subnav button').forEach(b=>b.classList.remove('active'));
                 renderAdminDashboard(document.getElementById('app-content'));
-                showAdminSection('dashboard');
+ applyAdminNav();
+ showAdminSection('dashboard');
                 updateAdminTotalUsers();
                 updateAdminClubRequestBadge();
                 updateAdminSaasEventBadge();
@@ -4620,6 +4627,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                     </div>
                     ${hubAdminHTML()}
                     ${trackAdminHTML()}
+ ${voiceAdminHTML()}
                     <div class="admin-section" id="admin-section-clubs">
                         <div class="admin-form">
                             <h3>Manage Official Clubs</h3>
@@ -4675,7 +4683,8 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         }
 
         function showAdminSection(section){
-            if(!adminAuthenticated) return;
+ if(!adminAuthenticated) return;
+ if(!adminNavOk(section)){ const f=ADMIN_NAV.find(x=>adminNavOk(x[0])); if(!f) return; section=f[0]; }
             document.querySelectorAll('.admin-section').forEach(el=>el.classList.remove('active'));
             const target=document.getElementById('admin-section-'+section);
             if(target) target.classList.add('active');
@@ -5269,9 +5278,9 @@ const VOICE_SERVER_TOKEN='NJmWqigFsCYNjKP-WAy548jWrfE6xLJ9';
    Ubah ke false bila ingin kembali ke WebRTC langsung (relay hanya cadangan). */
 const VOICE_RELAY_ONLY=true;
 function voiceWsUrl(){
- let u=''; try{ u=(localStorage.getItem('voice_url')||VOICE_SERVER_URL||'').trim(); }catch(_){ u=VOICE_SERVER_URL; }
+ let u=''; try{ u=(voiceCfg().url||localStorage.getItem('voice_url')||VOICE_SERVER_URL||'').trim(); }catch(_){ u=(voiceCfg().url||VOICE_SERVER_URL||'').trim(); }
  if(u){
-  let t=VOICE_SERVER_TOKEN; try{ t=localStorage.getItem('voice_token')||t; }catch(_){}
+  let t=voiceCfg().token||VOICE_SERVER_TOKEN; try{ t=voiceCfg().token||localStorage.getItem('voice_token')||t; }catch(_){}
   u=u.replace(/\/+$/,'').replace(/^http/,'ws');
   return u+'/realtime/v1/websocket?apikey='+encodeURIComponent(t||'public')+'&vsn=1.0.0';
  }
@@ -5465,6 +5474,9 @@ function rtcHandle(X,m){
  const S=X.S;
  if(!X.alive()||!S.stream||!m||m.from===S.me||(m.to&&m.to!==S.me)) return;
  if(m.t==='aud'){ rlyPlay(X,m); return; }
+ if(m.t==='mus'){ musPlay(X,m); return; }
+ if(m.t==='mstate'){ musState(X,m); return; }
+ if(m.t==='mmsg'){ musMsg(X,m); return; }
  if(m.t==='vid'){ vidRecv(X,m); return; }
  const u=m.from; S.chain=S.chain||{};
  S.chain[u]=(S.chain[u]||Promise.resolve()).then(()=>rtcStep(X,m)).catch(e=>console.warn('voice',e));
@@ -5727,7 +5739,7 @@ function vsUpdate(k){
  const tiles=vsTiles(k), fk=vsFocusKey(k,tiles), cid=k==='gv'?GV.cur:'';
  const title=k==='vc'?'SAAS VOICE':((typeof gvFind==='function'&&gvFind(GV.cur)||{}).name||'Voice');
  const full=document.fullscreenElement===st;
- const sig=JSON.stringify([tiles.map(t=>[t.key,t.muted,t.deaf]),fk,!!S.muted,!!S.deaf,!!S.camOn,!!S.scrOn,NS_LVL,VID_LVL,S._pop||'',title,full]);
+ const sig=JSON.stringify([tiles.map(t=>[t.key,t.muted,t.deaf]),fk,!!S.muted,!!S.deaf,!!S.camOn,!!S.scrOn,NS_LVL,VID_LVL,S._pop||'',title,full,S._mu&&S._mu.now?1:0]);
  if(sig===S._sig) return; S._sig=sig;
  const canShare=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
  let grid;
@@ -5743,6 +5755,7 @@ function vsUpdate(k){
   <div class="vs-grp"><button class="vs-b ${S.muted?'off':''}" data-a="mic" title="${S.muted?'Unmute':'Mute'}">${S.muted?VIC.micoff:VIC.mic}</button><button class="vs-b vs-chev" data-a="pop-mic" title="Pengaturan mikrofon">${VIC.chev}</button>
    <button class="vs-b ${S.camOn?'on':''}" data-a="cam" title="${S.camOn?'Matikan kamera':'Nyalakan kamera'}">${S.camOn?VIC.cam:VIC.camoff}</button><button class="vs-b vs-chev" data-a="pop-cam" title="Kualitas video">${VIC.chev}</button></div>
   <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button></div>
+  <button class="vs-music ${S._mu&&S._mu.now?'on':''}" data-a="music" title="SAAS Music">🎵 ${S._mu&&S._mu.now?'MUSIC':'PUTAR MUSIC'}</button>
   <button class="vs-hang" data-a="hang" title="Keluar dari voice">${VIC.hang}</button>
   <button class="vs-b vs-fs" data-a="fs" title="Layar penuh">${VIC.fs}</button>
  </div>`;
@@ -5786,6 +5799,7 @@ function vsClick(k,e){
   const key=b.dataset.key, cur=vsFocusKey(k,vsTiles(k));
   S._focus=(cur===key)?'-':key; vsUpdate(k); return;
  }
+ if(a==='music'){ S._pop=''; musToggle(k); vsUpdate(k); return; }
  if(a==='pop-mic'||a==='pop-cam'){ const p=a.slice(4); S._pop=S._pop===p?'':p; vsUpdate(k); return; }
  if(a==='vq'){ VID_LVL=+b.dataset.v||0; try{ localStorage.setItem('saas_vq',String(VID_LVL)); }catch(_){} vsUpdate(k); return; }
  S._pop='';
@@ -5804,7 +5818,7 @@ function vsClick(k,e){
  vsUpdate(k);
 }
 function vsDestroy(k){
- const S=vsS(k);
+ const S=vsS(k); musReset(k);
  try{ if(S._stage&&document.fullscreenElement===S._stage) document.exitFullscreen(); }catch(_){}
  if(S._stage) S._stage.remove();
  S._stage=null; S._sig=''; S._vf={}; S._vt={}; S._focus=''; S._pop='';
@@ -5881,6 +5895,134 @@ function vidDropUser(k,u){ const S=vsS(k); ['cam','scr'].forEach(x=>{ if(S._vf) 
 document.addEventListener('fullscreenchange',()=>{ ['vc','gv'].forEach(k=>{ const S=vsS(k); if(S._stage){ S._sig=''; vsUpdate(k); } }); });
 window.addEventListener('resize',()=>{ ['vc','gv'].forEach(vsFit); });
 setInterval(()=>{ ['vc','gv'].forEach(k=>{ if(vsS(k)._stage&&vsIn(k)){ vsTick(k); vsUpdate(k); } }); },500);
+
+
+/* ======================= SAAS MUSIC (klien) =======================
+   Musik diputar oleh SAAS Server (yt-dlp + ffmpeg) lalu dialirkan ke semua peserta voice, sama seperti suara & share screen. */
+function voiceCfg(){ try{ return (typeof db==='object'&&db&&db.voiceCfg)||{}; }catch(_){ return {}; } }
+function musCan(){
+ if(!currentUser) return false; if(currentUser.isOwner) return true;
+ const r=voiceCfg().musicRoles||[]; if(!r.length) return true;
+ const mine=(getUser(currentUser.username)?.roleIds)||[]; return r.some(x=>mine.includes(x));
+}
+let _mk='';
+const muS=k=>{ const S=vsS(k); return S._mu||(S._mu={now:null,queue:[],paused:false,pos:0,at:0,msg:'',pj:{t:0}}); };
+const musVol=()=>{ let v=0.8; try{ const x=parseFloat(localStorage.getItem('saas_mvol')); if(x>=0&&x<=1) v=x; }catch(_){} return v; };
+const fmtT=s=>{ s=Math.max(0,Math.floor(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+function musState(X,m){ const u=muS(X.k); u.now=m.now||null; u.queue=m.queue||[]; u.paused=!!m.paused; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0; vsUpdate(X.k); musRender(); }
+function musMsg(X,m){ const u=muS(X.k); u.msg=m.text||''; if(document.getElementById('mu-panel')) musRender(); else if(typeof showToast==='function') showToast(u.msg); }
+function musPlay(X,m){
+ const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
+ let bin; try{ bin=atob(m.d); }catch(_){ return; }
+ const u=muS(X.k), st=u.pj, ch=m.ch||1, n=Math.floor(bin.length/ch);
+ if(!S._mg){ S._mg=ctx.createGain(); S._mg.connect(ctx.destination); }
+ S._mg.gain.value=musVol();
+ const buf=ctx.createBuffer(ch,n,m.sr), d=[]; for(let c=0;c<ch;c++) d.push(buf.getChannelData(c));
+ for(let i=0;i<n;i++) for(let c=0;c<ch;c++) d[c][i]=rlyUnmu(bin.charCodeAt(i*ch+c));
+ const now=ctx.currentTime; if(st.t<now+0.05) st.t=now+0.7;
+ const src=ctx.createBufferSource(); src.buffer=buf; src.connect(S._mg); src.start(st.t); st.t+=buf.duration;
+ if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+}
+function musSend(k,cmd,extra){ const S=vsS(k); if(!vsIn(k)) return; if(!musCan()) return alert('Role kamu tidak punya izin mengontrol musik.'); vsX(k).sig(Object.assign({t:'mcmd',from:S.me,cmd},extra||{})); }
+function musToggle(k){
+ const old=document.getElementById('mu-panel'); if(old){ old.remove(); _mk=''; return; }
+ _mk=k;
+ if(!document.getElementById('mu-css')){ const st=document.createElement('style'); st.id='mu-css'; st.textContent=`
+.vs-music{height:40px;padding:0 14px;border-radius:20px;border:1px solid #333;background:#2b2d31;color:#fff;font:700 12px var(--body);cursor:pointer;white-space:nowrap}.vs-music.on{background:#1db954;color:#06210f;border-color:#1db954}
+#mu-panel{position:fixed;right:14px;bottom:86px;width:min(380px,calc(100vw - 28px));max-height:70vh;overflow:auto;z-index:100000;background:#1c1c1e;border:1px solid #333;border-radius:14px;padding:14px;color:#fff;font:13px var(--body);box-shadow:0 10px 36px rgba(0,0,0,.5)}
+#mu-panel h4{margin:0 0 8px;font-size:15px}#mu-panel small{color:#9aa0a6;display:block;line-height:1.4;margin-top:3px}
+#mu-panel input[type=text]{width:100%;padding:10px;border-radius:8px;background:#000;color:#fff;border:1px solid #333;margin-bottom:8px;box-sizing:border-box}
+#mu-panel button{background:#2e2e31;border:0;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer;font:600 12px var(--body)}#mu-panel button.go{width:100%;background:#1db954;color:#06210f;padding:10px;font-weight:800}
+.mu-now{margin-top:12px;padding:10px;background:#252527;border-radius:10px}.mu-pg{height:5px;background:#3a3a3d;border-radius:4px;margin:8px 0 2px;overflow:hidden}.mu-pg i{display:block;height:100%;width:0;background:#1db954}
+.mu-ct{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.mu-q{margin-top:10px}.mu-q div{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #2e2e31;align-items:center}.mu-q span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mu-st{color:#8ab4f8;min-height:16px;margin-top:6px;font-size:12px}`; document.head.appendChild(st); }
+ const p=document.createElement('div'); p.id='mu-panel'; const can=musCan();
+ p.innerHTML=`<h4>🎵 SAAS MUSIC <button data-x="1" style="float:right;padding:3px 9px">✕</button></h4>
+  ${can?`<input type="text" id="mu-in" placeholder="Link YouTube / Spotify / SoundCloud / link audio, atau ketik judul lagu" autocomplete="off"><button class="go" data-c="play">▶ PUTAR MUSIC</button>`:'<small>Role kamu tidak punya izin memutar musik, tapi kamu tetap bisa mendengarkan.</small>'}
+  <small>Spotify: judul lagu dicarikan versi audionya di YouTube. Playlist ikut masuk antrian.</small>
+  <div id="mu-st"></div><div id="mu-body"></div>
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center">🔈<input type="range" id="mu-vol" min="0" max="100" value="${Math.round(musVol()*100)}" style="flex:1"><small id="mu-vv" style="margin:0">${Math.round(musVol()*100)}%</small></div>`;
+ (document.fullscreenElement||document.body).appendChild(p);
+ const inp=p.querySelector('#mu-in'), play=()=>{ const q=inp&&inp.value.trim(); if(!q) return; musSend(k,'play',{q}); inp.value=''; muS(k).msg='⏳ Mengirim ke server musik…'; musRender(); };
+ if(inp) inp.onkeydown=e=>{ if(e.key==='Enter') play(); };
+ p.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.x){ p.remove(); _mk=''; return; }
+  const c=b.dataset.c; if(c==='play') play(); else if(c) musSend(k,c,{id:b.dataset.id}); });
+ p.querySelector('#mu-vol').oninput=e=>{ const v=+e.target.value/100; try{ localStorage.setItem('saas_mvol',String(v)); }catch(_){} p.querySelector('#mu-vv').textContent=e.target.value+'%'; const S=vsS(k); if(S._mg) S._mg.gain.value=v; };
+ musRender(); if(inp) inp.focus();
+}
+function musRender(){
+ const p=document.getElementById('mu-panel'); if(!p||!_mk) return;
+ const u=muS(_mk), can=musCan(), n=u.now;
+ p.querySelector('#mu-st').textContent=u.msg||'';
+ p.querySelector('#mu-body').innerHTML=(n?`<div class="mu-now"><b>${escapeHTML(n.title)}</b><small>${escapeHTML(n.artist||'')}${n.artist?' · ':''}diputar oleh ${escapeHTML(n.by||'')}</small><div class="mu-pg"><i id="mu-bar"></i></div><small id="mu-tm"></small>${can?`<div class="mu-ct"><button data-c="${u.paused?'resume':'pause'}">${u.paused?'▶ Lanjut':'⏸ Jeda'}</button><button data-c="skip">⏭ Lewati</button><button data-c="stop">⏹ Stop</button></div>`:''}</div>`:'<small style="margin-top:12px">Belum ada musik yang diputar.</small>')
+  +(u.queue.length?`<div class="mu-q"><b>Antrian (${u.queue.length})</b>${u.queue.map(q=>`<div><span>${escapeHTML(q.title)}</span>${can?`<button data-c="rm" data-id="${escapeHTML(q.id)}">✕</button>`:''}</div>`).join('')}</div>`:'');
+ musTick();
+}
+function musTick(){
+ const p=document.getElementById('mu-panel'); if(!p||!_mk) return;
+ const u=muS(_mk), n=u.now, bar=p.querySelector('#mu-bar'), tm=p.querySelector('#mu-tm'); if(!n||!bar) return;
+ const pos=(u.pos+(u.paused?0:Date.now()-u.at))/1000;
+ bar.style.width=(n.dur?Math.min(100,pos/n.dur*100):0)+'%'; tm.textContent=fmtT(pos)+(n.dur?' / '+fmtT(n.dur):'')+(u.paused?' · dijeda':'');
+}
+setInterval(musTick,500);
+function musReset(k){ const S=vsS(k); if(_mk===k){ document.getElementById('mu-panel')?.remove(); _mk=''; } S._mu=null; S._mg=null; }
+document.addEventListener('fullscreenchange',()=>{ const p=document.getElementById('mu-panel'); if(p) (document.fullscreenElement||document.body).appendChild(p); });
+
+/* ======================= ADMIN: Server Voice & Musik + Akses Navigasi Admin ======================= */
+const ADMIN_NAV=[['dashboard','Dashboard'],['github','Database'],['discord','Discord Bot'],['security','Security'],['teritory','Teritory'],['race','Race'],['saas','Information SAAS'],['announcement','Pengumuman'],['clubs','Official Clubs'],['club-requests','Masukan Club'],['saas-event','Acara SAAS'],['saas-event-clubs','Club Acara SAAS'],['create-role','Create Role'],['assign-role','Tambah Role'],['hub','Hub SAAS'],['track','Track Official SAAS'],['voicecfg','Server & Musik'],['navacc','Akses Navigasi Admin']];
+function adminNavOk(k){
+ if(!currentUser) return false; if(currentUser.isOwner) return true;
+ const a=db.adminNav; if(!a||!a.on) return true;
+ const l=(a.map&&a.map[k])||[], mine=(getUser(currentUser.username)?.roleIds)||[]; return l.some(r=>mine.includes(r));
+}
+function applyAdminNav(){ document.querySelectorAll('.admin-subnav button[data-admin-section]').forEach(b=>{ b.style.display=adminNavOk(b.dataset.adminSection)?'':'none'; }); }
+function updateAdminEntry(){ const b=document.getElementById('more-admin'); if(b) b.style.display=(!currentUser||ADMIN_NAV.some(x=>adminNavOk(x[0])))?'':'none'; }
+function voiceAdminHTML(){
+ if(!db.voiceCfg||typeof db.voiceCfg!=='object') db.voiceCfg={}; const c=db.voiceCfg; if(!Array.isArray(c.musicRoles)) c.musicRoles=[];
+ if(!db.adminNav||typeof db.adminNav!=='object') db.adminNav={on:false,map:{}}; if(!db.adminNav.map) db.adminNav.map={};
+ const chk=(cls,key,list)=>db.roles.map(r=>`<label style="font-size:11px;display:flex;gap:5px;align-items:center"><input type="checkbox" class="${cls}" data-k="${key}" value="${escapeHTML(r.id)}" ${list.includes(r.id)?'checked':''} style="width:auto"><span style="color:${escapeHTML(r.color)}">${escapeHTML(r.name)}</span></label>`).join('')||'<small>Belum ada role.</small>';
+ const rows=ADMIN_NAV.map(([k,t])=>`<div style="margin-bottom:12px"><b style="font-size:12px">${t}</b><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">${chk('anacc',k,db.adminNav.map[k]||[])}</div></div>`).join('');
+ return `<div class="admin-section" id="admin-section-voicecfg"><div class="admin-form"><h3>Server Voice &amp; Musik</h3>
+ <p style="font-size:11px;color:var(--muted);line-height:1.6">Isi alamat tunnel &amp; token dari console SAAS Server (kotak "TUNNEL AKTIF"). Tersimpan di database, jadi semua member otomatis memakainya tanpa edit source. Kosongkan untuk memakai nilai bawaan di source.</p>
+ <label>URL SERVER (wss://...)</label><input id="vc-cfg-url" value="${escapeHTML(c.url||'')}" placeholder="wss://xxxx.trycloudflare.com">
+ <label>TOKEN (VOICE_TOKEN di server)</label><input id="vc-cfg-token" value="${escapeHTML(c.token||'')}" placeholder="token rahasia server">
+ <label>TEMPEL DARI CONSOLE (opsional, otomatis mengisi dua kolom di atas)</label><textarea id="vc-cfg-paste" rows="3" oninput="voiceCfgPaste()" placeholder="const VOICE_SERVER_URL='wss://...'; const VOICE_SERVER_TOKEN='...';"></textarea>
+ <h3 style="margin-top:20px">Kontrol Musik (PUTAR MUSIC)</h3><p style="font-size:11px;color:var(--muted)">Role yang boleh memutar / mengatur musik. Kosong = semua yang ada di voice. Owner selalu boleh.</p>
+ <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">${chk('mroles','music',c.musicRoles)}</div>
+ <button type="button" class="btn-red" onclick="saveVoiceCfg()">Simpan</button> <button type="button" class="btn-red" onclick="testVoiceCfg()">Tes Koneksi</button>
+ <div id="vc-cfg-res" style="font-size:12px;margin-top:10px"></div></div></div>
+ <div class="admin-section" id="admin-section-navacc"><div class="admin-form"><h3>Akses Navigasi Admin</h3>
+ <label style="display:flex;gap:8px;align-items:center;font-size:12px"><input type="checkbox" id="an-on" ${db.adminNav.on?'checked':''} style="width:auto"> Aktifkan pembatasan per role</label>
+ <p style="font-size:11px;color:var(--muted);line-height:1.6">Bila aktif, tiap menu admin hanya terlihat oleh role yang dicentang (kosong = hanya Owner). Owner selalu melihat semua menu. Bila nonaktif, semua yang lolos password admin melihat semua menu seperti biasa.</p>${rows}
+ <button type="button" class="btn-red" onclick="saveAdminNav()">Simpan Akses</button></div></div>`;
+}
+function voiceCfgPaste(){
+ const t=document.getElementById('vc-cfg-paste').value, u=/wss?:\/\/[^\s'"`]+/i.exec(t), k=/VOICE_SERVER_TOKEN\s*=\s*['"]([^'"]+)['"]/.exec(t);
+ if(u) document.getElementById('vc-cfg-url').value=u[0]; if(k) document.getElementById('vc-cfg-token').value=k[1];
+}
+async function saveVoiceCfg(){
+ const c=db.voiceCfg=db.voiceCfg||{};
+ c.url=document.getElementById('vc-cfg-url').value.trim().replace(/\/+$/,'').replace(/^http/i,'ws');
+ c.token=document.getElementById('vc-cfg-token').value.trim();
+ c.musicRoles=[...document.querySelectorAll('.mroles:checked')].map(x=>x.value);
+ await saveToDB();
+ try{ if(!VC.inCall) vcClose(); if(!GV.cur) gvClose(); }catch(_){}
+ alert('Tersimpan. Member yang sedang membuka website perlu refresh agar memakai alamat baru.');
+}
+function testVoiceCfg(){
+ const res=document.getElementById('vc-cfg-res'); let u=document.getElementById('vc-cfg-url').value.trim().replace(/\/+$/,'').replace(/^http/i,'ws'), t=document.getElementById('vc-cfg-token').value.trim();
+ if(!u) u=voiceWsUrl().split('/realtime')[0]; if(!u) return res.textContent='Isi URL dulu.';
+ res.style.color='var(--muted)'; res.textContent='Menguji…'; let done=false, ws;
+ const end=(ok,tx)=>{ if(done) return; done=true; try{ws.close();}catch(_){} res.style.color=ok?'#39ff14':'#ff2938'; res.textContent=tx; };
+ try{ ws=new WebSocket(u+'/realtime/v1/websocket?apikey='+encodeURIComponent(t||'public')+'&vsn=1.0.0'); }catch(e){ return end(false,'❌ URL tidak valid'); }
+ ws.onopen=()=>end(true,'✅ Tersambung ke SAAS Server'); ws.onerror=()=>end(false,'❌ Gagal tersambung (URL salah, token salah, atau server mati)'); ws.onclose=()=>end(false,'❌ Ditolak server (cek token / ALLOWED_ORIGINS)');
+ setTimeout(()=>end(false,'❌ Waktu habis'),8000);
+}
+async function saveAdminNav(){
+ const a=db.adminNav=db.adminNav||{on:false,map:{}}; a.on=document.getElementById('an-on').checked; a.map={};
+ ADMIN_NAV.forEach(([k])=>{ a.map[k]=[...document.querySelectorAll(`.anacc[data-k="${k}"]:checked`)].map(x=>x.value); });
+ await saveToDB(); applyAdminNav(); updateAdminEntry(); alert('Akses navigasi admin tersimpan.');
+}
 
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,deaf:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
@@ -6447,5 +6589,123 @@ showPage=function(id){
  };
 })();
 </script>
+<script>
+/* ======================= UPLOAD GAMBAR DARI PERANGKAT (alternatif URL/link) =======================
+   Semua kolom gambar yang tadinya hanya bisa pakai link sekarang punya tombol "Upload dari perangkat".
+   File otomatis diperkecil/dikompres lalu disimpan ke kolom yang sama, jadi link tetap bisa dipakai juga. */
+(function(){
+  const RULES=[
+    {re:/^change-profile-pic$/,max:256,type:'jpeg',q:0.8},
+    {re:/^(saas-event-logo|new-saas-event-club-logo|saas-event-club-logo-\d+)$/,max:800,type:'auto',q:0.8},
+    {re:/^(edit-teri-img|race-bot-img|saas-top-img-\d+|saas-bottom-img-\d+|club-img-\d+|club-info-top-img-\d+-\d+|club-info-bot-img-\d+|new-club-img|new-info-top-img-\d+|new-info-bot-img)$/,max:1000,type:'jpeg',q:0.7}
+  ];
+  const SEL=['change-profile-pic','edit-teri-img','race-bot-img','saas-top-img-','saas-bottom-img-','saas-event-logo','new-saas-event-club-logo','saas-event-club-logo-','club-img-','club-info-top-img-','club-info-bot-img-','new-club-img','new-info-top-img-','new-info-bot-img'].map(x=>'input[id^="'+x+'"]').join(',');
+  const MAX_RAW=25*1024*1024;
+
+  const st=document.createElement('style');
+  st.textContent='.upl-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:7px 0 4px}'
+   +'.upl-btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:1px dashed var(--line,#34508f);border-radius:4px;padding:8px 12px;font:600 11px var(--body,sans-serif);color:var(--ink,#fff);background:var(--panel2,rgba(255,255,255,.04))}'
+   +'.upl-btn:hover{border-color:var(--red,#e33)}'
+   +'.upl-clear{cursor:pointer;border:1px solid var(--line,#34508f);border-radius:4px;padding:8px 10px;font:600 11px var(--body,sans-serif);color:var(--dim,#cfe0ff);background:transparent}'
+   +'.upl-prev{width:42px;height:42px;object-fit:cover;border:1px solid var(--line,#34508f);border-radius:4px;background:var(--panel,#0a1a3f)}'
+   +'.upl-info{flex-basis:100%;color:var(--muted,#8fa6d6);font-size:10px;line-height:1.5}';
+  document.head.appendChild(st);
+
+  function compress(file,rule){
+    return new Promise((res,rej)=>{
+      if(!/^image\//.test(file.type)) return rej(new Error('File harus berupa gambar (JPG / PNG / WEBP).'));
+      if(file.size>MAX_RAW) return rej(new Error('Ukuran file terlalu besar (maksimal 25 MB).'));
+      const r=new FileReader();
+      r.onerror=()=>rej(new Error('Gagal membaca file.'));
+      r.onload=()=>{
+        const im=new Image();
+        im.onerror=()=>rej(new Error('File bukan gambar yang valid.'));
+        im.onload=()=>{
+          const w0=im.naturalWidth||im.width||1, h0=im.naturalHeight||im.height||1;
+          const sc=Math.min(1,rule.max/Math.max(w0,h0));
+          const cv=document.createElement('canvas');
+          cv.width=Math.max(1,Math.round(w0*sc)); cv.height=Math.max(1,Math.round(h0*sc));
+          const cx=cv.getContext('2d');
+          let out=rule.type; if(out==='auto') out=(file.type==='image/jpeg')?'jpeg':'png';
+          if(out==='jpeg'){ cx.fillStyle='#ffffff'; cx.fillRect(0,0,cv.width,cv.height); }
+          cx.drawImage(im,0,0,cv.width,cv.height);
+          res(out==='jpeg'?cv.toDataURL('image/jpeg',rule.q||0.7):cv.toDataURL('image/png'));
+        };
+        im.src=r.result;
+      };
+      r.readAsDataURL(file);
+    });
+  }
+
+  function attach(inp,rule){
+    inp.dataset.upl='1';
+    inp.style.textOverflow='ellipsis';
+    const row=document.createElement('div'); row.className='upl-row';
+    row.innerHTML='<img class="upl-prev" alt="" style="display:none">'
+      +'<label class="upl-btn">📁 Upload dari perangkat<input type="file" accept="image/*" hidden></label>'
+      +'<button type="button" class="upl-clear" style="display:none">✕ Hapus gambar</button>'
+      +'<small class="upl-info"></small>';
+    inp.insertAdjacentElement('afterend',row);
+    const prev=row.querySelector('.upl-prev'), file=row.querySelector('input[type=file]'),
+          clr=row.querySelector('.upl-clear'), info=row.querySelector('.upl-info');
+    prev.onerror=()=>{ prev.style.display='none'; };
+    function sync(msg){
+      const v=(inp.value||'').trim();
+      if(v){ prev.src=v; prev.style.display='block'; } else { prev.removeAttribute('src'); prev.style.display='none'; }
+      clr.style.display=v?'inline-block':'none';
+      if(msg) info.textContent=msg;
+      else if(/^data:/i.test(v)) info.textContent='✅ Gambar dari perangkat terpasang (~'+Math.round(v.length*0.75/1024)+' KB). Jangan lupa tekan tombol Simpan.';
+      else if(v) info.textContent='🔗 Memakai link gambar. Atau upload dari perangkat dengan tombol di atas.';
+      else info.textContent='Tempel link gambar di kolom atas, atau upload langsung dari perangkat.';
+    }
+    inp.addEventListener('input',()=>sync());
+    clr.addEventListener('click',()=>{ inp.value=''; file.value=''; inp.dispatchEvent(new Event('input',{bubbles:true})); });
+    file.addEventListener('change',async()=>{
+      const f=file.files&&file.files[0]; if(!f) return;
+      info.textContent='⏳ Memproses gambar...';
+      try{
+        inp.value=await compress(f,rule);
+        inp.dispatchEvent(new Event('input',{bubbles:true}));
+      }catch(e){ sync('❌ '+(e.message||'Gagal memproses gambar.')); }
+      file.value='';
+    });
+    sync();
+  }
+
+  function enhance(){
+    document.querySelectorAll(SEL).forEach(inp=>{
+      if(inp.dataset.upl) return;
+      const rule=RULES.find(r=>r.re.test(inp.id));
+      if(rule) attach(inp,rule);
+    });
+  }
+  let timer=0;
+  new MutationObserver(()=>{ if(timer) return; timer=setTimeout(()=>{ timer=0; enhance(); },120); })
+    .observe(document.body,{childList:true,subtree:true});
+  enhance();
+})();
+</script>
+<style id="track-anim">
+/* ===== Animasi foto Track Official SAAS ===== */
+@keyframes trkPop{0%{opacity:0;transform:translateY(34px) scale(.88) rotate(-2deg)}60%{opacity:1;transform:translateY(-6px) scale(1.02) rotate(.8deg)}100%{opacity:1;transform:none}}
+@keyframes trkSway{0%,100%{transform:scale(1.08) rotate(-1.4deg) translate(-1.5%,0)}50%{transform:scale(1.08) rotate(1.4deg) translate(1.5%,-1%)}}
+@keyframes trkWiggle{0%,100%{transform:scale(1.12) rotate(0)}20%{transform:scale(1.12) rotate(-3deg)}40%{transform:scale(1.12) rotate(3deg)}60%{transform:scale(1.12) rotate(-2deg)}80%{transform:scale(1.12) rotate(2deg)}}
+@keyframes trkBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes trkZoomIn{0%{opacity:0;transform:scale(.6) rotate(-4deg)}70%{opacity:1;transform:scale(1.04) rotate(1deg)}100%{opacity:1;transform:none}}
+@keyframes trkShine{0%{left:-60%}100%{left:130%}}
+.track-photos .track-box{animation:trkPop .65s cubic-bezier(.22,1.2,.36,1) both}
+.track-photos .track-box:nth-child(2){animation-delay:.08s}.track-photos .track-box:nth-child(3){animation-delay:.16s}
+.track-photos .track-box:nth-child(4){animation-delay:.24s}.track-photos .track-box:nth-child(5){animation-delay:.32s}
+.track-photos .track-box:nth-child(6){animation-delay:.40s}.track-photos .track-box:nth-child(n+7){animation-delay:.48s}
+.track-box{position:relative}
+.track-box .track-img{transform-origin:center;animation:trkSway 6s ease-in-out infinite;will-change:transform}
+.track-box:nth-child(even) .track-img{animation-duration:7.5s;animation-direction:reverse}
+.track-box:hover .track-img{animation:trkWiggle .7s ease-in-out infinite}
+.track-box::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);pointer-events:none;opacity:0}
+.track-box:hover::after{opacity:1;animation:trkShine .9s ease}
+.track-box:hover{transform:translateY(-6px) scale(1.015);box-shadow:0 14px 36px rgba(0,0,0,.45)}
+.track-lightbox.show img{animation:trkZoomIn .5s cubic-bezier(.22,1.2,.36,1) both,trkBob 4.5s ease-in-out .5s infinite}
+@media (prefers-reduced-motion:reduce){.track-photos .track-box,.track-box .track-img,.track-box:hover .track-img,.track-lightbox.show img{animation:none!important}}
+</style>
 </body>
 </html>

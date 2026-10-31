@@ -5103,6 +5103,83 @@ async function hubAbsenSend(){
  await saveToDB(true); hubAbsenUI(document.getElementById('hub-body'));
 }
 
+/* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
+   Perbaikan: TURN relay (tanpa ini suara gagal di banyak jaringan seluler/CGNAT),
+   antrian ICE candidate, perfect-negotiation (anti tabrakan offer), serialisasi sinyal per peer,
+   auto-retry saat koneksi gagal, dan unlock autoplay audio. */
+const RTC_CFG={iceServers:[
+ {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
+ /* TURN publik gratis untuk uji coba. Untuk produksi, ganti dengan akun TURN sendiri (metered.ca / Cloudflare / coturn). */
+ {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp','turns:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}
+],iceCandidatePoolSize:4};
+const rtcBlocked=[];
+function rtcUnlockAudio(){ while(rtcBlocked.length){ const a=rtcBlocked.pop(); try{ a.play().catch(()=>{}); }catch(_){} } }
+['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,rtcUnlockAudio,{passive:true}));
+function rtcMk(X,u){
+ const S=X.S;
+ if(S.peers[u]) return S.peers[u];
+ const pc=new RTCPeerConnection(RTC_CFG);
+ pc._q=[]; pc._ignore=false;
+ S.stream.getTracks().forEach(t=>pc.addTrack(t,S.stream));
+ pc.onicecandidate=e=>{ if(e.candidate) X.sig({t:'ice',from:S.me,to:u,c:e.candidate}); };
+ pc.ontrack=e=>{
+  let a=document.getElementById(X.pre+u);
+  if(!a){ a=document.createElement('audio'); a.id=X.pre+u; a.autoplay=true; a.playsInline=true; document.body.appendChild(a); }
+  a.srcObject=(e.streams&&e.streams[0])||new MediaStream([e.track]);
+  const p=a.play(); if(p&&p.catch) p.catch(()=>{ if(!rtcBlocked.includes(a)) rtcBlocked.push(a); });
+ };
+ pc.onconnectionstatechange=()=>{
+  const st=pc.connectionState;
+  if(st==='connected'){ if(S.retry) S.retry[u]=0; }
+  else if(st==='failed'||st==='closed'){
+   if(S.peers[u]!==pc) return;
+   X.drop(u);
+   if(st==='failed'&&X.alive()){
+    S.retry=S.retry||{}; S.retry[u]=(S.retry[u]||0)+1;
+    if(S.retry[u]<=3) setTimeout(()=>{ if(X.alive()&&!S.peers[u]) X.sig({t:'hello',from:S.me,to:u}); },1500+Math.random()*1500);
+   }
+  }
+ };
+ S.peers[u]=pc; return pc;
+}
+async function rtcFlush(pc){ const q=pc._q.splice(0); for(const c of q){ try{ await pc.addIceCandidate(c); }catch(e){ console.warn('ice',e); } } }
+function rtcHandle(X,m){
+ const S=X.S;
+ if(!X.alive()||!S.stream||!m||m.from===S.me||(m.to&&m.to!==S.me)) return;
+ const u=m.from; S.chain=S.chain||{};
+ S.chain[u]=(S.chain[u]||Promise.resolve()).then(()=>rtcStep(X,m)).catch(e=>console.warn('voice',e));
+}
+async function rtcStep(X,m){
+ const S=X.S, u=m.from;
+ if(!X.alive()||!S.stream) return;
+ if(m.t==='bye'){ X.drop(u); return; }
+ if(m.t==='hello'){
+  X.drop(u); const pc=rtcMk(X,u);
+  const o=await pc.createOffer(); await pc.setLocalDescription(o);
+  X.sig({t:'offer',from:S.me,to:u,sdp:pc.localDescription}); return;
+ }
+ if(m.t==='offer'){
+  const pc=rtcMk(X,u);
+  const polite=S.me>u;                       /* satu sisi mengalah bila offer bertabrakan */
+  if(pc.signalingState!=='stable'&&!polite){ pc._ignore=true; return; }
+  pc._ignore=false;
+  await pc.setRemoteDescription(m.sdp);
+  await rtcFlush(pc);
+  const a=await pc.createAnswer(); await pc.setLocalDescription(a);
+  X.sig({t:'answer',from:S.me,to:u,sdp:pc.localDescription}); return;
+ }
+ if(m.t==='answer'){
+  const pc=S.peers[u]; if(!pc||pc.signalingState!=='have-local-offer') return;
+  await pc.setRemoteDescription(m.sdp); await rtcFlush(pc); return;
+ }
+ if(m.t==='ice'){
+  const pc=S.peers[u]; if(!pc||pc._ignore) return;
+  if(pc.remoteDescription&&pc.remoteDescription.type){ try{ await pc.addIceCandidate(m.c); }catch(e){ console.warn('ice',e); } }
+  else pc._q.push(m.c);
+ }
+}
+const VCX={get S(){return VC;},pre:'va-',sig:m=>vsig(m),drop:u=>vdrop(u),alive:()=>VC.inCall};
+const GVX={get S(){return GV;},pre:'ga-',sig:m=>gvSig(m),drop:u=>gvDrop(u),alive:()=>!!GV.cur};
 /* ---------- SAAS VOICE (1 channel · WebRTC + Supabase Realtime: signaling & presence) ---------- */
 const VC={ws:null,joined:false,inCall:false,peers:{},stream:null,ref:1,muted:false,roster:{},topic:'realtime:hubvoice-saas-main',me:'',hb:null,ready:false};
 function vcAvatar(u){
@@ -5178,26 +5255,9 @@ async function joinVoice(){
  setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ alert('Gagal masuk voice (Realtime Supabase belum aktif?).'); leaveVoice(true); } },8000);
  vcActions(); vcRoster();
 }
-function vmk(u){
- if(VC.peers[u]) return VC.peers[u];
- const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
- VC.stream.getTracks().forEach(t=>pc.addTrack(t,VC.stream));
- pc.onicecandidate=e=>{ if(e.candidate) vsig({t:'ice',from:VC.me,to:u,c:e.candidate}); };
- pc.ontrack=e=>{ let a=document.getElementById('va-'+u); if(!a){a=document.createElement('audio');a.id='va-'+u;a.autoplay=true;document.body.appendChild(a);} a.srcObject=e.streams[0]; };
- pc.onconnectionstatechange=()=>{ if(['failed','closed'].includes(pc.connectionState)) vdrop(u); };
- VC.peers[u]=pc; return pc;
-}
+function vmk(u){ return rtcMk(VCX,u); }
 function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; document.getElementById('va-'+u)?.remove(); }
-async function vhandle(m){
- if(!VC.inCall||!VC.stream||!m||m.from===VC.me||(m.to&&m.to!==VC.me)) return;
- try{
-  if(m.t==='hello'){ const pc=vmk(m.from); const o=await pc.createOffer(); await pc.setLocalDescription(o); vsig({t:'offer',from:VC.me,to:m.from,sdp:pc.localDescription}); }
-  else if(m.t==='offer'){ const pc=vmk(m.from); await pc.setRemoteDescription(m.sdp); const a=await pc.createAnswer(); await pc.setLocalDescription(a); vsig({t:'answer',from:VC.me,to:m.from,sdp:pc.localDescription}); }
-  else if(m.t==='answer'){ await VC.peers[m.from]?.setRemoteDescription(m.sdp); }
-  else if(m.t==='ice'){ await VC.peers[m.from]?.addIceCandidate(m.c); }
-  else if(m.t==='bye'){ vdrop(m.from); }
- }catch(e){ console.warn('voice',e); }
-}
+function vhandle(m){ rtcHandle(VCX,m); }
 function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); vcActions(); }
 function leaveVoice(silent){
  if(VC.ws&&VC.joined){ vsig({t:'bye',from:VC.me}); vsend('presence',{type:'presence',event:'untrack'}); }
@@ -5528,26 +5588,9 @@ async function gvJoin(id){
  setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ alert('Gagal masuk voice (Realtime Supabase belum aktif?).'); gvLeave(true); } },8000);
  gvRender();
 }
-function gvPeer(u){
- if(GV.peers[u]) return GV.peers[u];
- const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
- GV.stream.getTracks().forEach(t=>pc.addTrack(t,GV.stream));
- pc.onicecandidate=e=>{ if(e.candidate) gvSig({t:'ice',from:GV.me,to:u,c:e.candidate}); };
- pc.ontrack=e=>{ let a=document.getElementById('ga-'+u); if(!a){a=document.createElement('audio');a.id='ga-'+u;a.autoplay=true;document.body.appendChild(a);} a.srcObject=e.streams[0]; };
- pc.onconnectionstatechange=()=>{ if(['failed','closed'].includes(pc.connectionState)) gvDrop(u); };
- GV.peers[u]=pc; return pc;
-}
+function gvPeer(u){ return rtcMk(GVX,u); }
 function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; document.getElementById('ga-'+u)?.remove(); }
-async function gvHandle(m){
- if(!GV.cur||!GV.stream||!m||m.from===GV.me||(m.to&&m.to!==GV.me)) return;
- try{
-  if(m.t==='hello'){ const pc=gvPeer(m.from); const o=await pc.createOffer(); await pc.setLocalDescription(o); gvSig({t:'offer',from:GV.me,to:m.from,sdp:pc.localDescription}); }
-  else if(m.t==='offer'){ const pc=gvPeer(m.from); await pc.setRemoteDescription(m.sdp); const a=await pc.createAnswer(); await pc.setLocalDescription(a); gvSig({t:'answer',from:GV.me,to:m.from,sdp:pc.localDescription}); }
-  else if(m.t==='answer'){ await GV.peers[m.from]?.setRemoteDescription(m.sdp); }
-  else if(m.t==='ice'){ await GV.peers[m.from]?.addIceCandidate(m.c); }
-  else if(m.t==='bye'){ gvDrop(m.from); }
- }catch(e){ console.warn('gvoice',e); }
-}
+function gvHandle(m){ rtcHandle(GVX,m); }
 function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); gvRender(); }
 function gvLeave(silent){
  if(GV.cur&&GV.ws&&GV.joined[GV.cur]===true){ gvSig({t:'bye',from:GV.me}); gvSendRaw(gvTopic(GV.cur),'presence',{type:'presence',event:'untrack'}); }

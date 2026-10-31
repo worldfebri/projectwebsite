@@ -2365,6 +2365,42 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             if(window.__SAAS_UNLOADING) return;   /* refresh bukan "keluar voice" -> jangan hapus */
             try{ const o=JSON.parse(ssGet(SAAS_VOICE_KEY)||'null'); if(!o || o.k===k) ssDel(SAAS_VOICE_KEY); }catch(_){ ssDel(SAAS_VOICE_KEY); }
         }
+        /* ===== EFEK SUARA MASUK / KELUAR VOICE: "<username> masuk voice sayang" / "<username> keluar voice sayang" ===== */
+        let _fxAc=null;
+        function saasChime(up){
+            try{
+                const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return 0;
+                if(!_fxAc) _fxAc=new AC();
+                if(_fxAc.state==='suspended') _fxAc.resume().catch(()=>{});
+                const t0=_fxAc.currentTime+0.02, f=up?[660,880]:[880,587];
+                f.forEach((hz,i)=>{
+                    const o=_fxAc.createOscillator(), g=_fxAc.createGain();
+                    o.type='sine'; o.frequency.value=hz;
+                    const a=t0+i*0.14;
+                    g.gain.setValueAtTime(0.0001,a); g.gain.exponentialRampToValueAtTime(0.18,a+0.02); g.gain.exponentialRampToValueAtTime(0.0001,a+0.2);
+                    o.connect(g); g.connect(_fxAc.destination); o.start(a); o.stop(a+0.22);
+                });
+                return 0.3;
+            }catch(_){ return 0; }
+        }
+        function saasVoiceFx(name,joined,S){
+            try{
+                if(window.__SAAS_UNLOADING || !name) return;
+                if(S && S.deaf && name!==S.me) return;           /* kalau audio dimatikan (deafen), efek orang lain ikut diam */
+                const delay=saasChime(joined);
+                const say=()=>{
+                    try{
+                        if(!('speechSynthesis' in window)) return;
+                        const nice=String(name).replace(/[_.\-]+/g,' ').trim();
+                        const u=new SpeechSynthesisUtterance(nice+(joined?' masuk voice sayang':' keluar voice sayang'));
+                        u.lang='id-ID'; u.rate=1; u.pitch=1.15; u.volume=1;
+                        const v=(speechSynthesis.getVoices()||[]).find(x=>/^id[-_]/i.test(x.lang)); if(v) u.voice=v;
+                        speechSynthesis.speak(u);
+                    }catch(_){}
+                };
+                setTimeout(say,Math.round(delay*1000));
+            }catch(_){}
+        }
         async function saasVoiceResume(){
             let o=null; try{ o=JSON.parse(ssGet(SAAS_VOICE_KEY)||'null'); }catch(_){}
             if(!o || !currentUser || o.user!==currentUser.username) return;
@@ -5894,8 +5930,8 @@ function vcConnect(){
   }
   else if(m.event==='presence_state'){ VC.roster={}; Object.keys(m.payload||{}).forEach(k=>VC.roster[k]=rtcPick(m.payload[k])); vcRoster(); }
   else if(m.event==='presence_diff'){
-   Object.keys(m.payload?.joins||{}).forEach(k=>VC.roster[k]=rtcPick(m.payload.joins[k]));
-   Object.keys(m.payload?.leaves||{}).forEach(k=>{ if(!(m.payload.joins&&m.payload.joins[k])) delete VC.roster[k]; });
+   Object.keys(m.payload?.joins||{}).forEach(k=>{ const isNew=!(k in VC.roster); VC.roster[k]=rtcPick(m.payload.joins[k]); if(isNew&&VC.inCall&&k!==VC.me) saasVoiceFx(k,true,VC); });
+   Object.keys(m.payload?.leaves||{}).forEach(k=>{ if(!(m.payload.joins&&m.payload.joins[k])){ const was=(k in VC.roster); delete VC.roster[k]; if(was&&VC.inCall&&k!==VC.me) saasVoiceFx(k,false,VC); } });
    vcRoster();
   }
   else if(m.event==='broadcast'&&m.payload?.event==='sig') vhandle(m.payload.payload);
@@ -5921,7 +5957,7 @@ async function joinVoice(){
  if(!VC.ws) vcConnect();
  const waitJoin=setInterval(()=>{
   if(!VC.inCall){ clearInterval(waitJoin); return; }
-  if(VC.joined){ clearInterval(waitJoin); vcTrack(); vsig({t:'hello',from:VC.me}); vcRoster(); }
+  if(VC.joined){ clearInterval(waitJoin); vcTrack(); vsig({t:'hello',from:VC.me}); vcRoster(); saasVoiceFx(VC.me,true,VC); }
  },200);
  setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); leaveVoice(true); } },8000);
  vcActions(); vcRoster();
@@ -5932,6 +5968,7 @@ function vhandle(m){ rtcHandle(VCX,m); }
 function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); vcTrack(); vcActions(); vcRoster(); }
 function leaveVoice(silent){
  saasVoiceClear('vc');
+ if(VC.inCall) saasVoiceFx(VC.me,false,VC);
  vidStopAll('vc');
  if(VC.ws&&VC.joined){ vsig({t:'bye',from:VC.me}); vsend('presence',{type:'presence',event:'untrack'}); }
  Object.keys(VC.peers).forEach(vdrop);
@@ -6229,14 +6266,14 @@ function gvConnect(){
   if(!m.topic||!m.topic.startsWith('realtime:gvoice-')) return;
   const id=m.topic.slice('realtime:gvoice-'.length);
   if(m.event==='phx_reply'){
-   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; if(GV.cur===id){ gvTrack(); gvSig({t:'hello',from:GV.me}); } }
+   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; if(GV.cur===id){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); } }
    else if(GV.joined[id]==='pending') delete GV.joined[id];
   }
   else if(m.event==='presence_state'){ GV.roster[id]={}; Object.keys(m.payload||{}).forEach(k=>GV.roster[id][k]=rtcPick(m.payload[k])); gvRender(); }
   else if(m.event==='presence_diff'){
    GV.roster[id]=GV.roster[id]||{};
-   Object.keys(m.payload?.joins||{}).forEach(k=>GV.roster[id][k]=rtcPick(m.payload.joins[k]));
-   Object.keys(m.payload?.leaves||{}).forEach(k=>{ if(!(m.payload.joins&&m.payload.joins[k])) delete GV.roster[id][k]; });
+   Object.keys(m.payload?.joins||{}).forEach(k=>{ const isNew=!(k in GV.roster[id]); GV.roster[id][k]=rtcPick(m.payload.joins[k]); if(isNew&&GV.cur===id&&k!==GV.me) saasVoiceFx(k,true,GV); });
+   Object.keys(m.payload?.leaves||{}).forEach(k=>{ if(!(m.payload.joins&&m.payload.joins[k])){ const was=(k in GV.roster[id]); delete GV.roster[id][k]; if(was&&GV.cur===id&&k!==GV.me) saasVoiceFx(k,false,GV); } });
    gvRender();
   }
   else if(m.event==='broadcast'&&m.payload?.event==='sig'&&id===GV.cur) gvHandle(m.payload.payload);
@@ -6262,7 +6299,7 @@ async function gvJoin(id){
  GV.cur=id; GV.muted=false; GV.deaf=false; GV.me=gvMe(); rtcMeter(GV,GVX);
  saasVoiceSave({k:'gv',id});
  gvConnect();
- if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); }
+ if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); }
  else if(GV.ws&&GV.ws.readyState===1) gvSync();
  setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); gvLeave(true); } },8000);
  gvRender();
@@ -6273,6 +6310,7 @@ function gvHandle(m){ rtcHandle(GVX,m); }
 function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); gvTrack(); gvRender(); }
 function gvLeave(silent){
  saasVoiceClear('gv');
+ if(GV.cur) saasVoiceFx(GV.me,false,GV);
  vidStopAll('gv');
  if(GV.cur&&GV.ws&&GV.joined[GV.cur]===true){ gvSig({t:'bye',from:GV.me}); gvSendRaw(gvTopic(GV.cur),'presence',{type:'presence',event:'untrack'}); }
  Object.keys(GV.peers).forEach(gvDrop);

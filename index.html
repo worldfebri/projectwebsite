@@ -5443,6 +5443,7 @@ const rtcMeta=S=>({user:S.me,ts:Date.now(),muted:!!S.muted,deaf:!!S.deaf,cam:!!S
 const rtcPick=v=>{ const a=v&&v.metas; return (a&&a.length)?(a[a.length-1]||{}):{}; };
 /* ---- PEREDAM NOISE (noise gate adaptif + highpass) & JALUR CADANGAN lewat WebSocket Supabase ---- */
 const RLY_SR=16000;
+const RLY_TG0=0.15, RLY_TGMIN=0.10, RLY_TGMAX=0.5;   /* jitter buffer: awal / minimum / maksimum (detik) */
 const NS_NAMES=['Mati','Ringan','Sedang','Kuat'];
 const NS_P=[null,{mul:2.0,floor:0.35},{mul:2.8,floor:0.12},{mul:4.0,floor:0.03}];
 let NS_LVL=2; try{ const v=parseInt(localStorage.getItem('saas_ns')); if(v>=0&&v<=3) NS_LVL=v; }catch(_){}
@@ -5466,7 +5467,7 @@ function rtcMeter(S,X){
  S._vf={}; S._vt={}; S._vc={}; S._focus=''; S._pop=''; S.camOn=false; S.scrOn=false;
  try{
   const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
-  const ctx=new AC(); S._ac=ctx; if(ctx.resume) ctx.resume().catch(()=>{});
+  let ctx; try{ ctx=new AC({latencyHint:'interactive'}); }catch(_){ ctx=new AC(); } S._ac=ctx; if(ctx.resume) ctx.resume().catch(()=>{});
   if(!ctx.createScriptProcessor) return;
   const sr=ctx.sampleRate, ratio=sr/RLY_SR, holdMax=Math.floor(0.18*sr);
   const src=ctx.createMediaStreamSource(S.stream), hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=100;
@@ -5496,10 +5497,10 @@ function rtcMeter(S,X){
    const k2=Math.floor(n/ratio), bl=new Uint8Array(k2);
    for(let i=0;i<k2;i++){ const a=Math.floor(i*ratio), b=Math.max(a+1,Math.floor((i+1)*ratio)); let t=0; for(let j=a;j<b&&j<n;j++) t+=out[j]; bl[i]=rlyMu(t/(b-a)); }
    grp.push(bl); if(S._outLv>0.01) vgrp=true;
-   if(grp.length>=3){                                                     /* ±128 ms per paket */
+   if(grp.length>=2){                                                     /* ±85 ms per paket (sebelumnya 128 ms) */
     const tot=grp.reduce((s,x)=>s+x.length,0), buf=new Uint8Array(tot); let o=0; grp.forEach(x=>{ buf.set(x,o); o+=x.length; });
     grp=[];
-    if(vgrp){ hang=5; } 
+    if(vgrp){ hang=7; } 
     const send=vgrp||hang>0;
     if(send){
      if(prev){ X.sig({t:'aud',from:S.me,q:S._seq++,d:btoa(String.fromCharCode.apply(null,prev))}); prev=null; }   /* pre-roll */
@@ -5523,19 +5524,22 @@ function rlyPlay(X,m){
  const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
  const pc=S.peers[m.from]; if(pc&&pc.connectionState==='connected') return;     /* audio sudah lewat jalur langsung */
  let bin; try{ bin=atob(m.d); }catch(_){ return; }
- const st=S._pj[m.from]||(S._pj[m.from]={t:0,tg:0.28,q:-1,at:0});
+ const st=S._pj[m.from]||(S._pj[m.from]={t:0,tg:RLY_TG0,q:-1,at:0});
  if(m.q!=null){ if(m.q<=st.q&&st.q-m.q<200) return; st.q=m.q; }
+ const nowT=ctx.currentTime, nowMs=Date.now(), ahead=st.t-nowT;
+ /* antrean sudah jauh melewati target (burst TCP/tunnel setelah macet): buang paket basi supaya delay tidak menumpuk */
+ if(ahead>st.tg+0.9) return;
  const buf=ctx.createBuffer(1,bin.length,RLY_SR), ch=buf.getChannelData(0);
  for(let i=0;i<bin.length;i++) ch[i]=rlyUnmu(bin.charCodeAt(i));
- const nowT=ctx.currentTime, nowMs=Date.now();
- let fade=false;
+ let fade=false, rate=1;
  if(st.t<nowT+0.02){                                                           /* buffer habis / awal bicara */
-  if(st.at&&nowMs-st.at<500) st.tg=Math.min(0.7,st.tg+0.06);                  /* putus saat bicara: perbesar buffer */
+  if(st.at&&nowMs-st.at<500) st.tg=Math.min(RLY_TGMAX,st.tg+0.06);            /* putus saat bicara: perbesar buffer */
+  else if(nowMs-st.at>3000) st.tg=Math.max(RLY_TGMIN,st.tg-0.03);             /* kalimat baru & jaringan lancar: kecilkan buffer pelan-pelan */
   st.t=nowT+st.tg; fade=true;
- }else if(st.t>nowT+1.5){ st.t=nowT+st.tg; fade=true; }                        /* terlalu tertunda: sinkron ulang */
+ }else if(ahead>st.tg+0.25) rate=1.12;                                         /* antrean menumpuk: kejar dengan sedikit lebih cepat (tanpa memotong kata) */
  if(fade){ const f=Math.min(ch.length,80); for(let i=0;i<f;i++) ch[i]*=i/f; }
- const s2=ctx.createBufferSource(); s2.buffer=buf; s2.connect(ctx.destination);
- s2.start(st.t); st.t+=buf.duration; st.at=nowMs; S._rx[m.from]=nowMs;
+ const s2=ctx.createBufferSource(); s2.buffer=buf; if(rate!==1) s2.playbackRate.value=rate; s2.connect(ctx.destination);
+ s2.start(st.t); st.t+=buf.duration/rate; st.at=nowMs; S._rx[m.from]=nowMs;
  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
 }
 /* ---- koneksi per peserta: "perfect negotiation" (tabrakan offer ditangani otomatis, tidak menyambung-nyambung terus) ---- */
@@ -5995,7 +5999,7 @@ function vidLoop(k,kind){
  if(c.lvl!==VID_LVL){ c.lvl=VID_LVL; c.qq=P[2]; c.sc=1; }
  const next=()=>{ if(S._vc&&S._vc[kind]===c) c.t=setTimeout(()=>vidLoop(k,kind),Math.max(40,1000/P[1]-(performance.now()-t0))); };
  const v=c.video, ws=X.ws();
- if(!X.alive()||!X.ready()||!ws||ws.readyState!==1||ws.bufferedAmount>300000||!v.videoWidth||v.readyState<2||!X.roster().some(n=>n!==S.me)) return next();
+ if(!X.alive()||!X.ready()||!ws||ws.readyState!==1||ws.bufferedAmount>40000||!v.videoWidth||v.readyState<2||!X.roster().some(n=>n!==S.me)) return next();
  const sc=Math.min(1,P[0]*c.sc/v.videoWidth), w=Math.max(16,Math.round(v.videoWidth*sc)), h=Math.max(16,Math.round(v.videoHeight*sc));
  const cv=c.cv; if(cv.width!==w) cv.width=w; if(cv.height!==h) cv.height=h;
  try{ cv.getContext('2d').drawImage(v,0,0,w,h); }catch(_){ return next(); }

@@ -3100,6 +3100,10 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                 db.saas.top.push({ title: `Division 0${db.saas.top.length + 1}`, img: "", text: "" });
             }
             if(!Array.isArray(db.saas.bottomMembers)) db.saas.bottomMembers=[];
+            ['highRank','connection','candidate'].forEach(k=>{
+                if(!Array.isArray(db.saas[k])) db.saas[k]=[];
+                db.saas[k]=db.saas[k].filter(x=>x&&typeof x==='object').map(x=>({title:String(x.title||''),img:String(x.img||''),text:String(x.text||'')}));
+            });
             if(!db.saas.bottom || typeof db.saas.bottom !== 'object') db.saas.bottom={img:'',text:''};
             if(typeof db.saas.bottom.img !== 'string') db.saas.bottom.img='';
             if(typeof db.saas.bottom.text !== 'string') db.saas.bottom.text='';
@@ -4717,10 +4721,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                                 <input type="text" id="saas-top-img-${i}" value="${escapeHTML(t.img)}" placeholder="URL Foto SAAS ${i+1}" style="margin-top:8px;">
                                 <textarea id="saas-top-txt-${i}" rows="3" placeholder="Deskripsi SAAS ${i+1}" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
                             </div>`).join('')}
-                            <h3>ALL SYNDICATE MEMBER INTI</h3>
-                            <p style="font-size:11px;color:var(--muted);">Bagian ini tampil sebagai kartu terpisah. Tambah kartu kapan saja, dan atur urutannya dengan menggeser kartu di bawah.</p>
-                            ${sbeEditorHTML()}
-                            <button type="button" class="btn-red" onclick="addSaasBottomMember()">+ Tambah Member Inti</button>
+                            ${saasGroupsAdminHTML()}
                             <h3>Button Discord SAAS</h3>
                             <label style="font-size:12px;color:var(--dim);">Link Discord:</label>
                             <input type="url" id="saas-discord-link" value="${escapeHTML(db.saas.discord.link)}" placeholder="https://discord.gg/...">
@@ -5149,6 +5150,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                 if(imgEl) db.saas.bottomMembers[i].img = imgEl.value.trim();
                 if(txtEl) db.saas.bottomMembers[i].text = txtEl.value.trim();
             });
+            if(typeof sbeSaveGroups==='function') sbeSaveGroups();
             saveSaasEventClubs();
             const discordLink=document.getElementById('saas-discord-link');
             const discordText=document.getElementById('saas-discord-text');
@@ -7229,67 +7231,104 @@ body .btn-group .btn-red{border-radius:999px!important}
 
  /* ===================== 2. INFORMATION SAAS (publik) ===================== */
  const _renderSAAS=renderSAAS;
+ function smSectionHTML(key){
+  const g=SG[key], list=db.saas[key]||[];
+  const cards=list.map((m,i)=>{
+   const t=m.title||defaultTitle(key,i);
+   const img=safeImg(m.img);
+   return `<article class="sm-card"><div class="sm-media">${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(t)}" loading="lazy">`:`<div class="sm-ph">${escapeHTML(t.trim().charAt(0)||'S')}</div>`}</div><div class="sm-body"><h3>${escapeHTML(t)}</h3>${m.text?`<p>${escapeHTML(m.text)}</p>`:''}</div></article>`;
+  }).join('');
+  return `<section class="sm-wrap" data-sect="${key}"><div class="sm-head"><h2>${g.label}</h2><span>${list.length} kartu</span></div>${list.length?`<div class="sm-grid">${cards}</div>`:'<div class="sm-empty">Belum ada kartu di bagian ini.</div>'}</section>`;
+ }
  window.renderSAAS=function(container){
   _renderSAAS(container);
   const grid=container.querySelector('.saas-member-grid'); if(!grid) return;
-  const list=db.saas.bottomMembers||[];
-  const html=`<section class="sm-wrap"><div class="sm-head"><h2>Member Inti SAAS</h2><span>${list.length} kartu</span></div><div class="sm-grid">${
-   list.map((m,i)=>{
-    const t=m.title||(i===0?'ALL SYNDICATE MEMBER INTI':'ALL SYNDICATE MEMBER INTI 0'+(i+1));
-    const img=safeImg(m.img);
-    return `<article class="sm-card"><div class="sm-media">${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(t)}" loading="lazy">`:`<div class="sm-ph">${escapeHTML(t.trim().charAt(0)||'S')}</div>`}</div><div class="sm-body"><h3>${escapeHTML(t)}</h3>${m.text?`<p>${escapeHTML(m.text)}</p>`:''}</div></article>`;
-   }).join('')}</div></section>`;
-  grid.outerHTML=html;
+  grid.outerHTML=['highRank','connection','bottomMembers','candidate'].map(smSectionHTML).join('');
  };
 
  /* ===================== 3. ADMIN: GESER KOTAK MEMBER ===================== */
- window.sbeEditorHTML=function(){
-  const list=db.saas.bottomMembers||[];
-  return `<div class="sbe-hint">↕ Tahan ikon <b>⠿</b> lalu geser untuk mengubah urutan, atau pakai tombol ↑ ↓. Urutan ini yang dilihat semua pengguna di halaman Information SAAS dan otomatis tersimpan.</div>
-  <div id="saas-bottom-members-editor">${list.map((m,i)=>sbeCardHTML(m,i)).join('')}</div>`;
+ const SG={
+  highRank:{label:'HIGH-RANK SAAS',unit:'High-Rank',pfx:'saas-hr',listId:'saas-hr-editor',min:0},
+  connection:{label:'CONNECTION SAAS',unit:'Connection',pfx:'saas-cn',listId:'saas-cn-editor',min:0},
+  bottomMembers:{label:'MEMBER INTI SAAS',unit:'Member Inti',pfx:'saas-bottom',listId:'saas-bottom-members-editor',min:3},
+  candidate:{label:'CANDIDATE SAAS',unit:'Candidate',pfx:'saas-cd',listId:'saas-cd-editor',min:0}
  };
- function sbeCardHTML(m,i){
-  const img=safeImg(m.img);
-  return `<div class="saas-bottom-editor sbe" data-index="${i}">
+ const SG_ORDER=['highRank','connection','bottomMembers','candidate'];
+ window.SAAS_GROUPS=SG;
+ function defaultTitle(key,n){ return key==='bottomMembers'?(n===0?'ALL SYNDICATE MEMBER INTI':'ALL SYNDICATE MEMBER INTI 0'+(n+1)):SG[key].label+' '+(n+1); }
+ const sbeHint='<div class="sbe-hint">↕ Tahan ikon <b>⠿</b> lalu geser untuk mengubah urutan, atau pakai tombol ↑ ↓. Urutan ini yang dilihat semua pengguna di halaman Information SAAS dan otomatis tersimpan.</div>';
+ function sbeGroupEditorHTML(key){
+  const g=SG[key], list=db.saas[key]||[];
+  return `<div id="${g.listId}" class="sbe-list" data-key="${key}">${list.length?list.map((m,i)=>sbeCardHTML(m,i,key)).join(''):'<div class="sbe-none">Belum ada kartu. Tekan tombol tambah di bawah.</div>'}</div>`;
+ }
+ window.sbeEditorHTML=function(){ return sbeHint+sbeGroupEditorHTML('bottomMembers'); };
+ window.saasGroupsAdminHTML=function(){
+  return sbeHint+SG_ORDER.map(k=>{ const g=SG[k];
+   return `<h3>${g.label}</h3><p style="font-size:11px;color:var(--muted);">Tampil sebagai kartu terpisah di halaman Information SAAS. Tambah kartu kapan saja, dan atur urutannya dengan menggeser kartu di bawah.</p>${sbeGroupEditorHTML(k)}<button type="button" class="btn-red" onclick="addSaasGroupItem('${k}')">+ Tambah ${g.unit}</button>`;
+  }).join('');
+ };
+ function sbeCardHTML(m,i,key){
+  const g=SG[key], p=g.pfx, img=safeImg(m.img), total=(db.saas[key]||[]).length;
+  return `<div class="${key==='bottomMembers'?'saas-bottom-editor ':''}sbe" data-index="${i}">
    <div class="sbe-top">
     <div class="sbe-grip" title="Geser untuk mengubah posisi" role="button" aria-label="Geser posisi" onpointerdown="sbeDragStart(event)">⠿</div>
     ${img?`<img class="sbe-thumb" src="${escapeHTML(img)}" alt="">`:''}
-    <div class="sbe-pos">Member Inti ${i+1}<small>Posisi ${i+1} dari ${(db.saas.bottomMembers||[]).length}</small></div>
+    <div class="sbe-pos">${g.unit} ${i+1}<small>Posisi ${i+1} dari ${total}</small></div>
     <div class="sbe-btns">
      <button type="button" class="btn-red" onclick="sbeStep(this,-1)" aria-label="Naik">↑</button>
      <button type="button" class="btn-red" onclick="sbeStep(this,1)" aria-label="Turun">↓</button>
-     <button type="button" class="btn-red" onclick="removeSaasBottomMember(${i})">Hapus</button>
+     <button type="button" class="btn-red" onclick="removeSaasGroupItem('${key}',${i})">Hapus</button>
     </div>
    </div>
-   <input type="text" id="saas-bottom-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul Member Inti" style="margin-top:8px;">
-   <input type="text" id="saas-bottom-img-${i}" value="${escapeHTML(m.img)}" placeholder="URL Foto / Logo Member" style="margin-top:8px;">
-   <textarea id="saas-bottom-txt-${i}" rows="3" placeholder="Deskripsi Member Inti" style="margin-top:8px;">${escapeHTML(m.text)}</textarea>
+   <input type="text" id="${p}-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul ${g.unit}" style="margin-top:8px;">
+   <input type="text" id="${p}-img-${i}" value="${escapeHTML(m.img)}" placeholder="URL Foto / Logo" style="margin-top:8px;">
+   <textarea id="${p}-txt-${i}" rows="3" placeholder="Deskripsi ${g.unit}" style="margin-top:8px;">${escapeHTML(m.text)}</textarea>
   </div>`;
  }
- function sbeList(){ return $('saas-bottom-members-editor'); }
- /* DOM -> db (sesuai urutan DOM sekarang) lalu beri ulang index/id supaya saveAllEdits tetap cocok */
- function sbeCommit(){
-  const list=sbeList(); if(!list) return;
-  const cards=[...list.querySelectorAll('.saas-bottom-editor')];
-  const old=db.saas.bottomMembers||[];
-  const next=cards.map(el=>{
-   const i=+el.dataset.index;
-   const g=k=>(el.querySelector(`#saas-bottom-${k}-${i}`)||{}).value;
-   const base=old[i]||{};
-   return Object.assign({},base,{title:(g('title')||'').trim(),img:(g('img')||'').trim(),text:(g('txt')||'').trim()});
+ /* baca isi form satu bagian dari DOM (null bila editornya tidak sedang tampil) */
+ function sbeReadGroup(key,defaults){
+  const g=SG[key], list=$(g.listId); if(!list) return null;
+  const old=db.saas[key]||[];
+  return [...list.querySelectorAll('.sbe')].map((el,n)=>{
+   const i=+el.dataset.index, q=k=>((el.querySelector(`#${g.pfx}-${k}-${i}`)||{}).value||'').trim();
+   let title=q('title'); if(defaults&&!title) title=defaultTitle(key,n);
+   return Object.assign({},old[i]||{},{title,img:q('img'),text:q('txt')});
   });
+ }
+ window.sbeSaveGroups=function(){ ['highRank','connection','candidate'].forEach(k=>{ const r=sbeReadGroup(k,true); if(r) db.saas[k]=r; }); };
+ function sbeSyncAll(){ SG_ORDER.forEach(k=>{ const r=sbeReadGroup(k,false); if(r) db.saas[k]=r; }); }
+ window.addSaasGroupItem=function(key){
+  if(!SG[key]) return;
+  sbeSyncAll();
+  const arr=db.saas[key]=db.saas[key]||[];
+  arr.push({title:defaultTitle(key,arr.length),img:'',text:''});
+  renderAdminDashboard($('app-content')); showAdminSection('saas');
+ };
+ window.removeSaasGroupItem=function(key,i){
+  const g=SG[key]; if(!g) return;
+  sbeSyncAll();
+  const arr=db.saas[key]||[];
+  if(g.min&&arr.length<=g.min){ alert('Minimal harus ada '+g.min+' bagian '+g.unit+'.'); return; }
+  arr.splice(i,1);
+  renderAdminDashboard($('app-content')); showAdminSection('saas');
+ };
+ window.addSaasBottomMember=function(){ window.addSaasGroupItem('bottomMembers'); };
+ window.removeSaasBottomMember=function(i){ window.removeSaasGroupItem('bottomMembers',i); };
+ /* DOM -> db (sesuai urutan DOM sekarang) lalu beri ulang index/id supaya penyimpanan tetap cocok */
+ function sbeCommit(list){
+  const key=list&&list.dataset.key, g=SG[key]; if(!g) return;
+  const cards=[...list.querySelectorAll('.sbe')];
+  const next=sbeReadGroup(key,false);
   cards.forEach((el,n)=>{
    const i=+el.dataset.index;
-   el.querySelector(`#saas-bottom-title-${i}`).id=`saas-bottom-title-${n}`;
-   el.querySelector(`#saas-bottom-img-${i}`).id=`saas-bottom-img-${n}`;
-   el.querySelector(`#saas-bottom-txt-${i}`).id=`saas-bottom-txt-${n}`;
+   ['title','img','txt'].forEach(k=>{ const x=el.querySelector(`#${g.pfx}-${k}-${i}`); if(x) x.id=`${g.pfx}-${k}-${n}`; });
   });
   cards.forEach((el,n)=>{
    el.dataset.index=n;
-   el.querySelector('.sbe-pos').innerHTML=`Member Inti ${n+1}<small>Posisi ${n+1} dari ${cards.length}</small>`;
-   const rm=el.querySelector('.sbe-btns .btn-red:last-child'); if(rm) rm.setAttribute('onclick',`removeSaasBottomMember(${n})`);
+   el.querySelector('.sbe-pos').innerHTML=`${g.unit} ${n+1}<small>Posisi ${n+1} dari ${cards.length}</small>`;
+   const rm=el.querySelector('.sbe-btns .btn-red:last-child'); if(rm) rm.setAttribute('onclick',`removeSaasGroupItem('${key}',${n})`);
   });
-  db.saas.bottomMembers=next;
+  db.saas[key]=next;
  }
  let sbeTimer=null;
  function sbePersist(){
@@ -7300,17 +7339,17 @@ body .btn-group .btn-red{border-radius:999px!important}
   },700);
  }
  window.sbeStep=function(btn,dir){
-  const card=btn.closest('.saas-bottom-editor'), list=card.parentElement;
+  const card=btn.closest('.sbe'), list=card.parentElement;
   const sib=dir<0?card.previousElementSibling:card.nextElementSibling; if(!sib) return;
   if(dir<0) list.insertBefore(card,sib); else list.insertBefore(sib,card);
-  sbeCommit(); sbePersist();
+  sbeCommit(list); sbePersist();
   card.scrollIntoView({block:'nearest',behavior:'smooth'});
  };
  window.sbeDragStart=function(e){
   if(e.button!==undefined&&e.button!==0) return;
   e.preventDefault();
-  const grip=e.currentTarget, card=grip.closest('.saas-bottom-editor'), list=card.parentElement;
-  const items=[...list.querySelectorAll('.saas-bottom-editor')];
+  const grip=e.currentTarget, card=grip.closest('.sbe'), list=card.parentElement;
+  const items=[...list.querySelectorAll('.sbe')];
   const from=items.indexOf(card);
   const sy=window.scrollY;
   const rects=items.map(el=>{ const r=el.getBoundingClientRect(); return {top:r.top+sy,h:r.height}; });
@@ -7354,7 +7393,7 @@ body .btn-group .btn-red{border-radius:999px!important}
    items.forEach(el=>{ el.classList.remove('shifting','dragging'); el.style.transform=''; });
    if(to!==from){
     if(to>from) list.insertBefore(card,items[to].nextSibling); else list.insertBefore(card,items[to]);
-    sbeCommit(); sbePersist();
+    sbeCommit(list); sbePersist();
    }
   }
   grip.addEventListener('pointermove',move);
@@ -7625,6 +7664,9 @@ body .fu-wrap input.fu-in.fu-in.fu-in.fu-in:focus{border-color:var(--fx-sky2)!im
   body .fu-wrap input.fu-in.fu-in.fu-in.fu-in{padding-right:52px;font-size:15px}
   .fu-card{padding:14px}
 }
+
+.sm-empty{padding:26px 16px;text-align:center;font-size:13px;color:var(--fx-mute);border:1.5px dashed var(--fx-bd);border-radius:18px;background:var(--fx-glass)}
+.sbe-none{padding:12px 4px;font-size:12px;color:var(--dim)}
 
 /* ---------- PLAY MUSIC (band di atas dashboard) ---------- */
 .pm-band{width:90%;max-width:1450px;margin:26px auto 0;position:relative;z-index:21;color:var(--fx-ink)}

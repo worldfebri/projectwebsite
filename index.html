@@ -2187,81 +2187,6 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             <div><span>MODE</span><b>STREET / RACE</b></div>
         </section>
         
-        <!-- ===== PLAY MUSIC pribadi (tanpa masuk voice) ===== -->
-        <section class="pm-band" id="pm-band" aria-label="Pemutar musik pribadi">
-            <button type="button" class="pm-big" id="pm-big" aria-expanded="false" aria-controls="pm-panel" onclick="PM.toggle()">
-                <span class="pm-disc" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12-7.4a1 1 0 0 0 0-1.72l-12-7.4A1 1 0 0 0 7 4.6z"/></svg>
-                    <span class="pm-eq"><i></i><i></i><i></i><i></i></span>
-                </span>
-                <span class="pm-bigtxt">
-                    <b>PLAY MUSIC</b>
-                    <small id="pm-big-sub">Dengerin lagu sendiri — ketik judul atau tempel link YouTube</small>
-                </span>
-                <span class="pm-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-            </button>
-
-            <div class="pm-panel" id="pm-panel"><div>
-                <div class="pm-grid">
-                    <!-- kiri: cari lagu -->
-                    <div class="pm-card">
-                        <h3 class="pm-h">Cari Lagu <small>via YouTube</small></h3>
-                        <div class="pm-form">
-                            <input class="pm-in" id="pm-q" type="text" placeholder="Judul lagu / artis / link YouTube…" autocomplete="off" enterkeyhint="search" aria-label="Cari lagu">
-                            <button type="button" class="pm-go" id="pm-go" onclick="PM.search()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>CARI
-                            </button>
-                        </div>
-                        <div class="pm-recent" id="pm-recent"></div>
-                        <div id="pm-msg"></div>
-                        <ul class="pm-list" id="pm-results" aria-live="polite"></ul>
-                        <p class="pm-note" id="pm-note">Musik ini hanya terdengar di perangkatmu — tidak masuk ke voice siapa pun.</p>
-                    </div>
-
-                    <!-- kanan: sedang diputar + antrian -->
-                    <div class="pm-card">
-                        <h3 class="pm-h">Sedang Diputar <small id="pm-mode"></small></h3>
-                        <div class="pm-np">
-                            <div class="pm-cover" id="pm-cover">🎧</div>
-                            <div class="pm-meta">
-                                <b id="pm-title">Belum ada lagu</b>
-                                <span id="pm-artist">Cari lagu di sebelah kiri, lalu tekan putar</span>
-                                <div class="pm-status" id="pm-status"></div>
-                            </div>
-                        </div>
-                        <div class="pm-bar">
-                            <div class="pm-track ro" id="pm-track" role="progressbar" aria-label="Posisi lagu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="pm-fill" id="pm-fill"></div></div>
-                            <div class="pm-time"><span id="pm-cur">0:00</span><span id="pm-dur">--:--</span></div>
-                        </div>
-                        <div class="pm-ctl">
-                            <button type="button" class="pm-ib" id="pm-shuf" onclick="PM.shuffle()" aria-label="Acak" title="Acak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
-                            <button type="button" class="pm-ib" onclick="PM.prev()" aria-label="Sebelumnya" title="Sebelumnya"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2.5v14H6zM20 5.5v13a.8.8 0 0 1-1.25.66L9.5 12.66a.8.8 0 0 1 0-1.32l9.25-6.5A.8.8 0 0 1 20 5.5z"/></svg></button>
-                            <button type="button" class="pm-ib pm-play" id="pm-play" onclick="PM.playpause()" aria-label="Putar / jeda" title="Putar / jeda"></button>
-                            <button type="button" class="pm-ib" onclick="PM.next()" aria-label="Berikutnya" title="Berikutnya"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5H18v14h-2.5zM4 5.5v13a.8.8 0 0 0 1.25.66l9.25-6.5a.8.8 0 0 0 0-1.32l-9.25-6.5A.8.8 0 0 0 4 5.5z"/></svg></button>
-                            <button type="button" class="pm-ib" id="pm-loop" onclick="PM.loop()" aria-label="Ulangi" title="Ulangi"></button>
-                        </div>
-                        <div class="pm-vol">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-                            <input type="range" id="pm-vol" min="0" max="100" value="80" aria-label="Volume" oninput="PM.volume(this.value)">
-                        </div>
-                        <div class="pm-ytw" id="pm-ytw"><div id="pm-yt"></div></div>
-                        <div class="pm-queue">
-                            <h3 class="pm-h">Antrian <small id="pm-qcount"></small></h3>
-                            <ul class="pm-list" id="pm-queue"></ul>
-                        </div>
-                    </div>
-                </div>
-            </div></div>
-        </section>
-
-        <!-- mini player: muncul kalau lagu sedang ada & panel di luar layar -->
-        <div class="pm-mini" id="pm-mini" role="region" aria-label="Mini player">
-            <div class="pm-mc" id="pm-mc" onclick="PM.reveal()"></div>
-            <div class="pm-mt" onclick="PM.reveal()"><b id="pm-mt">—</b><span id="pm-ms"></span></div>
-            <button type="button" class="pm-ib" id="pm-mplay" onclick="PM.playpause()" aria-label="Putar / jeda"></button>
-            <button type="button" class="pm-ib" onclick="PM.next()" aria-label="Berikutnya"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5H18v14h-2.5zM4 5.5v13a.8.8 0 0 0 1.25.66l9.25-6.5a.8.8 0 0 0 0-1.32l-9.25-6.5A.8.8 0 0 0 4 5.5z"/></svg></button>
-        </div>
-
         <!-- Container Utama Render JavaScript -->
         <div class="content-container" id="app-content">
             <!-- JS Injects HTML Here -->
@@ -5917,7 +5842,7 @@ function vsTileHTML(k,t){
  const S=vsS(k), cid=k==='gv'?GV.cur:'';
  const media=(t.me&&t.kind==='scr')?'':t.me?`<video class="vs-vid${t.kind==='cam'?' mir':''}" muted playsinline autoplay></video>`:`<img class="vs-vid" alt=""${S._vf&&S._vf[t.key]?` src="${S._vf[t.key]}"`:''}>`;
  const inner=t.kind==='cam'?`<div class="vs-avwrap">${vcAvatar(t.u)}</div>`:(t.me?'<div class="vs-wait">🖥️ Layarmu sedang dibagikan</div>':'<div class="vs-wait">Memuat layar…</div>');
- const lbl=`<div class="vs-lbl"><span class="vs-name">${escapeHTML(t.u)}${t.me?' (kamu)':''}${t.kind==='scr'?' · layar':''}</span>${t.kind==='scr'?'<span class="vs-live">LIVE</span>':''}${t.kind==='cam'&&t.muted?`<span class="vs-mi">${VIC.micoff}</span>`:''}${t.kind==='cam'&&t.deaf?`<span class="vs-mi">${VIC.headoff}</span>`:''}</div>`;
+ const lbl=`<div class="vs-lbl"><span class="vs-name">${escapeHTML(t.u)}${(()=>{ const _u=vcUser(t.u); return _u&&_u.icName?' · '+escapeHTML(_u.icName):''; })()}${t.me?' (kamu)':''}${t.kind==='scr'?' · layar':''}</span>${t.kind==='scr'?'<span class="vs-live">LIVE</span>':''}${t.kind==='cam'&&t.muted?`<span class="vs-mi">${VIC.micoff}</span>`:''}${t.kind==='cam'&&t.deaf?`<span class="vs-mi">${VIC.headoff}</span>`:''}</div>`;
  return `<div class="vs-tile ${t.kind}${t.me?' mine':''}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}${t.kind==='scr'?`<button class="vs-tfs" data-a="tilefs" data-key="${escapeHTML(t.key)}" title="Perbesar / layar penuh">⛶</button>`:''}</div>`;
 }
 function vsMount(k,host){
@@ -6307,10 +6232,45 @@ function vcClose(){
  try{VC.ws?.close();}catch(_){}
  VC.ws=null; VC.joined=false; VC.roster={};
 }
+/* ---- Wajib isi NAMA IC sebelum masuk SAAS VOICE (sistem sama seperti Chat Public IC) ---- */
+function voiceAskIC(){
+ return new Promise(resolve=>{
+  const me=getUser(currentUser.username); if(!me){ resolve(null); return; }
+  const old=document.getElementById('vic-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='vic-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(4,20,70,.78);display:grid;place-items:center;padding:20px';
+  ov.innerHTML=`<div class="card" style="max-width:420px;width:100%;min-width:0;margin:0">
+   <h2 class="card-title" style="font-size:22px">NAMA IC</h2>
+   <p style="margin:0 0 6px">Masukkan nama IC kamu untuk masuk <b>SAAS VOICE</b>. Nama ini akan tampil di channel voice.</p>
+   <div class="ic-name-form show">
+    <input id="vic-in" maxlength="40" autocomplete="off" placeholder="Masukkan nama IC kamu...">
+    <button type="button" class="btn-red" id="vic-ok">MASUK VOICE</button>
+    <button type="button" class="btn-red" id="vic-no" style="background:transparent">BATAL</button>
+   </div></div>`;
+  document.body.appendChild(ov);
+  const inp=ov.querySelector('#vic-in'); inp.value=me.icName||currentUser.icName||''; setTimeout(()=>{ try{inp.focus();inp.select();}catch(_){} },30);
+  const done=v=>{ ov.remove(); resolve(v); };
+  ov.querySelector('#vic-no').onclick=()=>done(null);
+  const ok=async()=>{
+   const name=(inp.value||'').trim();
+   if(name.length<2) return alert('Nama IC minimal 2 karakter.');
+   if(name.length>40) return alert('Nama IC maksimal 40 karakter.');
+   me.icName=name; currentUser.icName=name;
+   try{ localStorage.setItem('saas_session', JSON.stringify(currentUser)); }catch(_){}
+   const saved=await saveToDB(true);
+   if(!saved && sbConfig.url && sbConfig.key) alert('Nama IC tersimpan di akun, tetapi sinkronisasi ke database gagal. Coba lagi nanti.');
+   done(name);
+  };
+  ov.querySelector('#vic-ok').onclick=ok;
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } else if(e.key==='Escape') done(null); });
+ });
+}
 async function joinVoice(){
  if(!canHub('voice')) return alert('Kamu tidak punya role untuk masuk SAAS VOICE.');
  if(!navigator.mediaDevices) return alert('Voice butuh HTTPS dan browser yang mendukung mikrofon.');
  if(VC.inCall) return;
+ if(window.__SAAS_VOICE_AUTO){ if(!String((getUser(currentUser.username)||{}).icName||currentUser.icName||'').trim()) return; }   /* auto-rejoin: cukup pakai nama IC yang tersimpan */
+ else { const ic=await voiceAskIC(); if(!ic) return; if(VC.inCall) return; }
  try{ VC.stream=await micPick(); if(!VC.stream) return; }
  catch(e){ if(window.__SAAS_VOICE_AUTO) return; return alert('Mikrofon tidak bisa diakses: '+e.message); }
  VC.inCall=true; VC.muted=false; VC.deaf=false; VC.me=currentUser.username;
@@ -7236,9 +7196,9 @@ body .btn-group .btn-red{border-radius:999px!important}
   const cards=list.map((m,i)=>{
    const t=m.title||defaultTitle(key,i);
    const img=safeImg(m.img);
-   return `<article class="sm-card"><div class="sm-media">${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(t)}" loading="lazy">`:`<div class="sm-ph">${escapeHTML(t.trim().charAt(0)||'S')}</div>`}</div><div class="sm-body"><h3>${escapeHTML(t)}</h3>${m.text?`<p>${escapeHTML(m.text)}</p>`:''}</div></article>`;
+   return `<div class="card"><h2 class="card-title">${escapeHTML(t)}</h2>${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(t)}" loading="lazy">`:''}${m.text?`<p>${escapeHTML(m.text)}</p>`:''}</div>`;
   }).join('');
-  return `<section class="sm-wrap" data-sect="${key}"><div class="sm-head"><h2>${g.label}</h2><span>${list.length} kartu</span></div>${list.length?`<div class="sm-grid">${cards}</div>`:'<div class="sm-empty">Belum ada kartu di bagian ini.</div>'}</section>`;
+  return `<section class="sm-wrap" data-sect="${key}"><div class="sm-head"><h2>${g.label}</h2><span>${list.length} kartu</span></div>${list.length?`<div class="saas-grid">${cards}</div>`:'<div class="sm-empty">BELUM ADA MEMBER TERDATA</div>'}</section>`;
  }
  window.renderSAAS=function(container){
   _renderSAAS(container);
@@ -7577,7 +7537,7 @@ body .btn-group .btn-red{border-radius:999px!important}
 
 <style>
 /* =====================================================================
-   SAAS v6 — UI Cari Pengguna baru (.fu-*) + PLAY MUSIC pribadi (.pm-*)
+   SAAS v6 — UI Cari Pengguna baru (.fu-*)
    Sengaja ditaruh paling akhir supaya menang atas lapisan tema lama.
    ===================================================================== */
 :root{
@@ -7668,481 +7628,8 @@ body .fu-wrap input.fu-in.fu-in.fu-in.fu-in:focus{border-color:var(--fx-sky2)!im
 .sm-empty{padding:26px 16px;text-align:center;font-size:13px;color:var(--fx-mute);border:1.5px dashed var(--fx-bd);border-radius:18px;background:var(--fx-glass)}
 .sbe-none{padding:12px 4px;font-size:12px;color:var(--dim)}
 
-/* ---------- PLAY MUSIC (band di atas dashboard) ---------- */
-.pm-band{width:90%;max-width:1450px;margin:26px auto 0;position:relative;z-index:21;color:var(--fx-ink)}
-.pm-big{position:relative;display:flex;align-items:center;gap:22px;width:100%;min-height:104px;padding:16px 26px 16px 18px;border:0;border-radius:26px;cursor:pointer;text-align:left;overflow:hidden;color:#fff;
-  background:linear-gradient(115deg,#0f5bff 0%,#2f86ff 38%,#38bdf8 78%,#7dd3fc 100%);
-  box-shadow:0 16px 44px rgba(15,91,255,.5),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 0 rgba(3,16,52,.18);
-  transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s;-webkit-tap-highlight-color:transparent}
-.pm-big:before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.38) 48%,transparent 66%);transform:translateX(-120%);animation:pmSheen 4.6s ease-in-out infinite}
-.pm-big:after{content:"";position:absolute;right:-40px;bottom:-70px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.28),transparent 66%);pointer-events:none}
-.pm-big:hover{transform:translateY(-3px);box-shadow:0 22px 54px rgba(15,91,255,.62),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 0 rgba(3,16,52,.18)}
-.pm-big:active{transform:translateY(0) scale(.99)}
-.pm-big:focus-visible{outline:3px solid #fff;outline-offset:4px}
-@keyframes pmSheen{0%,55%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
-.pm-disc{position:relative;flex:none;width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;color:#0f5bff;box-shadow:0 8px 22px rgba(3,16,52,.35);z-index:1}
-.pm-disc:before{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(255,255,255,.65);animation:pmRing 2.4s ease-out infinite}
-.pm-disc svg{width:34px;height:34px;margin-left:4px}
-.pm-eq{display:none;align-items:flex-end;gap:4px;height:30px}
-.pm-eq i{width:6px;border-radius:3px;background:linear-gradient(#0f5bff,#38bdf8);height:30%;animation:pmEq .9s ease-in-out infinite}
-.pm-eq i:nth-child(2){animation-delay:-.3s}.pm-eq i:nth-child(3){animation-delay:-.6s}.pm-eq i:nth-child(4){animation-delay:-.15s}
-@keyframes pmEq{0%,100%{height:22%}50%{height:100%}}
-@keyframes pmRing{0%{transform:scale(.9);opacity:.9}100%{transform:scale(1.35);opacity:0}}
-.pm-band.playing .pm-disc svg{display:none}.pm-band.playing .pm-eq{display:flex}
-.pm-band:not(.playing) .pm-disc:before{animation-play-state:paused;opacity:.5}
-.pm-bigtxt{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-.pm-bigtxt b{font:800 clamp(34px,6vw,58px)/.95 var(--display);letter-spacing:3px;text-transform:uppercase;text-shadow:0 3px 14px rgba(3,16,52,.35)}
-.pm-bigtxt small{font-size:13px;font-weight:600;letter-spacing:.3px;color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pm-chev{position:relative;z-index:1;flex:none;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(3,16,52,.28);border:1px solid rgba(255,255,255,.35);transition:transform .35s}
-.pm-chev svg{width:20px;height:20px}
-.pm-band.open .pm-chev{transform:rotate(180deg)}
-
-.pm-panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .42s cubic-bezier(.2,.8,.2,1),margin .42s}
-.pm-band.open .pm-panel{grid-template-rows:1fr;margin-top:14px}
-.pm-panel>div{min-height:0;overflow:hidden}
-.pm-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;padding:2px}
-.pm-card{border:1px solid var(--fx-bd);border-radius:22px;padding:18px;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.05));box-shadow:var(--fx-sh);backdrop-filter:blur(12px);min-width:0}
-.pm-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font:800 18px var(--display);letter-spacing:1.4px;text-transform:uppercase}
-.pm-h small{font:600 11px var(--body);letter-spacing:.3px;color:var(--fx-mute);text-transform:none}
-.pm-form{display:flex;gap:10px}
-body .pm-band input.pm-in.pm-in.pm-in.pm-in{flex:1;min-width:0;height:50px;padding:0 16px!important;font-size:15px;border-radius:15px!important;background:rgba(3,16,52,.55)!important;border:1.5px solid var(--fx-bd)!important;color:#fff!important}
-body .pm-band input.pm-in.pm-in.pm-in.pm-in:focus{border-color:var(--fx-sky2)!important;box-shadow:0 0 0 4px rgba(56,189,248,.25)!important}
-.pm-go{flex:none;display:inline-flex;align-items:center;gap:8px;height:50px;padding:0 20px;border:0;border-radius:15px;cursor:pointer;font:800 14px var(--body);letter-spacing:.6px;color:#0a3a9c;background:linear-gradient(135deg,#fff,#cfe3ff);transition:.18s}
-.pm-go:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.28)}
-.pm-go:disabled{opacity:.6;cursor:wait;transform:none}
-.pm-go svg{width:17px;height:17px}
-.pm-recent{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
-.pm-recent button{border:1px solid var(--fx-bd);background:var(--fx-glass);color:var(--fx-mute);font:600 12px var(--body);padding:6px 12px;border-radius:999px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:.15s}
-.pm-recent button:hover{color:#fff;background:var(--fx-glass2)}
-.pm-note{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--fx-mute)}
-.pm-err{margin:12px 0 0;padding:11px 14px;border-radius:13px;font-size:13px;line-height:1.5;background:rgba(255,80,110,.14);border:1px solid rgba(255,120,150,.4);color:#ffd6df}
-.pm-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:430px;overflow-y:auto;padding-right:3px}
-.pm-row{display:flex;align-items:center;gap:12px;padding:8px;border-radius:15px;background:rgba(3,16,52,.32);border:1px solid transparent;transition:.16s}
-.pm-row:hover{background:rgba(3,16,52,.5);border-color:var(--fx-bd)}
-.pm-row.cur{border-color:var(--fx-sky2);background:rgba(56,189,248,.16)}
-.pm-th{position:relative;flex:none;width:76px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#0a3a9c center/cover no-repeat}
-.pm-th em{position:absolute;right:4px;bottom:4px;font:700 10px var(--body);font-style:normal;padding:2px 5px;border-radius:5px;background:rgba(0,0,0,.72);color:#fff}
-.pm-ti{flex:1;min-width:0;cursor:pointer}
-.pm-ti b{display:block;font-size:13.5px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pm-ti span{display:block;margin-top:2px;font-size:11.5px;color:var(--fx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pm-ac{flex:none;display:flex;gap:6px}
-.pm-ib{width:38px;height:38px;border-radius:12px;border:1px solid var(--fx-bd);background:var(--fx-glass);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.16s}
-.pm-ib:hover{background:var(--fx-glass2);transform:translateY(-1px)}
-.pm-ib.pri{background:#fff;color:#0a3a9c;border-color:#fff}
-.pm-ib svg{width:17px;height:17px}
-.pm-skel{height:62px;border-radius:15px;background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.05) 70%) 0 0/200% 100%;animation:pmSk 1.2s linear infinite}
-@keyframes pmSk{to{background-position:-200% 0}}
-.pm-np{display:flex;gap:16px;align-items:center}
-.pm-cover{flex:none;width:112px;aspect-ratio:1;border-radius:18px;background:linear-gradient(145deg,#1a62ec,#061a4d) center/cover no-repeat;box-shadow:0 10px 26px rgba(2,12,40,.5);display:flex;align-items:center;justify-content:center;font-size:40px}
-.pm-meta{min-width:0;flex:1}
-.pm-meta b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:16px;line-height:1.3}
-.pm-meta span{display:block;margin-top:4px;font-size:12px;color:var(--fx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pm-status{margin-top:7px;font-size:11.5px;font-weight:700;letter-spacing:.3px;color:var(--fx-sky2);min-height:15px}
-.pm-bar{margin-top:18px}
-.pm-track{position:relative;height:8px;border-radius:99px;background:rgba(255,255,255,.16);cursor:pointer;overflow:hidden}
-.pm-track.ro{cursor:default}
-.pm-fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:linear-gradient(90deg,#38bdf8,#fff)}
-.pm-time{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--fx-mute);font-variant-numeric:tabular-nums}
-.pm-ctl{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px}
-.pm-ctl .pm-ib{width:44px;height:44px;border-radius:50%}
-.pm-ctl .pm-ib.on{background:rgba(56,189,248,.28);border-color:var(--fx-sky2);color:var(--fx-sky2)}
-.pm-ctl .pm-play{width:64px;height:64px;background:#fff;color:#0f5bff;border-color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.32)}
-.pm-ctl .pm-play svg{width:26px;height:26px}
-.pm-vol{display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--fx-mute)}
-.pm-vol svg{width:18px;height:18px;flex:none}
-.pm-vol input[type=range]{flex:1;height:6px;-webkit-appearance:none;appearance:none;border-radius:99px;background:linear-gradient(90deg,#fff var(--v,80%),rgba(255,255,255,.2) var(--v,80%))!important;border:0!important;padding:0!important;cursor:pointer}
-.pm-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.pm-vol input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:#fff}
-.pm-ytw{display:none;margin-top:16px;border-radius:16px;overflow:hidden;aspect-ratio:16/9;background:#000;border:1px solid var(--fx-bd)}
-.pm-ytw.on{display:block}
-.pm-ytw iframe{width:100%;height:100%;border:0}
-.pm-queue{margin-top:20px}
-.pm-queue .pm-list{max-height:250px}
-.pm-qn{flex:none;width:22px;text-align:center;font:700 12px var(--body);color:var(--fx-mute)}
-.pm-row.cur .pm-qn{color:var(--fx-sky2)}
-.pm-empty{padding:22px 10px;text-align:center;font-size:13px;color:var(--fx-mute)}
-
-/* mini player (muncul saat panel di luar layar) */
-.pm-mini{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:900;display:flex;align-items:center;gap:10px;max-width:min(560px,calc(100vw - 24px));padding:8px 10px 8px 8px;border-radius:999px;
-  background:rgba(6,26,77,.88);border:1px solid var(--fx-bd);box-shadow:0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(14px);color:#fff;
-  transform:translate(-50%,140%);opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s}
-.pm-mini.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
-.pm-mini .pm-mc{flex:none;width:44px;height:44px;border-radius:50%;background:#0a3a9c center/cover;cursor:pointer}
-.pm-mini .pm-mt{min-width:0;flex:1;cursor:pointer;padding-right:4px}
-.pm-mini .pm-mt b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
-.pm-mini .pm-mt span{display:block;font-size:11px;color:var(--fx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pm-mini .pm-ib{width:38px;height:38px;border-radius:50%}
-
-@media(max-width:900px){
-  .pm-band{width:94%}
-  .pm-grid{grid-template-columns:1fr}
-}
-@media(max-width:560px){
-  .pm-big{min-height:88px;gap:14px;padding:12px 16px 12px 12px;border-radius:22px}
-  .pm-disc{width:58px;height:58px}.pm-disc svg{width:28px;height:28px}
-  .pm-bigtxt small{font-size:12px}
-  .pm-bigtxt b{font-size:31px;letter-spacing:1.5px;white-space:nowrap}
-  .pm-chev{width:38px;height:38px}
-  .pm-form{flex-direction:column}.pm-go{justify-content:center}
-  .pm-np{flex-direction:column;align-items:flex-start}
-  .pm-cover{width:100%;aspect-ratio:16/9;border-radius:16px}
-  .pm-th{width:64px}
-  .pm-mini{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
-}
-@media(prefers-reduced-motion:reduce){
-  .pm-big:before,.pm-disc:before,.pm-eq i,.fu-anim .fu-card,.pm-skel{animation:none!important}
-  .pm-panel,.fu-card,.pm-mini{transition:none!important}
-}
 
 </style>
-<script>
-/* =====================================================================
-   PLAY MUSIC pribadi — dengerin lagu sendiri tanpa masuk voice.
-   Cara kerja:
-     1. Cari judul lagu  -> server SAAS (yt-dlp) mencari di YouTube  -> daftar hasil.
-     2. Putar            -> audio YouTube di-stream lewat server SAAS ke <audio> di perangkat ini.
-     3. Cadangan         -> kalau server gagal/menolak, otomatis pindah ke pemutar resmi YouTube (iframe).
-   Musik ini hanya terdengar di perangkat pengguna, tidak dikirim ke voice siapa pun.
-   URL & token server dibaca dari pengaturan voice yang sama (Admin -> Server & Musik).
-   ===================================================================== */
-(function(){
-'use strict';
-const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ID_RE=/^[A-Za-z0-9_-]{11}$/;
-const store={
-  get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(_){ return d; } },
-  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} }
-};
-const ICO={
-  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12-7.4a1 1 0 0 0 0-1.72l-12-7.4A1 1 0 0 0 7 4.6z"/></svg>',
-  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4.2" height="15" rx="1.2"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2"/></svg>',
-  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
-  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-  loop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>@</svg>'
-};
-const thumb=id=>'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg';
-const fmt=s=>{ s=Math.max(0,Math.floor(+s||0)); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60; return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(r).padStart(2,'0'); };
-const toast=(m,ms)=>{ try{ if(typeof showToast==='function') return showToast(m,false,ms||2600); }catch(_){} };
-
-const S={
-  open:false, inView:true,
-  results:[], loading:false, msg:'',
-  queue:[], idx:-1, loaded:false,
-  playing:false, mode:'stream', status:'', err:'',
-  pos:0, dur:0, vol:.8, loop:'off', shuf:false,
-  tok:0, wd:0, poll:0
-};
-
-/* ---------- server (memakai pengaturan voice yang sama) ---------- */
-function server(){
-  let u='',t='';
-  try{
-    const c=(typeof voiceCfg==='function'?voiceCfg():null)||{};
-    u=(c.url||localStorage.getItem('voice_url')||(typeof VOICE_SERVER_URL!=='undefined'?VOICE_SERVER_URL:'')||'').trim();
-    t=c.token||localStorage.getItem('voice_token')||(typeof VOICE_SERVER_TOKEN!=='undefined'?VOICE_SERVER_TOKEN:'')||'';
-  }catch(_){}
-  if(!u) return null;
-  return { base:u.replace(/\/+$/,'').replace(/^ws/i,'http'), token:t };
-}
-function url(path,params){
-  const s=server(); if(!s) throw new Error('Server musik belum diatur (Admin → Server & Musik).');
-  const u=new URL(s.base+path);
-  Object.keys(params||{}).forEach(k=>u.searchParams.set(k,params[k]));
-  u.searchParams.set('apikey',s.token||'public');
-  return u.toString();
-}
-function clientYtId(q){
-  const m=String(q).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([A-Za-z0-9_-]{11})/i);
-  return m?m[1]:'';
-}
-const clean=a=>(Array.isArray(a)?a:[]).map(e=>({id:String(e&&e.id||''),title:String(e&&e.title||'Tanpa judul').slice(0,200),artist:String(e&&e.artist||'').slice(0,100),dur:Math.max(0,+(e&&e.dur)||0)})).filter(e=>ID_RE.test(e.id));
-const cur=()=>S.queue[S.idx]||null;
-const save=()=>store.set('pm_q',{q:S.queue.slice(0,40),i:S.idx});
-
-/* ---------- pemutar: stream server ---------- */
-const A=new Audio(); A.preload='none';
-A.addEventListener('playing',()=>{ if(S.mode!=='stream') return; clearTimeout(S.wd); S.playing=true; S.status=''; S.err=''; paintNow(); });
-A.addEventListener('pause',()=>{ if(S.mode!=='stream'||!A.getAttribute('src')) return; S.playing=false; paintNow(); });
-A.addEventListener('waiting',()=>{ if(S.mode!=='stream'||!A.getAttribute('src')) return; S.status='Memuat…'; paintNow(); });
-A.addEventListener('timeupdate',()=>{ if(S.mode!=='stream') return; S.pos=A.currentTime; paintProgress(); });
-A.addEventListener('ended',()=>{ if(S.mode==='stream') next(true); });
-A.addEventListener('error',()=>{ if(S.mode!=='stream'||!A.getAttribute('src')) return; fallback(S.tok,'Server musik tidak merespons'); });
-
-/* ---------- pemutar: YouTube resmi (cadangan) ---------- */
-let YTP=null, ytLoading=null;
-function loadYT(){
-  if(window.YT&&window.YT.Player) return Promise.resolve();
-  if(ytLoading) return ytLoading;
-  ytLoading=new Promise((ok,no)=>{
-    const prev=window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady=()=>{ try{ prev&&prev(); }catch(_){} ok(); };
-    const s=document.createElement('script'); s.src='https://www.youtube.com/iframe_api';
-    s.onerror=()=>{ ytLoading=null; no(new Error('Pemutar YouTube tidak bisa dimuat (cek koneksi internet).')); };
-    document.head.appendChild(s);
-  });
-  return ytLoading;
-}
-async function ytPlay(t,startAt){
-  await loadYT();
-  $('pm-ytw').classList.add('on');
-  const start=startAt>5?Math.floor(startAt):0;
-  if(!YTP){
-    await new Promise(res=>{
-      const vars={autoplay:1,playsinline:1,rel:0,modestbranding:1,start:start};
-      if(/^https?:$/.test(location.protocol)) vars.origin=location.origin;
-      YTP=new YT.Player('pm-yt',{width:'100%',height:'100%',videoId:t.id,playerVars:vars,
-        events:{ onReady:e=>{ e.target.setVolume(S.vol*100); res(); }, onStateChange:ytState, onError:ytErr }});
-    });
-  } else YTP.loadVideoById({videoId:t.id,startSeconds:start});
-  YTP.setVolume(S.vol*100);
-  clearInterval(S.poll);
-  S.poll=setInterval(()=>{
-    if(S.mode!=='yt'||!YTP||!YTP.getCurrentTime) return;
-    S.pos=YTP.getCurrentTime()||0; const d=YTP.getDuration&&YTP.getDuration(); if(d>0) S.dur=d;
-    paintProgress();
-  },500);
-}
-function ytState(e){
-  if(S.mode!=='yt') return;
-  const st=e.data;
-  if(st===0) next(true);
-  else if(st===1){ S.playing=true; S.status='Mode YouTube (cadangan)'; S.err=''; }
-  else if(st===2){ S.playing=false; }
-  else if(st===3){ S.status='Memuat…'; }
-  paintNow();
-}
-function ytErr(e){
-  if(S.mode!=='yt') return;
-  S.playing=false; S.err='Video ini tidak bisa diputar lewat pemutar tersemat (kode '+e.data+').';
-  paintNow();
-  const tk=S.tok;
-  setTimeout(()=>{ if(S.mode==='yt'&&S.tok===tk&&S.err&&S.queue.length>1){ S.err=''; next(true); } },2500);
-}
-
-/* ---------- kontrol ---------- */
-function stopAll(){
-  clearTimeout(S.wd); clearInterval(S.poll);
-  try{ A.pause(); A.removeAttribute('src'); A.load(); }catch(_){}
-  try{ YTP&&YTP.stopVideo&&YTP.stopVideo(); }catch(_){}
-  $('pm-ytw').classList.remove('on');
-  S.playing=false;
-}
-function load(t,forceYT){
-  if(!t) return;
-  const tk=++S.tok;
-  stopAll();
-  S.loaded=true; S.pos=0; S.dur=t.dur||0; S.status='Memuat…'; S.err='';
-  if(!forceYT&&server()){
-    S.mode='stream';
-    try{ A.src=url('/music/stream',{id:t.id}); }catch(e){ return fallback(tk,e.message); }
-    A.volume=S.vol;
-    const p=A.play(); if(p&&p.catch) p.catch(e=>{ if(e&&e.name==='NotAllowedError'&&S.tok===tk){ S.status='Tekan tombol putar untuk mulai'; paintNow(); } });
-    S.wd=setTimeout(()=>{ if(S.tok===tk&&!S.playing) fallback(tk,'Server lambat merespons'); },30000);
-  } else fallback(tk,server()?'':'Server musik belum diatur');
-  media(); paintAll();
-}
-function fallback(tk,why){
-  if(S.tok!==tk) return;
-  const t=cur(); if(!t) return;
-  const resume=S.pos;
-  clearTimeout(S.wd);
-  try{ A.pause(); A.removeAttribute('src'); A.load(); }catch(_){}
-  S.mode='yt'; S.playing=false; S.status='Beralih ke YouTube…'; S.err='';
-  paintAll();
-  ytPlay(t,resume).catch(e=>{ if(S.tok===tk){ S.err=(why?why+'. ':'')+e.message; S.status=''; paintNow(); } });
-}
-function play(i){ if(i<0||i>=S.queue.length) return; S.idx=i; save(); load(S.queue[i]); paintQueue(); paintResults(); }
-function playNow(t){
-  let i=S.queue.findIndex(x=>x.id===t.id);
-  if(i<0){ i=S.idx<0?S.queue.length:S.idx+1; S.queue.splice(i,0,t); }
-  play(i);
-}
-function add(t,silent){
-  if(S.queue.some(x=>x.id===t.id)){ if(!silent) toast('Lagu itu sudah ada di antrian'); return false; }
-  S.queue.push(t); if(S.idx<0) S.idx=0; save(); paintQueue(); paintNow();
-  if(!silent) toast('➕ Ditambahkan ke antrian'); return true;
-}
-function next(auto){
-  if(!S.queue.length) return;
-  if(auto&&S.loop==='one') return load(cur());
-  let n;
-  if(S.shuf&&S.queue.length>1){ do{ n=Math.floor(Math.random()*S.queue.length); }while(n===S.idx); }
-  else n=S.idx+1;
-  if(n>=S.queue.length){ if(S.loop==='all'||!auto) n=0; else return finish(); }
-  play(n);
-}
-function finish(){
-  S.tok++; stopAll(); S.loaded=false; S.status='Antrian selesai'; S.pos=0; paintAll();
-}
-function prev(){
-  if(!S.queue.length) return;
-  if(S.loaded&&S.pos>4){ if(S.mode==='yt'&&YTP&&YTP.seekTo){ YTP.seekTo(0,true); return; } return load(cur()); }
-  play(S.idx>0?S.idx-1:0);
-}
-function playpause(){
-  if(!cur()){ toast('Cari lagu dulu, lalu tekan putar'); if(!S.open) toggle(); return; }
-  if(!S.loaded) return load(cur());
-  if(S.mode==='stream'){ if(A.paused){ const p=A.play(); p&&p.catch&&p.catch(()=>{}); } else A.pause(); }
-  else if(YTP&&YTP.getPlayerState){ YTP.getPlayerState()===1?YTP.pauseVideo():YTP.playVideo(); }
-}
-function volume(v){
-  S.vol=Math.min(1,Math.max(0,(+v||0)/100)); A.volume=S.vol;
-  try{ YTP&&YTP.setVolume&&YTP.setVolume(S.vol*100); }catch(_){}
-  const r=$('pm-vol'); if(r) r.style.setProperty('--v',(S.vol*100)+'%');
-  store.set('pm_vol',S.vol);
-}
-function loopMode(){ S.loop=S.loop==='off'?'all':S.loop==='all'?'one':'off'; store.set('pm_loop',S.loop); paintNow(); }
-function shuffle(){ S.shuf=!S.shuf; store.set('pm_shuf',S.shuf); paintNow(); }
-function removeAt(i){
-  if(i<0||i>=S.queue.length) return;
-  const wasCur=i===S.idx;
-  S.queue.splice(i,1);
-  if(i<S.idx) S.idx--;
-  if(wasCur){
-    if(!S.queue.length){ S.idx=-1; S.tok++; stopAll(); S.loaded=false; S.status=''; }
-    else { if(S.idx>=S.queue.length) S.idx=0; if(S.loaded) load(cur()); }
-  }
-  save(); paintAll();
-}
-
-/* ---------- pencarian ---------- */
-async function search(qOverride){
-  const inp=$('pm-q'); if(typeof qOverride==='string') inp.value=qOverride;
-  const q=inp.value.trim();
-  if(!q){ inp.focus(); return; }
-  S.loading=true; S.msg=''; S.results=[]; paintResults(); paintMsg(); $('pm-go').disabled=true;
-  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),50000);
-  try{
-    const r=await fetch(url('/music/search',{q:q,n:10}),{signal:ctl.signal,cache:'no-store'});
-    const j=await r.json();
-    if(!j.ok) throw new Error(j.error||'Gagal mencari lagu');
-    S.results=clean(j.results);
-    if(!S.results.length) throw new Error('Lagu tidak ditemukan. Coba kata kunci lain.');
-    remember(q);
-  }catch(e){
-    const id=clientYtId(q);
-    if(id){ S.results=[{id:id,title:'Video YouTube ('+id+')',artist:'Dari link yang kamu tempel',dur:0}]; S.msg=''; }
-    else S.msg=e.name==='AbortError'?'Pencarian terlalu lama. Coba lagi sebentar lagi.'
-      :(e instanceof TypeError?'Tidak bisa terhubung ke server musik. Pastikan server voice menyala (cek Admin → Server & Musik).'
-      :String(e.message||'Gagal mencari').replace(/^./,c=>c.toUpperCase()));
-  }finally{
-    clearTimeout(to); S.loading=false; $('pm-go').disabled=false; paintResults(); paintMsg();
-  }
-}
-function remember(q){
-  const l=store.get('pm_recent',[]).filter(x=>x.toLowerCase()!==q.toLowerCase()); l.unshift(q);
-  store.set('pm_recent',l.slice(0,6)); paintRecent();
-}
-
-/* ---------- tampilan ---------- */
-function paintRecent(){
-  const l=store.get('pm_recent',[]), src=l.length?l:['lagu santai','lofi hip hop','street racing mix'];
-  $('pm-recent').innerHTML=src.map(x=>'<button type="button" data-q="'+esc(x)+'" title="'+esc(x)+'">'+(l.length?'🕘 ':'✨ ')+esc(x)+'</button>').join('');
-}
-function paintMsg(){ $('pm-msg').innerHTML=S.msg?'<div class="pm-err" role="alert">'+esc(S.msg)+'</div>':''; }
-function rowHTML(t,i,kind){
-  const c=cur(), isCur=c&&c.id===t.id;
-  const th=kind==='r'?'<div class="pm-th" style="background-image:url('+thumb(t.id)+')">'+(t.dur?'<em>'+fmt(t.dur)+'</em>':'')+'</div>':'<div class="pm-qn">'+(isCur?'▶':(i+1))+'</div>';
-  const ac=kind==='r'
-    ?'<div class="pm-ac"><button type="button" class="pm-ib pri" data-act="play" aria-label="Putar">'+ICO.play+'</button><button type="button" class="pm-ib" data-act="add" aria-label="Tambah ke antrian">'+ICO.plus+'</button></div>'
-    :'<div class="pm-ac"><button type="button" class="pm-ib" data-act="rm" aria-label="Hapus dari antrian">'+ICO.x+'</button></div>';
-  return '<li class="pm-row'+(isCur?' cur':'')+'" data-i="'+i+'">'+th+'<div class="pm-ti" data-act="play"><b>'+esc(t.title)+'</b><span>'+esc(t.artist||'YouTube')+(kind==='q'&&t.dur?' · '+fmt(t.dur):'')+'</span></div>'+ac+'</li>';
-}
-function paintResults(){
-  const el=$('pm-results');
-  if(S.loading){ el.innerHTML='<li class="pm-skel"></li><li class="pm-skel"></li><li class="pm-skel"></li>'; return; }
-  if(!S.results.length){ el.innerHTML=''; return; }
-  el.innerHTML=(S.results.length>1?'<li style="list-style:none"><button type="button" class="pm-recent-all" data-act="addall" style="border:1px dashed rgba(255,255,255,.35);background:transparent;color:#bcd3fb;font:700 12px var(--body);padding:9px 14px;border-radius:12px;cursor:pointer;width:100%">＋ Tambah semua ('+S.results.length+') ke antrian</button></li>':'')
-    +S.results.map((t,i)=>rowHTML(t,i,'r')).join('');
-}
-function paintQueue(){
-  $('pm-qcount').textContent=S.queue.length?S.queue.length+' lagu':'';
-  $('pm-queue').innerHTML=S.queue.length?S.queue.map((t,i)=>rowHTML(t,i,'q')).join(''):'<li class="pm-empty">Antrian kosong. Tekan ＋ pada lagu untuk menambahkannya.</li>';
-}
-function paintProgress(){
-  const d=S.dur||0, p=d?Math.min(100,S.pos/d*100):0;
-  $('pm-fill').style.width=p+'%'; $('pm-cur').textContent=fmt(S.pos); $('pm-dur').textContent=d?fmt(d):'--:--';
-  $('pm-track').setAttribute('aria-valuenow',String(Math.round(p)));
-}
-function paintNow(){
-  const t=cur();
-  $('pm-title').textContent=t?t.title:'Belum ada lagu';
-  $('pm-artist').textContent=t?(t.artist||'YouTube'):'Cari lagu di sebelah kiri, lalu tekan putar';
-  const cv=$('pm-cover'); cv.style.backgroundImage=t?'url('+thumb(t.id)+')':''; cv.textContent=t?'':'🎧';
-  const st=$('pm-status'); st.textContent=S.err||S.status; st.style.color=S.err?'#ffb4c3':'';
-  $('pm-mode').textContent=S.loaded?(S.mode==='yt'?'Mode YouTube':'Server SAAS'):'';
-  $('pm-track').classList.toggle('ro',!(S.mode==='yt'&&S.loaded));
-  const ic=S.playing?ICO.pause:ICO.play;
-  $('pm-play').innerHTML=ic; $('pm-mplay').innerHTML=ic;
-  const lp=$('pm-loop'); lp.innerHTML=ICO.loop.replace('@',S.loop==='one'?'<path d="M11 10h1v4"/>':'');
-  lp.classList.toggle('on',S.loop!=='off'); { const lb='Ulangi: '+(S.loop==='off'?'mati':S.loop==='all'?'semua':'satu lagu'); lp.title=lb; lp.setAttribute('aria-label',lb); }
-  $('pm-shuf').classList.toggle('on',S.shuf);
-  const band=$('pm-band'); band.classList.toggle('playing',S.playing);
-  $('pm-big-sub').textContent=t&&S.loaded?((S.playing?'♪ ':'⏸ ')+t.title+(t.artist?' — '+t.artist:'')):'Dengerin lagu sendiri — ketik judul atau tempel link YouTube';
-  $('pm-mt').textContent=t?t.title:'—'; $('pm-ms').textContent=t?(t.artist||'YouTube'):'';
-  $('pm-mc').style.backgroundImage=t?'url('+thumb(t.id)+')':'';
-  paintMini(); paintProgress();
-}
-function paintMini(){ $('pm-mini').classList.toggle('show',!!(cur()&&S.loaded&&!S.inView)); }
-function paintAll(){ paintNow(); paintQueue(); paintResults(); }
-
-function media(){
-  if(!('mediaSession' in navigator)) return;
-  const t=cur(); if(!t) return;
-  try{
-    navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist||'SAAS Music',artwork:[{src:thumb(t.id),sizes:'320x180',type:'image/jpeg'}]});
-    navigator.mediaSession.setActionHandler('play',playpause);
-    navigator.mediaSession.setActionHandler('pause',playpause);
-    navigator.mediaSession.setActionHandler('nexttrack',()=>next(false));
-    navigator.mediaSession.setActionHandler('previoustrack',prev);
-  }catch(_){}
-}
-
-function toggle(force){
-  S.open=typeof force==='boolean'?force:!S.open;
-  $('pm-band').classList.toggle('open',S.open);
-  $('pm-big').setAttribute('aria-expanded',String(S.open));
-  if(S.open&&window.matchMedia&&matchMedia('(hover:hover)').matches) setTimeout(()=>{ try{ $('pm-q').focus({preventScroll:true}); }catch(_){} },380);
-}
-function reveal(){ toggle(true); $('pm-band').scrollIntoView({behavior:'smooth',block:'center'}); }
-
-/* ---------- event ---------- */
-function init(){
-  if(!$('pm-band')) return;
-  S.vol=Math.min(1,Math.max(0,+store.get('pm_vol',.8)||0)); S.loop=store.get('pm_loop','off'); S.shuf=!!store.get('pm_shuf',false);
-  const saved=store.get('pm_q',null);
-  if(saved&&Array.isArray(saved.q)){ S.queue=clean(saved.q); S.idx=S.queue.length?Math.min(Math.max(0,+saved.i||0),S.queue.length-1):-1; }
-  const vr=$('pm-vol'); vr.value=Math.round(S.vol*100); vr.style.setProperty('--v',(S.vol*100)+'%'); A.volume=S.vol;
-
-  $('pm-q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); search(); } });
-  $('pm-recent').addEventListener('click',e=>{ const b=e.target.closest('button[data-q]'); if(b) search(b.getAttribute('data-q')); });
-  $('pm-results').addEventListener('click',e=>{
-    const a=e.target.closest('[data-act]'); if(!a) return;
-    if(a.dataset.act==='addall'){ let n=0; S.results.forEach(t=>{ if(add(t,true)) n++; }); toast(n?'➕ '+n+' lagu masuk antrian':'Semua lagu sudah ada di antrian'); return; }
-    const row=a.closest('.pm-row'); const t=row&&S.results[+row.dataset.i]; if(!t) return;
-    if(a.dataset.act==='add') add(t); else playNow(t);
-  });
-  $('pm-queue').addEventListener('click',e=>{
-    const a=e.target.closest('[data-act]'); const row=e.target.closest('.pm-row'); if(!a||!row) return;
-    const i=+row.dataset.i; if(a.dataset.act==='rm') removeAt(i); else play(i);
-  });
-  $('pm-track').addEventListener('click',e=>{
-    if(!(S.mode==='yt'&&S.loaded&&S.dur&&YTP&&YTP.seekTo)) return;
-    const r=e.currentTarget.getBoundingClientRect(); const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
-    YTP.seekTo(f*S.dur,true); S.pos=f*S.dur; paintProgress();
-  });
-  if('IntersectionObserver' in window){
-    new IntersectionObserver(en=>{ S.inView=en[0].isIntersecting; paintMini(); },{threshold:.05}).observe($('pm-band'));
-  }
-  paintRecent(); paintAll();
-}
-
-window.PM={ toggle:toggle, search:()=>search(), playpause:playpause, next:()=>next(false), prev:prev, loop:loopMode, shuffle:shuffle, volume:volume, reveal:reveal };
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
-})();
-
-</script>
 
 </body>
 </html>

@@ -1118,6 +1118,21 @@ th{background:#1a62ec}td,th{border-color:var(--line)!important}
 .hub-prof{display:none;align-items:center;gap:8px;align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;font-size:11px;font-weight:700;cursor:pointer}
 .hub-prof.show{display:flex}.hub-prof .user-avatar{width:26px;height:26px}
 @keyframes hubin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+/* ===== NOTIFIKASI BESAR: muncul tepat di bawah foto profil, tahan 1 menit, ada tombol X ===== */
+#hub-top{width:min(400px,calc(100vw - 24px))!important}
+#hub-top .hub-prof{order:1}
+#hub-toasts{order:2;display:flex;flex-direction:column;gap:10px}
+#hub-notice{order:3}
+.saas-toast{position:relative;overflow:hidden;background:#fff;color:#0a3a9c;border-radius:16px;padding:18px 46px 20px 20px;
+  font:800 15px/1.45 'DM Sans',sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.5);border:2px solid #7dd3fc;animation:hubin .35s}
+.saas-toast.clickable{cursor:pointer}
+.saas-toast .tx{position:absolute;top:8px;right:10px;width:32px;height:32px;display:grid;place-items:center;background:rgba(10,58,156,.1);
+  border:0;border-radius:50%;color:#0a3a9c;font-size:22px;line-height:1;cursor:pointer}
+.saas-toast .tx:hover{background:rgba(10,58,156,.25)}
+.saas-toast .tsub{display:block;margin-top:6px;font:600 12px 'DM Sans',sans-serif;opacity:.75}
+.saas-toast .tbar{position:absolute;left:0;bottom:0;height:4px;background:#38bdf8;width:100%;transform-origin:left;animation:toastbar linear forwards}
+@keyframes toastbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
 
 /* ================= PENYESUAIAN BIRU PUTIH ================= */
 :root{ --black:#0a3a9c; --panel:#1250c8; --panel2:#1a62ec; --line:#5b8ff0;
@@ -1721,12 +1736,10 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         <button type="button" class="in-skip" id="in-skip">LEWATI ▶</button>
     </div>
 
-    <div class="guest-prompt" id="user-profile-modal" aria-hidden="true">
-        <div class="guest-prompt-box" style="max-width:360px;">
+    <div class="guest-prompt" id="user-profile-modal" aria-hidden="true" onclick="if(event.target===this)closeUserProfileModal()">
+        <div class="upm-box" role="dialog" aria-modal="true" aria-label="Profil pengguna">
+            <button type="button" class="upm-x" onclick="closeUserProfileModal()" aria-label="Tutup">✕</button>
             <div id="user-profile-modal-body"></div>
-            <div class="guest-prompt-actions" style="margin-top:16px;">
-                <button class="btn-red" onclick="closeUserProfileModal()">Tutup</button>
-            </div>
         </div>
     </div>
 
@@ -1982,7 +1995,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
     <nav><button id="nav-teritory" class="tab" onclick="showPage('teritory')"><span class="ico">🗺️</span><span>Teritory</span></button><button id="nav-saas-event" class="tab" onclick="showPage('saas-event')"><span class="ico">🏁</span><span>Acara</span></button><button id="nav-public-chat" class="tab" onclick="showPage('public-chat')"><span class="ico">💬</span><span>Chat</span></button><button id="nav-race" class="tab" onclick="showPage('race')"><span class="ico">🏎️</span><span>Race</span></button><button id="nav-track" class="tab" onclick="showPage('track')"><span class="ico">🛣️</span><span>Track Official</span></button><button id="nav-hub" style="display:none" onclick="showPage('hub')"><span class="ico">🎛️</span><span>Hub</span></button><button id="nav-more" onclick="toggleMore()"><span class="ico">⋯</span><span>Lainnya</span></button></nav>
 
 
-    <div id="hub-top"><div id="hub-notice"></div><div class="hub-prof" id="hub-prof" onclick="showPage('profile')"></div></div>
+    <div id="hub-top"><div id="hub-toasts"></div><div id="hub-notice"></div><div class="hub-prof" id="hub-prof" onclick="showPage('profile')"></div></div>
     <div class="more-scrim" id="more-scrim" onclick="toggleMore(false)"></div>
     <div class="more-sheet" id="more-sheet" aria-hidden="true">
         <div class="grab"></div>
@@ -1992,6 +2005,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             <button onclick="moreGo('movies')"><span class="ico">🎬</span>Nonton Film</button>
             <button onclick="moreGo('club-request')"><span class="ico">📝</span>Ajukan Club</button>
             <button onclick="moreGo('gvoice')"><span class="ico">🎙️</span>Global Voice</button>
+            <button id="nav-public-event" onclick="moreGo('public-event')"><span class="ico">🎟️</span>Public Event</button>
             <button onclick="moreGo('find-user')"><span class="ico">🔎</span>Cari Pengguna</button>
             <button onclick="moreGo('club')"><span class="ico">🏆</span>Official Club</button>
             <button onclick="moreGo('saas')"><span class="ico">ℹ️</span>Info SAAS</button>
@@ -2014,6 +2028,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         <button data-admin-section="club-requests" onclick="showAdminSection('club-requests')">MASUKAN CLUB <span id="admin-club-request-badge" class="admin-notif-badge">0</span></button>
         <button data-admin-section="saas-event" onclick="showAdminSection('saas-event')">ACARA SAAS <span id="admin-saas-event-badge" class="admin-notif-badge">0</span></button>
         <button data-admin-section="saas-event-clubs" onclick="showAdminSection('saas-event-clubs')">CLUB ACARA SAAS</button>
+        <button data-admin-section="public-event" onclick="showAdminSection('public-event')">PUBLIC EVENT</button>
         <button data-admin-section="create-role" onclick="showAdminSection('create-role')">Create Role</button>
         <button data-admin-section="assign-role" onclick="showAdminSection('assign-role')">Tambah Role</button>
         <button data-admin-section="hub" onclick="showAdminSection('hub')">Hub SAAS</button>
@@ -3280,14 +3295,23 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             }, 12000);
         }
 
-        function showToast(message, openProfile=false){
-            let t=document.getElementById('saas-toast');
-            if(!t){ t=document.createElement('div'); t.id='saas-toast'; t.style.cssText='position:fixed;right:20px;bottom:20px;z-index:30000;background:var(--red);color:var(--black);padding:13px 17px;font:700 11px DM Sans,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 15px rgba(255,255,255,0.4);border:1px solid #fff;border-radius:4px;'; document.body.appendChild(t); }
-            t.textContent=message;
-            t.style.cursor=openProfile?'pointer':'default';
-            t.onclick=openProfile?()=>showPage('profile'):null;
-            t.style.display='block';
-            clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',5000);
+        function showToast(message, openProfile=false, duration=60000){
+            const box=document.getElementById('hub-toasts'); if(!box) return;
+            const text=String(message??'');
+            // pesan yang sama tidak ditumpuk: kartu lama diganti agar timer 1 menit mulai ulang
+            [...box.children].forEach(c=>{ if(c.dataset.msg===text) { clearTimeout(c._timer); c.remove(); } });
+            while(box.children.length>=4){ clearTimeout(box.lastChild._timer); box.lastChild.remove(); }
+            const t=document.createElement('div');
+            t.className='saas-toast'+(openProfile?' clickable':''); t.dataset.msg=text; t.setAttribute('role','status');
+            const close=()=>{ clearTimeout(t._timer); t.remove(); };
+            const x=document.createElement('button'); x.className='tx'; x.type='button'; x.setAttribute('aria-label','Tutup'); x.textContent='\u00d7';
+            x.onclick=e=>{ e.stopPropagation(); close(); };
+            const m=document.createElement('div'); m.textContent=text;
+            t.append(x,m);
+            if(openProfile){ const h=document.createElement('span'); h.className='tsub'; h.textContent='Ketuk untuk membuka Profile Account'; t.appendChild(h); t.onclick=()=>{ close(); showPage('profile'); }; }
+            const bar=document.createElement('i'); bar.className='tbar'; bar.style.animationDuration=duration+'ms'; t.appendChild(bar);
+            t._timer=setTimeout(close,duration);
+            box.prepend(t);
         }
 
         function escapeHTML(value){
@@ -3660,52 +3684,49 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
             const me=getUser(currentUser.username);
             const notes=(db.notifications[currentUser.username]||[]).slice(0,50);
             const unread=notes.filter(n=>!n.read).length;
-            container.innerHTML=`<div class="social-layout">
-                <div class="social-panel">
-                    <h2>Profile Account</h2>
-                    <div class="profile-card">
-                        <div class="profile-head">
-                            <div class="profile-avatar">${getAvatarContent(me.username)}</div>
-                            <div><div class="profile-name">@${escapeHTML(me.username)}</div>
-                            <div class="profile-stats">❤️ ${me.likes.length} like</div>
-                            <div class="profile-role-badges">${renderUserRoles(me)}</div></div>
-                        </div>
-                        ${me.bio?`<div class="bio-box">${linkifyBio(me.bio)}</div>`:''}
-                        <hr style="border-color:var(--line);margin:20px 0">
-                        <div class="admin-form">
-                            <h3>Bio</h3>
-                            <p style="color:var(--muted);font-size:11px;margin-top:-5px;margin-bottom:5px;">Maksimal 200 karakter. Link (https://...) otomatis bisa diklik.</p>
-                            <textarea class="social-input" id="change-bio" rows="3" maxlength="200" placeholder="Ceritakan tentang dirimu...">${escapeHTML(me.bio || '')}</textarea>
-                            <button class="btn-red" onclick="saveBio()">Simpan Bio</button>
-
-                            <h3>Ganti Foto Profil</h3>
-                            <p style="color:var(--muted);font-size:11px;margin-top:-5px;margin-bottom:5px;">Tempel URL (link) gambar, atau upload langsung dari perangkat (galeri / file) lewat tombol di bawah.</p>
-                            <input class="social-input" id="change-profile-pic" placeholder="Contoh: https://i.imgur.com/foto.jpg" value="${escapeHTML(me.profilePic || '')}">
-                            <button class="btn-red" onclick="changeProfilePic()">Simpan Foto Profil</button>
-                            
-                            <h3>Ganti Username</h3>
-                            <input class="social-input" id="change-username" maxlength="20" placeholder="Username baru">
-                            <button class="btn-red" onclick="changeUsername()">Simpan Username</button>
-                            
-                            <h3>Ganti Password</h3>
-                            <input class="social-input" id="old-password" type="password" placeholder="Password lama">
-                            <input class="social-input" id="new-password" type="password" minlength="6" placeholder="Password baru">
-                            <button class="btn-red" onclick="changePassword()">Simpan Password</button>
-                            
-                            <h3>Akun</h3>
-                            <button class="btn-red" onclick="logout()">Logout</button>
-                        </div>
-                    </div>
+            const ico=t=>t==='message'?'💬':t==='like'?'❤️':t==='saas-event'?'🏁':t==='club-request'?'🛡️':'🔔';
+            container.innerHTML=`<div class="pf-wrap">
+              <section class="pf-hero">
+                <div class="pf-cover"></div>
+                <div class="pf-hero-body">
+                  <div class="pf-avatar">${getAvatarContent(me.username)}</div>
+                  <div class="pf-id">
+                    <h1>@${escapeHTML(me.username)}</h1>
+                    <div class="pf-roles">${renderUserRoles(me)}</div>
+                  </div>
+                  <div class="pf-stats">
+                    <div><b>${me.likes.length}</b><span>❤️ Like</span></div>
+                    <div><b>${unread}</b><span>🔔 Belum dibaca</span></div>
+                  </div>
                 </div>
-                <div class="social-panel">
-                    <h2>Notifikasi ${unread?`(${unread})`:''}</h2>
-                    <div>${notes.length?notes.map(n=>`
-                        <div class="notification-item ${n.read?'':'unread'}" onclick="openNotification('${encodeURIComponent(n.id)}')">
-                            <strong>${n.type==='message'?'💬':n.type==='like'?'❤️':'🔔'} ${escapeHTML(n.text)}</strong>
-                            <p>${fmtTime(n.createdAt)} · dari @${escapeHTML(n.from)}</p>
-                        </div>`).join(''):'<div class="empty-state">Belum ada notifikasi.</div>'}</div>
-                    ${notes.length?`<button class="btn-red" style="margin-top:15px" onclick="markAllNotificationsRead()">Tandai semua dibaca</button>`:''}
+                ${me.bio?`<div class="pf-bio">${linkifyBio(me.bio)}</div>`:'<div class="pf-bio pf-bio-empty">Belum ada bio. Ceritakan tentang dirimu di bawah 👇</div>'}
+              </section>
+              <div class="pf-grid">
+                <div class="pf-col">
+                  <section class="pf-card"><h3>✏️ Bio</h3><p>Maksimal 200 karakter. Link (https://...) otomatis bisa diklik.</p>
+                    <textarea class="social-input" id="change-bio" rows="3" maxlength="200" placeholder="Ceritakan tentang dirimu...">${escapeHTML(me.bio || '')}</textarea>
+                    <button class="btn-red" onclick="saveBio()">Simpan Bio</button></section>
+                  <section class="pf-card"><h3>🖼️ Foto Profil</h3><p>Tempel URL gambar, atau upload dari perangkat lewat tombol yang muncul di bawah kolom.</p>
+                    <input class="social-input" id="change-profile-pic" placeholder="Contoh: https://i.imgur.com/foto.jpg" value="${escapeHTML(me.profilePic || '')}">
+                    <button class="btn-red" onclick="changeProfilePic()">Simpan Foto Profil</button></section>
+                  <section class="pf-card"><h3>🪪 Username</h3><p>Maksimal 20 karakter.</p>
+                    <input class="social-input" id="change-username" maxlength="20" placeholder="Username baru">
+                    <button class="btn-red" onclick="changeUsername()">Simpan Username</button></section>
+                  <section class="pf-card"><h3>🔒 Password</h3><p>Minimal 6 karakter.</p>
+                    <input class="social-input" id="old-password" type="password" placeholder="Password lama">
+                    <input class="social-input" id="new-password" type="password" minlength="6" placeholder="Password baru">
+                    <button class="btn-red" onclick="changePassword()">Simpan Password</button></section>
+                  <button class="pf-logout" onclick="logout()">🚪 Logout</button>
                 </div>
+                <aside class="pf-card pf-notes"><div class="pf-notes-head"><h3>🔔 Notifikasi ${unread?`<em>${unread}</em>`:''}</h3>
+                    ${notes.length?`<button class="pf-link" onclick="markAllNotificationsRead()">Tandai semua dibaca</button>`:''}</div>
+                  <div class="pf-notes-list">${notes.length?notes.map(n=>`
+                    <div class="notification-item ${n.read?'':'unread'}" onclick="openNotification('${encodeURIComponent(n.id)}')">
+                      <span class="ni-ico">${ico(n.type)}</span>
+                      <div><strong>${escapeHTML(n.text)}</strong><p>${fmtTime(n.createdAt)} · dari @${escapeHTML(n.from)}</p></div>
+                    </div>`).join(''):'<div class="empty-state">Belum ada notifikasi.</div>'}</div>
+                </aside>
+              </div>
             </div>`;
         }
 
@@ -4522,18 +4543,8 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                                 <textarea id="saas-top-txt-${i}" rows="3" placeholder="Deskripsi SAAS ${i+1}" style="margin-top:8px;">${escapeHTML(t.text)}</textarea>
                             </div>`).join('')}
                             <h3>ALL SYNDICATE MEMBER INTI</h3>
-                            <p style="font-size:11px;color:var(--muted);">Bagian ini tampil sebagai kartu terpisah dengan jarak antar kartu. Kamu bisa menambah kartu/member inti kapan saja dari Admin Panel.</p>
-                            <div id="saas-bottom-members-editor">
-                                ${db.saas.bottomMembers.map((m,i)=>`<div class="saas-bottom-editor" data-index="${i}" style="border:1px solid var(--line);padding:14px;margin-bottom:12px;background:var(--panel);border-radius:4px;">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                                        <label style="color:var(--red);font-weight:bold;font-size:13px;">Member Inti ${i+1}</label>
-                                        <button type="button" class="btn-red" onclick="removeSaasBottomMember(${i})">Hapus</button>
-                                    </div>
-                                    <input type="text" id="saas-bottom-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul Member Inti" style="margin-top:8px;">
-                                    <input type="text" id="saas-bottom-img-${i}" value="${escapeHTML(m.img)}" placeholder="URL Foto / Logo Member" style="margin-top:8px;">
-                                    <textarea id="saas-bottom-txt-${i}" rows="3" placeholder="Deskripsi Member Inti" style="margin-top:8px;">${escapeHTML(m.text)}</textarea>
-                                </div>`).join('')}
-                            </div>
+                            <p style="font-size:11px;color:var(--muted);">Bagian ini tampil sebagai kartu terpisah. Tambah kartu kapan saja, dan atur urutannya dengan menggeser kartu di bawah.</p>
+                            ${sbeEditorHTML()}
                             <button type="button" class="btn-red" onclick="addSaasBottomMember()">+ Tambah Member Inti</button>
                             <h3>Button Discord SAAS</h3>
                             <label style="font-size:12px;color:var(--dim);">Link Discord:</label>
@@ -4631,6 +4642,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                     </div>
                     ${hubAdminHTML()}
                     ${trackAdminHTML()}
+ ${publicEventAdminHTML()}
  ${voiceAdminHTML()}
                     <div class="admin-section" id="admin-section-clubs">
                         <div class="admin-form">
@@ -5985,7 +5997,7 @@ function musReset(k){ const S=vsS(k); if(_mk===k){ document.getElementById('mu-p
 document.addEventListener('fullscreenchange',()=>{ const p=document.getElementById('mu-panel'); if(p) (document.fullscreenElement||document.body).appendChild(p); });
 
 /* ======================= ADMIN: Server Voice & Musik + Akses Navigasi Admin ======================= */
-const ADMIN_NAV=[['dashboard','Dashboard'],['github','Database'],['discord','Discord Bot'],['security','Security'],['teritory','Teritory'],['race','Race'],['saas','Information SAAS'],['announcement','Pengumuman'],['clubs','Official Clubs'],['club-requests','Masukan Club'],['saas-event','Acara SAAS'],['saas-event-clubs','Club Acara SAAS'],['create-role','Create Role'],['assign-role','Tambah Role'],['hub','Hub SAAS'],['track','Track Official SAAS'],['voicecfg','Server & Musik'],['navacc','Akses Navigasi Admin']];
+const ADMIN_NAV=[['dashboard','Dashboard'],['github','Database'],['discord','Discord Bot'],['security','Security'],['teritory','Teritory'],['race','Race'],['saas','Information SAAS'],['announcement','Pengumuman'],['clubs','Official Clubs'],['club-requests','Masukan Club'],['saas-event','Acara SAAS'],['saas-event-clubs','Club Acara SAAS'],['public-event','Public Event'],['create-role','Create Role'],['assign-role','Tambah Role'],['hub','Hub SAAS'],['track','Track Official SAAS'],['voicecfg','Server & Musik'],['navacc','Akses Navigasi Admin']];
 function adminNavOk(k){
  if(!currentUser) return false; if(currentUser.isOwner) return true;
  const a=db.adminNav; if(!a||!a.on) return true;
@@ -6724,5 +6736,611 @@ showPage=function(id){
 .track-lightbox.show img{animation:trkZoomIn .5s cubic-bezier(.22,1.2,.36,1) both,trkBob 4.5s ease-in-out .5s infinite}
 @media (prefers-reduced-motion:reduce){.track-photos .track-box,.track-box .track-img,.track-box:hover .track-img,.track-lightbox.show img{animation:none!important}}
 </style>
+
+<style id="ui-v3">
+/* ================= SAAS UI v3 — glass / navy-sky ================= */
+:root{--bg0:#061a4d;--bg1:#0a3a9c;--sky:#38bdf8;--sky2:#7dd3fc;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);
+  --bd:rgba(255,255,255,.16);--r:18px;--sh:0 10px 30px rgba(2,12,40,.35);--line:rgba(255,255,255,.18)}
+html{color-scheme:dark}
+body{background:radial-gradient(1100px 600px at 85% -10%,rgba(56,189,248,.28),transparent 60%),radial-gradient(900px 600px at -10% 20%,rgba(59,130,246,.35),transparent 60%),linear-gradient(165deg,#0b43b8 0%,#082f80 45%,#051a50 100%) fixed!important;
+  font-family:'DM Sans',system-ui,sans-serif;letter-spacing:.005em}
+body:after{opacity:.035!important}
+::selection{background:var(--sky);color:#04204f}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.28)!important;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent!important}
+.top-bar{background:linear-gradient(90deg,transparent,var(--sky),#fff,var(--sky),transparent)!important;height:3px}
+
+/* header & nav */
+body header{background:rgba(6,26,77,.72)!important;backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border-bottom:1px solid var(--bd)!important}
+.brand-mark{background:linear-gradient(135deg,#fff,var(--sky2))!important;border-radius:12px!important;color:#06308a!important}
+.brand-copy strong{letter-spacing:2px;text-shadow:0 2px 12px rgba(56,189,248,.5)}
+body .user-chip{background:var(--glass2)!important;border:1px solid var(--bd)!important;border-radius:999px!important;transition:.2s}
+body .user-chip:hover{transform:translateY(-1px);border-color:var(--sky2)!important}
+.user-avatar,.profile-avatar{border-radius:50%!important;background:linear-gradient(135deg,#fff,var(--sky2))!important;color:#06308a!important}
+body > nav{background:rgba(6,26,77,.78)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--bd)!important;box-shadow:0 -10px 30px rgba(2,12,40,.35)}
+body > nav .tab{border-radius:14px!important;transition:.2s;border:1px solid transparent!important;background:transparent!important}
+body > nav .tab:hover{background:var(--glass)!important}
+body > nav .tab.active{background:linear-gradient(135deg,rgba(125,211,252,.28),rgba(255,255,255,.12))!important;border-color:rgba(125,211,252,.55)!important;box-shadow:0 6px 18px rgba(56,189,248,.28)}
+body > nav .tab .ico{transition:transform .2s}body > nav .tab.active .ico{transform:translateY(-2px) scale(1.12)}
+
+/* kartu, tombol, input */
+body .card,body .social-panel,body .chat-panel-bg,body .profile-card{background:var(--glass)!important;border:1px solid var(--bd)!important;border-radius:var(--r)!important;
+  box-shadow:var(--sh);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+body .card{transition:transform .2s,border-color .2s,box-shadow .2s}
+body .card:hover{border-color:rgba(125,211,252,.5)}
+body .hub-item:hover,body .find-user-row:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(2,12,40,.45)}
+body .btn-red{background:linear-gradient(135deg,#fff 0%,#dff3ff 100%)!important;color:#06308a!important;border:0!important;border-radius:12px!important;font-weight:800!important;
+  box-shadow:0 6px 16px rgba(2,12,40,.3);transition:transform .15s,box-shadow .15s,filter .15s}
+body .btn-red:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(56,189,248,.35);filter:brightness(1.03)}
+body .btn-red:active{transform:translateY(0) scale(.98)}
+body input:not([type=checkbox]):not([type=radio]):not([type=range]),body select,body textarea,body .social-input{background:rgba(3,16,52,.45)!important;color:#fff!important;
+  border:1px solid var(--bd)!important;border-radius:12px!important;transition:border-color .15s,box-shadow .15s}
+body input::placeholder,body textarea::placeholder{color:rgba(207,224,255,.55)}
+body input:focus,body select:focus,body textarea:focus{outline:0!important;border-color:var(--sky2)!important;box-shadow:0 0 0 3px rgba(56,189,248,.28)!important}
+body table{border-collapse:separate;border-spacing:0 4px}body th{color:var(--sky2);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+body .empty-state{border:1px dashed var(--bd);border-radius:14px;padding:22px;color:var(--muted);text-align:center}
+.notification-item{border-radius:14px!important}
+.saas-toast{border-radius:18px!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ================= PROFILE ACCOUNT ================= */
+.pf-wrap{width:100%;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px;animation:hubin .35s}
+.pf-hero{background:var(--glass);border:1px solid var(--bd);border-radius:24px;overflow:hidden;box-shadow:var(--sh);backdrop-filter:blur(10px)}
+.pf-cover{height:130px;background:radial-gradient(400px 160px at 20% 0,rgba(255,255,255,.35),transparent 70%),linear-gradient(120deg,#38bdf8 0%,#2563eb 50%,#1e1b8f 100%)}
+.pf-hero-body{display:flex;align-items:flex-end;gap:18px;padding:0 24px;margin-top:-48px;flex-wrap:wrap}
+.pf-avatar{width:104px;height:104px;border-radius:50%;border:4px solid #0a3a9c;background:linear-gradient(135deg,#fff,var(--sky2));color:#06308a;display:grid;place-items:center;
+  font:900 42px var(--display);overflow:hidden;box-shadow:0 10px 28px rgba(2,12,40,.5);flex:none}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-id{flex:1;min-width:180px;padding-bottom:6px}.pf-id h1{margin:0 0 8px;font:800 30px var(--display);letter-spacing:.5px;word-break:break-all}
+.pf-roles{display:flex;gap:6px;flex-wrap:wrap}
+.pf-stats{display:flex;gap:10px;padding-bottom:6px}
+.pf-stats div{background:var(--glass2);border:1px solid var(--bd);border-radius:14px;padding:9px 16px;text-align:center;min-width:92px}
+.pf-stats b{display:block;font:800 22px var(--display)}.pf-stats span{font-size:10px;color:var(--muted)}
+.pf-bio{margin:18px 24px 24px;padding:14px 16px;background:rgba(3,16,52,.35);border-left:3px solid var(--sky);border-radius:12px;line-height:1.65;font-size:13px;word-break:break-word}
+.pf-bio-empty{color:var(--muted);font-style:italic}
+.pf-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}
+.pf-col{display:flex;flex-direction:column;gap:14px}
+.pf-card{background:var(--glass);border:1px solid var(--bd);border-radius:var(--r);padding:18px;box-shadow:var(--sh);backdrop-filter:blur(10px);display:flex;flex-direction:column;gap:10px}
+.pf-card h3{margin:0;font:800 17px var(--display);letter-spacing:.5px}.pf-card p{margin:-4px 0 2px;color:var(--muted);font-size:11px}
+.pf-card .social-input{width:100%;margin:0}.pf-card .btn-red{align-self:flex-start}
+.pf-logout{padding:13px;border-radius:14px;border:1px solid rgba(248,113,113,.55);background:rgba(239,68,68,.14);color:#fecaca;font:800 13px var(--body);cursor:pointer;transition:.15s}
+.pf-logout:hover{background:rgba(239,68,68,.3);transform:translateY(-1px)}
+.pf-notes{position:sticky;top:calc(var(--bar-h) + 16px);max-height:calc(100vh - var(--bar-h) - var(--nav-h) - 40px)}
+.pf-notes-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pf-notes h3 em{font-style:normal;background:var(--sky);color:#04204f;border-radius:999px;padding:1px 9px;font-size:12px;margin-left:6px}
+.pf-link{background:none;border:0;color:var(--sky2);font:700 11px var(--body);cursor:pointer;text-decoration:underline}
+.pf-notes-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+.pf-notes .notification-item{display:flex;gap:11px;align-items:flex-start;padding:12px!important;border:1px solid var(--bd)!important;background:rgba(3,16,52,.3)!important}
+.pf-notes .notification-item:hover{background:rgba(125,211,252,.18)!important}
+.pf-notes .notification-item.unread{border-left:3px solid var(--sky)!important;background:rgba(56,189,248,.14)!important}
+.ni-ico{width:34px;height:34px;border-radius:50%;background:var(--glass2);display:grid;place-items:center;flex:none;font-size:16px}
+.pf-notes .notification-item strong{font-size:12px;line-height:1.4;display:block}.pf-notes .notification-item p{font-size:10px;margin:4px 0 0}
+@media(max-width:820px){.pf-grid{grid-template-columns:1fr}.pf-notes{position:static;max-height:none}.pf-cover{height:100px}
+  .pf-hero-body{justify-content:center;text-align:center;margin-top:-44px}.pf-id{flex-basis:100%}.pf-roles,.pf-stats{justify-content:center}.pf-avatar{width:92px;height:92px}}
+</style>
+
+<style id="ui-v4">
+/* ================= SAAS UI v4 — polish seluruh halaman (visual saja, layout tidak diubah) ================= */
+:root{--glow:0 0 0 1px rgba(125,211,252,.35),0 12px 34px rgba(56,189,248,.22)}
+body h1,body h2,body .card-title,body .auth-title,body .hero-title{font-family:var(--display)}
+body h2,body .card-title{letter-spacing:.6px}
+#app-content>*{animation:v4in .4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes v4in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+:focus-visible{outline:2px solid var(--sky2)!important;outline-offset:2px}
+
+/* HERO / beranda */
+body .hero-overlay{background:linear-gradient(90deg,rgba(6,26,77,.92) 0%,rgba(8,47,128,.55) 50%,rgba(8,47,128,.12) 100%),linear-gradient(0deg,#061a4d 0%,transparent 40%)!important}
+body .hero-title{background:linear-gradient(180deg,#fff 30%,var(--sky2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 6px 22px rgba(2,12,40,.55))}
+body .hero-kicker,body .hero-topline{background:var(--glass2);border:1px solid var(--bd);border-radius:999px;padding:6px 14px;backdrop-filter:blur(8px);width:fit-content}
+body .hero-stat,body .hero-side{background:var(--glass)!important;border:1px solid var(--bd)!important;border-radius:16px!important;backdrop-filter:blur(10px)}
+body .visual-hero{border-radius:0 0 28px 28px;overflow:hidden;box-shadow:0 20px 50px rgba(2,12,40,.45)}
+
+/* LOGIN / DAFTAR */
+body .auth-box{background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.05))!important;border:1px solid var(--bd)!important;border-radius:26px!important;
+  box-shadow:0 30px 80px rgba(2,12,40,.55),inset 0 1px 0 rgba(255,255,255,.2)!important;backdrop-filter:blur(22px) saturate(150%)!important}
+body .auth-tabs{background:rgba(3,16,52,.45)!important;border:1px solid var(--bd)!important;border-radius:999px!important;padding:4px;gap:4px}
+body .auth-tabs button{border:0!important;border-radius:999px!important;background:transparent!important;color:var(--muted)!important;transition:.2s}
+body .auth-tabs button.active{background:linear-gradient(135deg,#fff,#d7f0ff)!important;color:#06308a!important;box-shadow:0 6px 16px rgba(56,189,248,.35)!important}
+body .auth-title{font-size:34px;letter-spacing:1px}
+
+/* KARTU KONTEN: teritory, acara, member, hub, voice */
+body .track-card,body .track-box,body .hub-card,body .saas-event-club-card,body .saas-member-card,body .race-photo-card,body .race-text-card,body .vc-card,body .more-grid>*,body .chat-category-btn{
+  background:var(--glass)!important;border:1px solid var(--bd)!important;border-radius:var(--r)!important;box-shadow:var(--sh);overflow:hidden;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .25s}
+body .track-card:hover,body .track-box:hover,body .hub-card:hover,body .saas-event-club-card:hover,body .saas-member-card:hover,body .race-photo-card:hover,body .vc-card:hover,body .chat-category-btn:hover{
+  transform:translateY(-4px);border-color:rgba(125,211,252,.65)!important;box-shadow:var(--glow)}
+body .track-card img,body .saas-event-club-card img,body .saas-member-card img,body .race-photo-card img,body .track-img{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+body .track-card:hover img,body .saas-event-club-card:hover img,body .saas-member-card:hover img,body .race-photo-card:hover img{transform:scale(1.06)}
+body .saas-member-card img,body .saas-event-club-logo{border-radius:50%}
+
+/* CHAT */
+body .chat-panel-bg,body .hub-chat{border-radius:22px!important}
+body .chat-msg-bubble{background:rgba(255,255,255,.96)!important;color:#0a2a6b!important;border:0!important;border-radius:4px 20px 20px 20px!important;box-shadow:0 4px 14px rgba(2,12,40,.22)!important}
+body .chat-msg-container.mine .chat-msg-bubble{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:#fff!important;border-radius:20px 4px 20px 20px!important;box-shadow:0 6px 18px rgba(37,99,235,.45)!important}
+body .chat-msg-avatar{border-radius:50%!important;box-shadow:0 4px 12px rgba(2,12,40,.35)}
+body .chat-compose-wrapper,body .hub-send{background:rgba(6,26,77,.6)!important;border:1px solid var(--bd)!important;border-radius:999px!important;padding:6px 8px!important;backdrop-filter:blur(12px)}
+body .chat-compose-wrapper input,body .hub-send input{background:transparent!important;border:0!important;box-shadow:none!important}
+body .hub-msg .hub-txt{border-radius:4px 18px 18px 18px!important}
+body .hub-msg.mine .hub-txt{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:#fff!important;border-radius:18px 4px 18px 18px!important}
+body .find-user-row{background:var(--glass)!important;border:1px solid var(--bd)!important;border-radius:16px!important;transition:.2s}
+
+/* ROLE BADGE */
+body .role-badge{border-radius:999px!important;box-shadow:0 2px 8px rgba(2,12,40,.3);font-weight:800}
+
+/* ADMIN */
+body .admin-subnav{background:rgba(6,26,77,.8)!important;border:1px solid var(--bd)!important;border-radius:999px!important;box-shadow:0 14px 40px rgba(2,12,40,.5);backdrop-filter:blur(16px);padding:6px!important}
+body .admin-subnav button{border-radius:999px!important;transition:.2s}
+body .admin-subnav button.active{background:linear-gradient(135deg,#fff,#d7f0ff)!important;color:#06308a!important}
+body .admin-form{background:var(--glass)!important;border:1px solid var(--bd)!important;border-radius:var(--r)!important}
+body .admin-form h3{color:var(--sky2)}
+body .btn-admin{border-radius:12px!important}
+
+/* MODAL / SHEET / POPUP */
+body .guest-prompt-box,body .more-sheet,body .announce-modal,body [class*="modal"]>div{background:linear-gradient(160deg,rgba(18,80,200,.92),rgba(8,47,128,.96))!important;border:1px solid var(--bd)!important;border-radius:24px!important;
+  box-shadow:0 30px 80px rgba(2,12,40,.6)!important;backdrop-filter:blur(20px)}
+body .more-scrim,body .guest-prompt{backdrop-filter:blur(6px)}
+body .more-sheet{border-radius:26px 26px 0 0!important}
+
+/* VOICE */
+body .vs-tile{border-radius:18px!important;border:1px solid var(--bd)!important;overflow:hidden;box-shadow:var(--sh)}
+body .vs-tile.speaking,body .vc-av.speaking{box-shadow:0 0 0 3px var(--sky),0 0 24px rgba(56,189,248,.65)!important}
+
+/* tombol aksi kecil & link */
+body a{color:var(--sky2)}body a:hover{color:#fff}
+body .btn-group .btn-red{border-radius:999px!important}
+@media(max-width:600px){body .auth-box{border-radius:20px!important}body .visual-hero{border-radius:0 0 20px 20px}body .track-card:hover,body .hub-card:hover{transform:none}}
+</style>
+<!-- ===================== PATCH v5: Profile modal, SAAS members drag, Public Event ===================== -->
+<style id="ui-v5">
+/* ---------- Profil orang lain (modal) ---------- */
+.upm-box{position:relative;width:min(400px,100%);max-height:calc(100vh - 40px);overflow-y:auto;background:linear-gradient(180deg,#1257d6 0%,#0a3a9c 100%);border:1px solid var(--bd);border-radius:26px;box-shadow:0 30px 90px rgba(2,12,40,.6);text-align:left;animation:upmIn .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes upmIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.upm-cover{height:108px;position:relative;background:linear-gradient(135deg,var(--upm-c,#38bdf8) 0%,#0a3a9c 90%)}
+.upm-cover:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% -10%,rgba(255,255,255,.38),transparent 55%),repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 2px,transparent 2px 14px)}
+.upm-x{position:absolute;top:12px;right:12px;z-index:3;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(4,20,70,.5);color:#fff;font-size:14px;cursor:pointer;backdrop-filter:blur(6px);display:grid;place-items:center}
+.upm-x:hover{background:rgba(4,20,70,.8)}
+.upm-main{position:relative;padding:0 24px 24px;margin-top:-48px}
+.upm-av{width:96px;height:96px;border-radius:50%;border:4px solid #0d46b3;background:#1a62ec;display:grid;place-items:center;font:800 40px var(--display);color:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(2,12,40,.45)}
+.upm-name{font:800 32px/1.05 var(--display);margin:14px 0 0;word-break:break-word;letter-spacing:.01em}
+.upm-sub{font-size:11px;color:var(--dim);margin-top:4px}
+.upm-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.upm-roles .role-badge{font-size:10.5px;padding:5px 11px}
+.upm-stats{display:grid;grid-template-columns:1fr 1.2fr 1.4fr;gap:8px;margin-top:18px}
+.upm-stat{background:rgba(255,255,255,.08);border:1px solid var(--bd);border-radius:14px;padding:10px 10px;min-width:0}
+.upm-stat span{display:block;font-size:10px;color:var(--dim);margin-bottom:3px}
+.upm-stat b{display:block;font:700 16px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upm-bio{margin-top:14px;padding:14px 15px;border-radius:14px;background:rgba(4,20,70,.38);border:1px solid var(--bd);font-size:12.5px;line-height:1.7;color:#e6efff;word-break:break-word;white-space:pre-wrap}
+.upm-bio.empty{color:var(--dim);font-style:italic}
+.upm-bio a{color:var(--sky2)}
+.upm-actions{display:flex;gap:8px;margin-top:18px}
+.upm-actions .btn-red{flex:1;border-radius:14px!important;padding:13px 10px}
+.upm-actions .upm-like{flex:0 0 auto;min-width:112px;background:rgba(255,255,255,.1)!important;border:1px solid var(--bd)!important;color:#fff!important}
+.upm-actions .upm-like.liked{background:linear-gradient(135deg,#ff6b8b,#ff3d6e)!important;border-color:transparent!important}
+@media(max-width:420px){.upm-main{padding:0 18px 20px}.upm-stats{grid-template-columns:1fr 1fr}.upm-stat:last-child{grid-column:1/-1}}
+
+/* ---------- Information SAAS: kotak member (publik) ---------- */
+.sm-wrap{width:100%;margin-top:34px}
+.sm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 4px 16px}
+.sm-head h2{font:800 28px var(--display);margin:0;letter-spacing:.02em}
+.sm-head span{font-size:11px;color:var(--dim)}
+.sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.sm-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--bd);border-radius:22px;overflow:hidden;transition:transform .25s,border-color .25s,box-shadow .25s}
+.sm-card:hover{transform:translateY(-4px);border-color:rgba(125,211,252,.65);box-shadow:var(--sh)}
+.sm-media{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,#1a62ec,#0a3a9c);overflow:hidden}
+.sm-media img{width:100%;height:100%;object-fit:cover;display:block}
+.sm-ph{position:absolute;inset:0;display:grid;place-items:center;font:800 68px var(--display);color:rgba(255,255,255,.5)}
+.sm-body{padding:16px 18px 20px}
+.sm-body h3{font:800 20px/1.15 var(--display);margin:0 0 8px;letter-spacing:.02em}
+.sm-body p{margin:0;font-size:12.5px;line-height:1.7;color:#dbe8ff;white-space:pre-wrap;word-break:break-word}
+
+/* ---------- Admin: editor member inti (bisa digeser) ---------- */
+.sbe{position:relative;border:1px solid var(--bd);background:var(--glass);border-radius:16px;padding:14px;margin-bottom:12px;transition:border-color .2s,box-shadow .2s}
+.sbe-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.sbe-grip{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;width:38px;height:38px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.12);border:1px solid var(--bd);color:#fff;font-size:20px;line-height:1}
+.sbe-grip:hover{background:rgba(56,189,248,.3)}
+.sbe-thumb{width:42px;height:42px;flex:0 0 auto;border-radius:10px;object-fit:cover;background:rgba(255,255,255,.1);border:1px solid var(--bd)}
+.sbe-pos{flex:1;min-width:0;font:800 16px var(--display);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbe-pos small{display:block;font:500 10px var(--body);color:var(--dim);letter-spacing:0}
+.sbe-btns{display:flex;gap:6px;flex:0 0 auto}
+.sbe-btns .btn-red{padding:8px 11px;min-width:36px}
+.sbe.dragging{z-index:50;cursor:grabbing;border-color:var(--sky);box-shadow:0 20px 44px rgba(2,12,40,.65);transition:none!important;background:#1356d8}
+.sbe.dragging .sbe-grip{cursor:grabbing}
+.sbe.shifting{transition:transform .18s ease}
+.sbe-hint{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--sky2);background:rgba(56,189,248,.1);border:1px dashed rgba(125,211,252,.5);border-radius:12px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+
+/* ---------- Public Event ---------- */
+.pe-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.pe-head h2{font:800 30px var(--display);margin:0;letter-spacing:.02em}
+.pe-head p{margin:4px 0 0;font-size:12px;color:var(--dim)}
+.pe-form{width:100%;max-width:640px;margin:0 auto 24px}
+.pe-form h3{font:800 22px var(--display);margin:0 0 4px}
+.pe-form label.pe-lbl{font-size:12px;color:var(--dim);margin-top:4px}
+.pe-photo-row{display:flex;gap:8px;flex-wrap:wrap}
+.pe-photo-row input[type=text],.pe-photo-row input:not([type]){flex:1 1 220px}
+.pe-file{display:inline-flex;align-items:center;gap:6px;padding:12px 14px;border-radius:12px;border:1px dashed var(--bd);background:rgba(255,255,255,.06);cursor:pointer;font-size:12px;color:#fff}
+.pe-file:hover{border-color:var(--sky)}
+.pe-file input{display:none}
+.pe-preview{display:none;border-radius:14px;overflow:hidden;border:1px solid var(--bd);max-height:200px;position:relative}
+.pe-preview.show{display:block}
+.pe-preview img{display:block;width:100%;max-height:200px;object-fit:cover}
+.pe-opts{display:flex;gap:8px;flex-wrap:wrap}
+.pe-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;border:1px solid var(--bd);background:rgba(255,255,255,.07);font-size:12px;cursor:pointer;user-select:none}
+.pe-chip input{width:auto!important;margin:0}
+.pe-chip:has(input:checked){background:rgba(56,189,248,.22);border-color:var(--sky)}
+.pe-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.pe-ghost{background:transparent!important;border:1px solid var(--bd)!important}
+.pe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px;width:100%}
+.pe-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--bd);border-radius:22px;overflow:hidden;transition:transform .25s,border-color .25s,box-shadow .25s}
+.pe-card:hover{transform:translateY(-4px);border-color:rgba(125,211,252,.65);box-shadow:var(--sh)}
+.pe-cover{position:relative;aspect-ratio:16/10;background:linear-gradient(135deg,#1a62ec,#0a3a9c);overflow:hidden}
+.pe-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.pe-ph{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.7}
+.pe-body{padding:16px 18px 16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.pe-body h3{font:800 22px/1.15 var(--display);margin:0;letter-spacing:.02em;word-break:break-word}
+.pe-desc{margin:0;font-size:12.5px;line-height:1.7;color:#dbe8ff;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.pe-desc.open{-webkit-line-clamp:unset;display:block}
+.pe-price{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 13px;border-radius:12px;background:rgba(56,189,248,.14);border:1px solid rgba(125,211,252,.4)}
+.pe-price span{font-size:11px;color:var(--sky2)}
+.pe-price b{font:800 22px var(--display);color:#fff}
+.pe-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--bd)}
+.pe-by{display:inline-flex;align-items:center;gap:8px;background:none;border:0;color:#fff;font:600 12px var(--body);cursor:pointer;padding:0;min-width:0}
+.pe-av{width:28px;height:28px;border-radius:50%;background:#1a62ec;display:grid;place-items:center;font:800 13px var(--display);overflow:hidden;flex:0 0 auto}
+.pe-by em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pe-foot time{font-size:10.5px;color:var(--dim);white-space:nowrap}
+.pe-empty{width:100%;text-align:center;padding:50px 20px;border:1px dashed var(--bd);border-radius:22px;color:var(--dim);font-size:13px}
+.pe-empty b{display:block;font:800 22px var(--display);color:#fff;margin-bottom:6px}
+/* admin list */
+.pe-adm{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:14px;background:var(--glass);margin-bottom:10px}
+.pe-adm img,.pe-adm .pe-adm-ph{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:0 0 auto;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:24px}
+.pe-adm-info{flex:1;min-width:0}
+.pe-adm-info b{display:block;font:800 17px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pe-adm-info small{display:block;color:var(--dim);font-size:11px;line-height:1.5;word-break:break-word}
+@media(max-width:560px){.pe-adm{flex-wrap:wrap}.pe-adm .btn-red{width:100%}}
+</style>
+
+<script id="patch-v5">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const safeImg=u=>{ u=String(u||'').trim(); return /^(https?:\/\/|data:image\/)/i.test(u)?u:''; };
+
+ /* ===================== 1. PROFIL ORANG LAIN ===================== */
+ window.userProfileCard=function(user){
+  const me=user.username===currentUser.username;
+  const liked=(user.likes||[]).includes(currentUser.username);
+  const roles=getUserRoles(user);
+  const col=roles.length&&roles[0].color?roles[0].color:'#38bdf8';
+  const joined=user.createdAt?new Date(user.createdAt).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+  const enc=encodeURIComponent(user.username);
+  return `<div class="upm-cover" style="--upm-c:${escapeHTML(col)}"></div>
+   <div class="upm-main">
+    <div class="upm-av">${getAvatarContent(user.username)}</div>
+    <h2 class="upm-name">@${escapeHTML(user.username)}</h2>
+    <div class="upm-sub">Anggota komunitas SAAS</div>
+    ${roles.length?`<div class="upm-roles">${renderUserRoleBadges(user)}</div>`:''}
+    <div class="upm-stats">
+      <div class="upm-stat"><span>Like</span><b>❤️ ${(user.likes||[]).length}</b></div>
+      <div class="upm-stat"><span>Bergabung</span><b>${escapeHTML(joined)}</b></div>
+      <div class="upm-stat"><span>Club</span><b title="${escapeHTML(user.club||'')}">${escapeHTML(user.club||'—')}</b></div>
+    </div>
+    ${user.bio?`<div class="upm-bio">${linkifyBio(user.bio)}</div>`:`<div class="upm-bio empty">Belum menulis bio.</div>`}
+    <div class="upm-actions">
+     ${me?`<button class="btn-red" onclick="closeUserProfileModal();showPage('profile')">Profil Saya</button>`
+      :`<button class="btn-red" onclick="closeUserProfileModal();openPrivateChat('${enc}')">💬 Chat Pribadi</button>
+        <button class="btn-red upm-like ${liked?'liked':''}" onclick="toggleLikeAndRefreshModal('${enc}')">${liked?'♥ Disukai':'♡ Like'}</button>`}
+    </div>
+   </div>`;
+ };
+ document.addEventListener('keydown',e=>{ if(e.key==='Escape') try{ closeUserProfileModal(); }catch(_){} });
+
+ /* ===================== 2. INFORMATION SAAS (publik) ===================== */
+ const _renderSAAS=renderSAAS;
+ window.renderSAAS=function(container){
+  _renderSAAS(container);
+  const grid=container.querySelector('.saas-member-grid'); if(!grid) return;
+  const list=db.saas.bottomMembers||[];
+  const html=`<section class="sm-wrap"><div class="sm-head"><h2>Member Inti SAAS</h2><span>${list.length} kartu</span></div><div class="sm-grid">${
+   list.map((m,i)=>{
+    const t=m.title||(i===0?'ALL SYNDICATE MEMBER INTI':'ALL SYNDICATE MEMBER INTI 0'+(i+1));
+    const img=safeImg(m.img);
+    return `<article class="sm-card"><div class="sm-media">${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(t)}" loading="lazy">`:`<div class="sm-ph">${escapeHTML(t.trim().charAt(0)||'S')}</div>`}</div><div class="sm-body"><h3>${escapeHTML(t)}</h3>${m.text?`<p>${escapeHTML(m.text)}</p>`:''}</div></article>`;
+   }).join('')}</div></section>`;
+  grid.outerHTML=html;
+ };
+
+ /* ===================== 3. ADMIN: GESER KOTAK MEMBER ===================== */
+ window.sbeEditorHTML=function(){
+  const list=db.saas.bottomMembers||[];
+  return `<div class="sbe-hint">↕ Tahan ikon <b>⠿</b> lalu geser untuk mengubah urutan, atau pakai tombol ↑ ↓. Urutan ini yang dilihat semua pengguna di halaman Information SAAS dan otomatis tersimpan.</div>
+  <div id="saas-bottom-members-editor">${list.map((m,i)=>sbeCardHTML(m,i)).join('')}</div>`;
+ };
+ function sbeCardHTML(m,i){
+  const img=safeImg(m.img);
+  return `<div class="saas-bottom-editor sbe" data-index="${i}">
+   <div class="sbe-top">
+    <div class="sbe-grip" title="Geser untuk mengubah posisi" role="button" aria-label="Geser posisi" onpointerdown="sbeDragStart(event)">⠿</div>
+    ${img?`<img class="sbe-thumb" src="${escapeHTML(img)}" alt="">`:''}
+    <div class="sbe-pos">Member Inti ${i+1}<small>Posisi ${i+1} dari ${(db.saas.bottomMembers||[]).length}</small></div>
+    <div class="sbe-btns">
+     <button type="button" class="btn-red" onclick="sbeStep(this,-1)" aria-label="Naik">↑</button>
+     <button type="button" class="btn-red" onclick="sbeStep(this,1)" aria-label="Turun">↓</button>
+     <button type="button" class="btn-red" onclick="removeSaasBottomMember(${i})">Hapus</button>
+    </div>
+   </div>
+   <input type="text" id="saas-bottom-title-${i}" value="${escapeHTML(m.title)}" placeholder="Judul Member Inti" style="margin-top:8px;">
+   <input type="text" id="saas-bottom-img-${i}" value="${escapeHTML(m.img)}" placeholder="URL Foto / Logo Member" style="margin-top:8px;">
+   <textarea id="saas-bottom-txt-${i}" rows="3" placeholder="Deskripsi Member Inti" style="margin-top:8px;">${escapeHTML(m.text)}</textarea>
+  </div>`;
+ }
+ function sbeList(){ return $('saas-bottom-members-editor'); }
+ /* DOM -> db (sesuai urutan DOM sekarang) lalu beri ulang index/id supaya saveAllEdits tetap cocok */
+ function sbeCommit(){
+  const list=sbeList(); if(!list) return;
+  const cards=[...list.querySelectorAll('.saas-bottom-editor')];
+  const old=db.saas.bottomMembers||[];
+  const next=cards.map(el=>{
+   const i=+el.dataset.index;
+   const g=k=>(el.querySelector(`#saas-bottom-${k}-${i}`)||{}).value;
+   const base=old[i]||{};
+   return Object.assign({},base,{title:(g('title')||'').trim(),img:(g('img')||'').trim(),text:(g('txt')||'').trim()});
+  });
+  cards.forEach((el,n)=>{
+   const i=+el.dataset.index;
+   el.querySelector(`#saas-bottom-title-${i}`).id=`saas-bottom-title-${n}`;
+   el.querySelector(`#saas-bottom-img-${i}`).id=`saas-bottom-img-${n}`;
+   el.querySelector(`#saas-bottom-txt-${i}`).id=`saas-bottom-txt-${n}`;
+  });
+  cards.forEach((el,n)=>{
+   el.dataset.index=n;
+   el.querySelector('.sbe-pos').innerHTML=`Member Inti ${n+1}<small>Posisi ${n+1} dari ${cards.length}</small>`;
+   const rm=el.querySelector('.sbe-btns .btn-red:last-child'); if(rm) rm.setAttribute('onclick',`removeSaasBottomMember(${n})`);
+  });
+  db.saas.bottomMembers=next;
+ }
+ let sbeTimer=null;
+ function sbePersist(){
+  clearTimeout(sbeTimer);
+  sbeTimer=setTimeout(async()=>{
+   let ok=false; try{ ok=await saveToDB(true); }catch(_){}
+   showToast(ok?'✅ Urutan kotak member tersimpan.':'↕ Urutan berubah di layar. Tekan Simpan untuk menyimpannya ke database.',false,4500);
+  },700);
+ }
+ window.sbeStep=function(btn,dir){
+  const card=btn.closest('.saas-bottom-editor'), list=card.parentElement;
+  const sib=dir<0?card.previousElementSibling:card.nextElementSibling; if(!sib) return;
+  if(dir<0) list.insertBefore(card,sib); else list.insertBefore(sib,card);
+  sbeCommit(); sbePersist();
+  card.scrollIntoView({block:'nearest',behavior:'smooth'});
+ };
+ window.sbeDragStart=function(e){
+  if(e.button!==undefined&&e.button!==0) return;
+  e.preventDefault();
+  const grip=e.currentTarget, card=grip.closest('.saas-bottom-editor'), list=card.parentElement;
+  const items=[...list.querySelectorAll('.saas-bottom-editor')];
+  const from=items.indexOf(card);
+  const sy=window.scrollY;
+  const rects=items.map(el=>{ const r=el.getBoundingClientRect(); return {top:r.top+sy,h:r.height}; });
+  const gap=12, startPageY=e.clientY+sy;
+  let lastClientY=e.clientY, to=from, raf=null;
+  items.forEach(el=>{ if(el!==card) el.classList.add('shifting'); });
+  card.classList.add('dragging');
+  try{ grip.setPointerCapture(e.pointerId); }catch(_){}
+  function update(){
+   const pageY=lastClientY+window.scrollY;
+   const dy=pageY-startPageY;
+   card.style.transform=`translateY(${dy}px)`;
+   const center=rects[from].top+rects[from].h/2+dy;
+   to=from;
+   items.forEach((el,i)=>{
+    if(i===from) return;
+    const mid=rects[i].top+rects[i].h/2;
+    if(i<from&&center<mid) to=Math.min(to,i);
+    if(i>from&&center>mid) to=Math.max(to,i);
+   });
+   const shift=rects[from].h+gap;
+   items.forEach((el,i)=>{
+    if(i===from) return;
+    let t=0;
+    if(i<from&&i>=to) t=shift;
+    if(i>from&&i<=to) t=-shift;
+    el.style.transform=t?`translateY(${t}px)`:'';
+   });
+  }
+  function loop(){
+   const vh=window.innerHeight;
+   if(lastClientY<90) window.scrollBy({top:-14,behavior:'instant'}); else if(lastClientY>vh-90) window.scrollBy({top:14,behavior:'instant'});
+   update(); raf=requestAnimationFrame(loop);
+  }
+  function move(ev){ lastClientY=ev.clientY; }
+  function end(){
+   cancelAnimationFrame(raf);
+   grip.removeEventListener('pointermove',move);
+   grip.removeEventListener('pointerup',end);
+   grip.removeEventListener('pointercancel',end);
+   items.forEach(el=>{ el.classList.remove('shifting','dragging'); el.style.transform=''; });
+   if(to!==from){
+    if(to>from) list.insertBefore(card,items[to].nextSibling); else list.insertBefore(card,items[to]);
+    sbeCommit(); sbePersist();
+   }
+  }
+  grip.addEventListener('pointermove',move);
+  grip.addEventListener('pointerup',end);
+  grip.addEventListener('pointercancel',end);
+  raf=requestAnimationFrame(loop);
+ };
+
+ /* ===================== 4. PUBLIC EVENT ===================== */
+ const fmtPrice=n=>'$'+Number(n).toLocaleString('id-ID');
+ const fmtDate=t=>new Date(t).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+
+ const _norm=normalizeDB;
+ window.normalizeDB=function(){
+  _norm.apply(this,arguments);
+  if(!Array.isArray(db.publicEvents)) db.publicEvents=[];
+  db.publicEvents=db.publicEvents.filter(e=>e&&typeof e==='object'&&e.id&&e.name).map(e=>({
+   id:String(e.id),name:String(e.name).slice(0,80),desc:typeof e.desc==='string'?e.desc:'',
+   price:(typeof e.price==='number'&&isFinite(e.price)&&e.price>=0)?e.price:null,
+   img:typeof e.img==='string'?e.img:'',creator:String(e.creator||''),ts:typeof e.ts==='number'?e.ts:Date.now()
+  }));
+ };
+ const _parts=getDbPartitions;
+ window.getDbPartitions=function(){ const p=_parts.apply(this,arguments); p.requests.publicEvents=db.publicEvents||[]; return p; };
+
+ function eventCardHTML(ev){
+  const img=safeImg(ev.img);
+  const u=ev.creator?getUser(ev.creator):null;
+  return `<article class="pe-card">
+   <div class="pe-cover">${img?`<img src="${escapeHTML(img)}" alt="${escapeHTML(ev.name)}" loading="lazy">`:`<div class="pe-ph">🎟️</div>`}</div>
+   <div class="pe-body">
+    <h3>${escapeHTML(ev.name)}</h3>
+    ${ev.desc?`<p class="pe-desc" onclick="this.classList.toggle('open')" title="Klik untuk buka / tutup">${escapeHTML(ev.desc)}</p>`:''}
+    ${ev.price!=null?`<div class="pe-price"><span>Total price</span><b>${fmtPrice(ev.price)}</b></div>`:''}
+    <div class="pe-foot">
+     <button type="button" class="pe-by" onclick="openUserProfileModal('${encodeURIComponent(ev.creator)}')"><span class="pe-av">${u?getAvatarContent(ev.creator):escapeHTML((ev.creator||'?').charAt(0).toUpperCase())}</span><em>@${escapeHTML(ev.creator||'unknown')}</em></button>
+     <time>${fmtDate(ev.ts)}</time>
+    </div>
+   </div></article>`;
+ }
+ window.renderPublicEvent=function(container){
+  const list=(db.publicEvents||[]).slice().sort((a,b)=>b.ts-a.ts);
+  container.innerHTML=`<div style="width:100%">
+   <div class="pe-head"><div><h2>Public Event</h2><p>Event buatan komunitas. Siapa saja yang punya akun bisa membuat event sendiri.</p></div>
+    <button type="button" class="btn-red" onclick="peToggleForm()">＋ Buat Event</button></div>
+   <div class="card pe-form admin-form" id="pe-form" style="display:none">
+    <h3>Buat Public Event</h3>
+    <label class="pe-lbl" for="pe-name">Nama event *</label>
+    <input id="pe-name" maxlength="80" placeholder="Contoh: Drift Night Los Santos" autocomplete="off">
+    <label class="pe-lbl">Foto event (opsional)</label>
+    <div class="pe-photo-row">
+     <input id="pe-img-url" placeholder="Tempel URL foto https://..." oninput="pePreview()">
+     <label class="pe-file">📷 Upload dari perangkat<input type="file" id="pe-img-file" accept="image/*" onchange="pePreview()"></label>
+    </div>
+    <div class="pe-preview" id="pe-preview"></div>
+    <div class="pe-opts">
+     <label class="pe-chip"><input type="checkbox" id="pe-no-desc" onchange="peToggleOpts()"> Tanpa deskripsi</label>
+     <label class="pe-chip"><input type="checkbox" id="pe-no-price" onchange="peToggleOpts()"> Tanpa total price</label>
+    </div>
+    <div id="pe-desc-wrap" style="display:flex;flex-direction:column;gap:8px"><label class="pe-lbl" for="pe-desc">Deskripsi</label><textarea id="pe-desc" rows="4" maxlength="600" placeholder="Ceritakan tentang event kamu..."></textarea></div>
+    <div id="pe-price-wrap" style="display:flex;flex-direction:column;gap:8px"><label class="pe-lbl" for="pe-price">Total price ($)</label><input id="pe-price" inputmode="numeric" maxlength="13" placeholder="Contoh: 5000" oninput="this.value=this.value.replace(/\\D/g,'')"></div>
+    <div class="pe-actions"><button type="button" class="btn-red" id="pe-submit" onclick="peSubmit()">Posting Event</button><button type="button" class="btn-red pe-ghost" onclick="peToggleForm(false)">Batal</button></div>
+   </div>
+   <div id="pe-list">${list.length?`<div class="pe-grid">${list.map(eventCardHTML).join('')}</div>`:`<div class="pe-empty"><b>Belum ada event</b>Jadilah yang pertama membuat event di sini.</div>`}</div>
+  </div>`;
+ };
+ window.peToggleForm=function(show){
+  const f=$('pe-form'); if(!f) return;
+  if(show===undefined) show=f.style.display==='none';
+  if(show&&!requireAccount()) return;
+  f.style.display=show?'':'none';
+  if(show){ f.scrollIntoView({behavior:'smooth',block:'start'}); setTimeout(()=>$('pe-name')?.focus(),250); }
+ };
+ window.peToggleOpts=function(){
+  $('pe-desc-wrap').style.display=$('pe-no-desc').checked?'none':'flex';
+  $('pe-price-wrap').style.display=$('pe-no-price').checked?'none':'flex';
+ };
+ window.pePreview=function(){
+  const box=$('pe-preview'), f=$('pe-img-file')?.files?.[0], url=($('pe-img-url')?.value||'').trim();
+  const show=src=>{ box.innerHTML=`<img src="${escapeHTML(src)}" alt="Preview">`; box.classList.add('show'); };
+  if(f){ const r=new FileReader(); r.onload=()=>show(r.result); r.readAsDataURL(f); }
+  else if(safeImg(url)) show(url);
+  else { box.innerHTML=''; box.classList.remove('show'); }
+ };
+ function peCompress(file){
+  return new Promise((res,rej)=>{
+   const r=new FileReader();
+   r.onerror=()=>rej(new Error('Gagal membaca file'));
+   r.onload=()=>{ const im=new Image(); im.onerror=()=>rej(new Error('File bukan gambar valid'));
+    im.onload=()=>{
+     let M=900,q=.72,out='';
+     for(let k=0;k<4;k++){
+      const sc=Math.min(1,M/Math.max(im.width,im.height)), cv=document.createElement('canvas');
+      cv.width=Math.round(im.width*sc); cv.height=Math.round(im.height*sc);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+      out=cv.toDataURL('image/jpeg',q);
+      if(out.length<280000) break; M-=150; q-=.07;
+     }
+     res(out);
+    };
+    im.src=r.result; };
+   r.readAsDataURL(file);
+  });
+ }
+ window.peSubmit=async function(){
+  if(!requireAccount()) return;
+  const name=($('pe-name').value||'').trim();
+  if(!name) return alert('Isi nama event dulu.');
+  const noDesc=$('pe-no-desc').checked, noPrice=$('pe-no-price').checked;
+  const desc=noDesc?'':($('pe-desc').value||'').trim();
+  const digits=noPrice?'':($('pe-price').value||'').replace(/\D/g,'');
+  const price=digits?Math.min(parseInt(digits,10),9999999999999):null;
+  const url=($('pe-img-url').value||'').trim(), file=$('pe-img-file').files[0];
+  if(!file&&url&&!safeImg(url)) return alert('URL foto harus diawali http:// atau https://');
+  const btn=$('pe-submit'); btn.disabled=true; btn.textContent='Memposting...';
+  try{
+   let img=''; if(file) img=await peCompress(file); else if(url) img=url;
+   try{ if(githubDatabaseReady) await fetchFromDB(true); }catch(_){}
+   normalizeDB();
+   db.publicEvents.unshift({id:uid(),name:name.slice(0,80),desc:desc.slice(0,600),price,img,creator:currentUser.username,ts:Date.now()});
+   db.publicEvents=db.publicEvents.slice(0,80);
+   const saved=await saveToDB(true);
+   if(!saved&&sbConfig.url&&sbConfig.key){ db.publicEvents.shift(); return alert('Event gagal disimpan ke database. Coba lagi.'); }
+   showToast('✅ Event berhasil diposting.',false,4000);
+   renderPublicEvent($('app-content'));
+  }catch(err){ alert('Gagal memposting event: '+(err&&err.message||err)); }
+  finally{ const b=$('pe-submit'); if(b){ b.disabled=false; b.textContent='Posting Event'; } }
+ };
+
+ /* halaman + navigasi */
+ const _showPage=showPage;
+ window.showPage=function(id){
+  if(id!=='public-event') return _showPage.apply(this,arguments);
+  if(!currentUser&&!guestMode) return showAuth();
+  document.querySelector('header')?.classList.remove('open'); toggleMore(false);
+  $('admin-subnav')?.classList.remove('show');
+  const c=$('app-content'); c.innerHTML='';
+  updateHero('PUBLIC EVENT','Buat dan lihat event komunitas');
+  setActiveNav('nav-public-event');
+  renderPublicEvent(c);
+  try{ if(saasPageOk(id)) ssSet(SAAS_NAV_KEY,id); }catch(_){}
+ };
+
+ /* ---- admin ---- */
+ window.publicEventAdminHTML=function(){
+  return `<div class="admin-section" id="admin-section-public-event"><div class="admin-form"><h3>Public Event — Kelola Event</h3>
+   <p style="font-size:11px;color:var(--muted);line-height:1.6">Semua event yang dibuat pengguna muncul di sini. Hapus event yang melanggar aturan atau sudah tidak relevan. Event yang dihapus langsung hilang dari halaman Public Event semua pengguna.</p>
+   <div id="pe-admin-list">${peAdminListHTML()}</div></div></div>`;
+ };
+ function peAdminListHTML(){
+  const l=(db.publicEvents||[]).slice().sort((a,b)=>b.ts-a.ts);
+  if(!l.length) return '<p style="color:var(--muted);font-size:12px">Belum ada event.</p>';
+  return `<p style="font-size:11px;color:var(--dim);margin:0 0 10px">${l.length} event</p>`+l.map(e=>{
+   const img=safeImg(e.img);
+   return `<div class="pe-adm">${img?`<img src="${escapeHTML(img)}" alt="">`:`<div class="pe-adm-ph">🎟️</div>`}
+    <div class="pe-adm-info"><b>${escapeHTML(e.name)}</b>
+     <small>oleh @${escapeHTML(e.creator||'unknown')} · ${fmtDate(e.ts)}${e.price!=null?' · '+fmtPrice(e.price):''}</small>
+     ${e.desc?`<small>${escapeHTML(e.desc.length>120?e.desc.slice(0,120)+'…':e.desc)}</small>`:''}</div>
+    <button type="button" class="btn-red" onclick="peAdminDelete('${escapeHTML(e.id)}')">🗑 Hapus</button></div>`;
+  }).join('');
+ }
+ window.peAdminDelete=async function(id){
+  const ev=(db.publicEvents||[]).find(e=>e.id===id); if(!ev) return;
+  if(!confirm(`Hapus event "${ev.name}" milik @${ev.creator}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try{ if(githubDatabaseReady) await fetchFromDB(true); }catch(_){}
+  normalizeDB();
+  const before=db.publicEvents.slice();
+  db.publicEvents=db.publicEvents.filter(e=>e.id!==id);
+  const saved=await saveToDB(true);
+  if(!saved&&sbConfig.url&&sbConfig.key){ db.publicEvents=before; alert('Gagal menghapus event dari database. Coba lagi.'); }
+  else showToast('🗑 Event dihapus.',false,3500);
+  const box=$('pe-admin-list'); if(box) box.innerHTML=peAdminListHTML();
+ };
+ const _sas=showAdminSection;
+ window.showAdminSection=function(s){
+  _sas.apply(this,arguments);
+  if($('admin-section-public-event')?.classList.contains('active')){ const box=$('pe-admin-list'); if(box) box.innerHTML=peAdminListHTML(); }
+ };
+})();
+</script>
+
 </body>
 </html>

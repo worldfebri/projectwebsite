@@ -5499,6 +5499,60 @@ function voiceDown(on,notify){
  }
  b.textContent='🔧 '+VOICE_MAINT_MSG; clearTimeout(_vmT); _vmT=setTimeout(()=>b.remove(),10000);
 }
+/* ---------- AUTO-RECONNECT & PEMANTAU KONEKSI VOICE ----------
+   Sebelumnya: WebSocket putus sekali saja -> langsung dikeluarkan dari voice.
+   Sekarang : sambung ulang otomatis (jeda bertahap), masuk lagi ke channel yang sama tanpa klik apa pun,
+              mikrofon & status mute tetap. Menyerah hanya bila gagal terus selama 3 menit.
+              Koneksi yang "mati diam-diam" (half-open: terlihat tersambung tapi tidak ada data) dideteksi lewat heartbeat. */
+const VR={vc:{since:0,n:0,t:0},gv:{since:0,n:0,t:0}};
+const VR_DELAYS=[300,800,1500,2500,4000,6000,8000], VR_GIVEUP=180000;
+function vrToast(m){ try{ showToast(m,false,5000); }catch(_){} }
+function vrIn(k){ return k==='vc'?!!VC.inCall:!!GV.cur; }
+function vrOk(k){ const R=VR[k]; if(!R.since) return; R.since=0; R.n=0; clearTimeout(R.t); vrToast('✅ Voice tersambung lagi.'); }
+function vrReset(k){ const R=VR[k]; R.since=0; R.n=0; clearTimeout(R.t); }
+function vrLost(k){
+ const R=VR[k];
+ if(!R.since){ R.since=Date.now(); R.n=0; vrToast('⚠️ Koneksi voice terputus, menyambung ulang otomatis…'); }
+ vrTry(k);
+}
+function vrTry(k){
+ const R=VR[k]; clearTimeout(R.t);
+ if(!vrIn(k)){ vrReset(k); return; }
+ if(Date.now()-R.since>VR_GIVEUP){
+  vrReset(k); voiceDown(true,true);
+  if(k==='vc') leaveVoice(true); else gvLeave(true);
+  vrToast('❌ Voice terputus & gagal tersambung lagi. Klik Gabung untuk masuk lagi.'); return;
+ }
+ const S=k==='vc'?VC:GV, ok=k==='vc'?VC.joined:(GV.joined[GV.cur]===true);
+ if(ok&&S.ws&&S.ws.readyState===1){ vrOk(k); return; }
+ if(S.ws&&S.ws.readyState===0&&Date.now()-(S._wt||0)>8000){ vrKill(k,S.ws); return; }   /* macet saat menyambung (vrKill -> onclose -> vrLost menjadwalkan ulang) */
+ if(k==='gv'&&S.ws&&S.ws.readyState===1&&!ok) gvSync();                                    /* tersambung tapi belum masuk channel: kirim join lagi */
+ if(!S.ws){ if(k==='vc') vcConnect(); else gvConnect(); }
+ R.t=setTimeout(()=>vrTry(k),VR_DELAYS[Math.min(R.n++,VR_DELAYS.length-1)]);
+}
+/* tutup soket yang macet & jalankan handler onclose-nya SEKARANG (tanpa menunggu browser) */
+function vrKill(k,ws){ const h=ws.onclose; ws.onclose=null; try{ws.close();}catch(_){} if(h) h(); }
+/* heartbeat: soket dianggap mati bila heartbeat sebelumnya tidak dibalas server dalam 15 detik */
+function vrBeat(ws,k){
+ const S=k==='vc'?VC:GV;
+ if(S.ws!==ws||ws.readyState!==1) return;
+ if(S._whb&&S._wrx<S._whb&&Date.now()-S._whb>15000){ vrKill(k,ws); return; }
+ S._whb=Date.now();
+ try{ ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(S.ref++)})); }catch(_){ vrKill(k,ws); }
+}
+/* upstream macet (antrian kirim browser menumpuk): buang paket suara basi, jangan ditumpuk jadi delay */
+function vrBusy(X){ const w=X.ws&&X.ws(); return !!w&&w.bufferedAmount>12000; }
+/* jaringan kembali / tab dibuka lagi -> cek & sambung sekarang juga, jangan menunggu jadwal */
+function vrKick(){
+ ['vc','gv'].forEach(k=>{
+  if(!vrIn(k)) return;
+  const S=k==='vc'?VC:GV;
+  if(!S.ws||S.ws.readyState>1){ const R=VR[k]; if(!R.since) R.since=Date.now(); R.n=0; vrTry(k); }
+  else if(S.ws.readyState===1){ const w=S.ws; vrBeat(w,k); setTimeout(()=>{ if(S.ws===w&&w.readyState===1&&S._wrx<S._whb) vrKill(k,w); },5000); }   /* tes cepat: tidak dibalas 5 dtk -> anggap mati */
+ });
+}
+window.addEventListener('online',vrKick);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) vrKick(); });
 /* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
    TURN relay, antrian ICE, perfect-negotiation, ICE dikirim per-batch (hindari rate-limit Supabase Realtime),
    retry otomatis, unlock autoplay, tombol matikan/nyalakan audio, dan indikator status per peserta. */
@@ -5596,7 +5650,8 @@ function rtcMeter(S,X){
     grp=[];
     if(vgrp){ hang=7; } 
     const send=vgrp||hang>0;
-    if(send){
+    if(send&&vrBusy(X)){ prev=null; if(!vgrp) hang--; }
+    else if(send){
      if(prev){ X.sig({t:'aud',from:S.me,q:S._seq++,d:btoa(String.fromCharCode.apply(null,prev))}); prev=null; }   /* pre-roll */
      X.sig({t:'aud',from:S.me,q:S._seq++,d:btoa(String.fromCharCode.apply(null,buf))});
      if(!vgrp) hang--;
@@ -6327,16 +6382,16 @@ function vcConnect(){
  if(VC.ws||!canHub('voice')||!currentUser||!voiceWsUrl()) return;
  VC.me=currentUser.username; VC.joined=false; VC.roster={};
  let ws;
- try{ ws=VC.ws=new WebSocket(voiceWsUrl()); }catch(e){ VC.ws=null; return; }
+ try{ ws=VC.ws=new WebSocket(voiceWsUrl()); VC._wt=Date.now(); VC._wrx=Date.now(); VC._whb=0; }catch(e){ VC.ws=null; return; }
  ws.onopen=()=>{
   vsend('phx_join',{config:{broadcast:{self:false,ack:false},presence:{key:VC.me},postgres_changes:[]}});
-  VC.hb=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(VC.ref++)})); },25000);
+  VC.hb=setInterval(()=>vrBeat(ws,'vc'),10000);
  };
- ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;}
+ ws.onmessage=e=>{ VC._wrx=Date.now(); let m; try{m=JSON.parse(e.data);}catch(_){return;}
   if(m.topic!==VC.topic) return;
   if(m.event==='phx_reply'&&!VC.joined){
-   if(m.payload?.status==='ok'){ VC.joined=true; voiceDown(false); if(VC.inCall) vcTrack(); }
-   else { VC.ws=null; try{ws.close();}catch(_){} }
+   if(m.payload?.status==='ok'){ VC.joined=true; voiceDown(false); if(VC.inCall){ const re=!!VR.vc.since; vcTrack(); if(re) vsig({t:'hello',from:VC.me}); vrOk('vc'); } }
+   else { VC.ws=null; try{ws.close();}catch(_){} if(VC.inCall) vrLost('vc'); }
   }
   else if(m.event==='presence_state'){ VC.roster={}; Object.keys(m.payload||{}).forEach(k=>VC.roster[k]=rtcPick(m.payload[k])); vcRoster(); }
   else if(m.event==='presence_diff'){
@@ -6346,7 +6401,7 @@ function vcConnect(){
   }
   else if(m.event==='broadcast'&&m.payload?.event==='sig'){ const p=m.payload.payload; if(p&&p.t==='mpeek'){ VC._peek=p.now?p:null; if(!VC.inCall) vcRoster(); } else vhandle(p); }
  };
- ws.onclose=()=>{ clearInterval(VC.hb); if(VC.ws===ws){ VC.ws=null; VC.joined=false; voiceDown(true,VC.inCall); if(VC.inCall) leaveVoice(true); else { VC.roster={}; VC._peek=null; if(HUB.page==='voice') vcRoster(); } } };
+ ws.onclose=()=>{ clearInterval(VC.hb); if(VC.ws===ws){ VC.ws=null; VC.joined=false; if(VC.inCall) vrLost('vc'); else { voiceDown(true,false); VC.roster={}; VC._peek=null; if(HUB.page==='voice') vcRoster(); } } };
  ws.onerror=()=>{ try{ws.close();}catch(_){} };
 }
 function vcTrack(){ if(VC.joined&&VC.inCall) vsend('presence',{type:'presence',event:'track',payload:rtcMeta(VC)}); }
@@ -6412,6 +6467,7 @@ function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; docu
 function vhandle(m){ rtcHandle(VCX,m); }
 function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); saasSelfFx(VC.muted?'mute':'unmute'); vcTrack(); vcActions(); vcRoster(); }
 function leaveVoice(silent){
+ vrReset('vc');
  saasVoiceClear('vc');
  if(VC.inCall) saasVoiceFx(VC.me,false,VC);
  vidStopAll('vc');
@@ -6707,13 +6763,13 @@ function gvConnect(){
  if(GV.ws||!currentUser||!voiceWsUrl()) return;
  GV.me=gvMe(); GV.joined={}; GV.roster={};
  let ws;
- try{ ws=GV.ws=new WebSocket(voiceWsUrl()); }catch(e){ GV.ws=null; return; }
- ws.onopen=()=>{ gvSync(); GV.hb=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(GV.ref++)})); },25000); };
- ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;}
+ try{ ws=GV.ws=new WebSocket(voiceWsUrl()); GV._wt=Date.now(); GV._wrx=Date.now(); GV._whb=0; }catch(e){ GV.ws=null; return; }
+ ws.onopen=()=>{ gvSync(); GV.hb=setInterval(()=>vrBeat(ws,'gv'),10000); };
+ ws.onmessage=e=>{ GV._wrx=Date.now(); let m; try{m=JSON.parse(e.data);}catch(_){return;}
   if(!m.topic||!m.topic.startsWith('realtime:gvoice-')) return;
   const id=m.topic.slice('realtime:gvoice-'.length);
   if(m.event==='phx_reply'){
-   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; voiceDown(false); if(GV.cur===id){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); } }
+   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; voiceDown(false); if(GV.cur===id){ const re=!!VR.gv.since; gvTrack(); gvSig({t:'hello',from:GV.me}); if(!re) saasVoiceFx(GV.me,true,GV); vrOk('gv'); } }
    else if(GV.joined[id]==='pending') delete GV.joined[id];
   }
   else if(m.event==='presence_state'){ GV.roster[id]={}; Object.keys(m.payload||{}).forEach(k=>GV.roster[id][k]=rtcPick(m.payload[k])); gvRender(); }
@@ -6726,7 +6782,7 @@ function gvConnect(){
   else if(m.event==='broadcast'&&m.payload?.event==='sig'&&m.payload.payload&&m.payload.payload.t==='mpeek'){ const p=m.payload.payload; (GV._peek=GV._peek||{})[id]=p.now?p:null; if(GV.cur!==id) gvRender(); }
   else if(m.event==='broadcast'&&m.payload?.event==='sig'&&id===GV.cur) gvHandle(m.payload.payload);
  };
- ws.onclose=()=>{ clearInterval(GV.hb); if(GV.ws===ws){ GV.ws=null; GV.joined={}; voiceDown(true,!!GV.cur); if(GV.cur) gvLeave(true); else { GV.roster={}; GV._peek={}; gvRender(); } } };
+ ws.onclose=()=>{ clearInterval(GV.hb); if(GV.ws===ws){ GV.ws=null; GV.joined={}; if(GV.cur) vrLost('gv'); else { voiceDown(true,false); GV.roster={}; GV._peek={}; gvRender(); } } };
  ws.onerror=()=>{ try{ws.close();}catch(_){} };
 }
 /* gabung ke topic semua channel yang boleh dilihat (hanya untuk melihat peserta), lepas yang sudah tidak boleh */
@@ -6757,6 +6813,7 @@ function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; doc
 function gvHandle(m){ rtcHandle(GVX,m); }
 function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); saasSelfFx(GV.muted?'mute':'unmute'); gvTrack(); gvRender(); }
 function gvLeave(silent){
+ vrReset('gv');
  saasVoiceClear('gv');
  if(GV.cur) saasVoiceFx(GV.me,false,GV);
  vidStopAll('gv');

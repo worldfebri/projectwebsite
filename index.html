@@ -1518,6 +1518,8 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
 .vs-pop button{background:transparent;border:0;color:#fff;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 13px var(--body)}
 .vs-pop button:hover{background:#2e2e31}
 .vs-tile.scr.mine .vs-wait{display:flex!important;align-items:center;justify-content:center;color:#cfd3d8;font-size:14px;text-align:center;padding:10px}
+.vs-uv.low{opacity:.9!important;background:rgba(220,60,60,.75)}
+.vs-tile:hover .vs-uv{opacity:.95}
 .vs-tfs{position:absolute;top:8px;right:8px;z-index:4;width:34px;height:34px;border-radius:8px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:18px;cursor:pointer;opacity:0;transition:opacity .15s}
 .vs-tile:hover .vs-tfs,.vs-tfs:focus{opacity:1}
 @media(hover:none){.vs-tfs{opacity:.85}}
@@ -2406,22 +2408,45 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                 return 0.3;
             }catch(_){ return 0; }
         }
+        /* Pengaturan efek suara: tiap pengguna bisa mematikan (tombol 🔔 di bar voice). Tersimpan di localStorage. */
+        function saasFxOn(){ try{ return localStorage.getItem('saas_voice_fx')!=='0'; }catch(_){ return true; } }
+        function saasFxToggle(){ const on=!saasFxOn(); try{ localStorage.setItem('saas_voice_fx',on?'1':'0'); }catch(_){} if(!on){ try{ speechSynthesis.cancel(); }catch(_){} } return on; }
+        const _fxPend={}, _fxLast={};   /* anti-spam: tunda "keluar", batalkan bila orang yang sama masuk lagi (koneksi putus-sambung) */
         function saasVoiceFx(name,joined,S){
             try{
                 if(window.__SAAS_UNLOADING || !name) return;
+                if(!saasFxOn()) return;                          /* dimatikan pengguna */
+                if(name===(typeof MUSIC_BOT!=='undefined'?MUSIC_BOT:'SAAS MUSIC')) return;   /* bot musik tidak diumumkan */
+                if(document.hidden) return;                      /* tab di background: jangan bersuara */
                 if(S && S.deaf && name!==S.me) return;           /* kalau audio dimatikan (deafen), efek orang lain ikut diam */
+                if(joined && window.__SAAS_VOICE_AUTO) return;   /* auto-rejoin setelah refresh: diam */
+                const key=(S&&S.me?S.me:'')+'|'+name;
+                if(joined){
+                    if(_fxPend[key]){ clearTimeout(_fxPend[key]); delete _fxPend[key]; return; }   /* keluar lalu masuk lagi dalam jeda = hanya flap */
+                    const now=Date.now(); if(_fxLast[key]&&now-_fxLast[key]<15000) return; _fxLast[key]=now;
+                    saasFxPlay(name,true);
+                }else{
+                    if(name===(S&&S.me)){ saasFxPlay(name,false); return; }   /* keluar sendiri langsung */
+                    if(_fxPend[key]) return;
+                    _fxPend[key]=setTimeout(()=>{ delete _fxPend[key]; saasFxPlay(name,false); },7000);
+                }
+            }catch(_){}
+        }
+        function saasFxPlay(name,joined){
+            try{
+                if(!saasFxOn() || document.hidden) return;
                 const delay=saasChime(joined);
-                const say=()=>{
+                setTimeout(()=>{
                     try{
                         if(!('speechSynthesis' in window)) return;
                         const nice=String(name).replace(/[_.\-]+/g,' ').trim();
                         const u=new SpeechSynthesisUtterance(nice+(joined?' masuk voice sayang':' keluar voice sayang'));
                         u.lang='id-ID'; u.rate=1; u.pitch=1.15; u.volume=1;
                         const v=(speechSynthesis.getVoices()||[]).find(x=>/^id[-_]/i.test(x.lang)); if(v) u.voice=v;
+                        if(speechSynthesis.pending) speechSynthesis.cancel();   /* jangan menumpuk antrean suara */
                         speechSynthesis.speak(u);
                     }catch(_){}
-                };
-                setTimeout(say,Math.round(delay*1000));
+                },Math.round(delay*1000));
             }catch(_){}
         }
         async function saasVoiceResume(){
@@ -5405,6 +5430,21 @@ function voiceWsUrl(){
  if(!sbConfig.url) return '';
  return sbConfig.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(sbConfig.key)+'&vsn=1.0.0';
 }
+/* ---------- PESAN MAINTENANCE: tampil bila website tidak bisa tersambung ke SAAS Voice Server ---------- */
+const VOICE_MAINT_MSG='MAAF SISTEM VOICE DI SAAS LAGI MAINTENANCE';
+let VOICE_DOWN=false,_vmT=0;
+function voiceDown(on,notify){
+ VOICE_DOWN=!!on;
+ if(!on){ document.getElementById('voice-maint')?.remove(); return; }
+ if(!notify) return;                                   /* banner hanya muncul bila member sedang mencoba masuk voice */
+ let b=document.getElementById('voice-maint');
+ if(!b){
+  b=document.createElement('div'); b.id='voice-maint';
+  b.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;max-width:92vw;background:#ff2938;color:#fff;font-weight:800;letter-spacing:.5px;text-align:center;padding:14px 22px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45);cursor:pointer';
+  b.title='Klik untuk menutup'; b.onclick=()=>b.remove(); document.body.appendChild(b);
+ }
+ b.textContent='🔧 '+VOICE_MAINT_MSG; clearTimeout(_vmT); _vmT=setTimeout(()=>b.remove(),10000);
+}
 /* ---------- WebRTC helper bersama (SAAS VOICE & Voice Global) ----------
    TURN relay, antrian ICE, perfect-negotiation, ICE dikirim per-batch (hindari rate-limit Supabase Realtime),
    retry otomatis, unlock autoplay, tombol matikan/nyalakan audio, dan indikator status per peserta. */
@@ -5463,7 +5503,7 @@ function rtcRelayOn(S,n){
 }
 /* rantai audio: mic -> highpass -> noise gate -> (stream keluar untuk WebRTC) + (paket relay) */
 function rtcMeter(S,X){
- S._jt=Date.now(); S._pj={}; S._rx={}; S._seq=0;
+ S._jt=Date.now(); S._pj={}; S._rx={}; S._ug={}; S._seq=0;
  S._vf={}; S._vt={}; S._vc={}; S._focus=''; S._pop=''; S.camOn=false; S.scrOn=false;
  try{
   const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
@@ -5516,9 +5556,26 @@ function rtcMeter(S,X){
 function rtcMeterStop(S){
  try{ S._sp&&(S._sp.onaudioprocess=null); (S._spNodes||[]).forEach(n=>{ try{n.disconnect();}catch(_){} }); }catch(_){}
  try{ S._ac&&S._ac.close(); }catch(_){}
- S._sp=null; S._spNodes=null; S._ac=null; S.out=null; S._outLv=0; S._lv=0;
+ S._sp=null; S._spNodes=null; S._ac=null; S._ug={}; S.out=null; S._outLv=0; S._lv=0;
 }
 const rtcSelfLevel=S=>S.muted?0:(S._outLv||0);
+/* ---- VOLUME PER PENGGUNA (0-100%, tersimpan di browser): kecilkan suara satu orang tanpa mengubah yang lain ---- */
+function uvolAll(){ try{ return JSON.parse(localStorage.getItem('saas_uvol')||'{}')||{}; }catch(_){ return {}; } }
+function uvolGet(u){ const v=uvolAll()[u]; return (typeof v==='number'&&isFinite(v))?Math.max(0,Math.min(1,v)):1; }
+function uvolSet(u,v){
+ v=Math.max(0,Math.min(1,v));
+ try{ const o=uvolAll(); if(v>=1) delete o[u]; else o[u]=v; localStorage.setItem('saas_uvol',JSON.stringify(o)); }catch(_){}
+ [VCX,GVX].forEach(X=>{
+  const a=document.getElementById(X.pre+u); if(a) a.volume=v;                 /* jalur WebRTC */
+  const g=X.S._ug&&X.S._ug[u]; if(g) g.gain.value=v;                         /* jalur relay server */
+ });
+ document.querySelectorAll('.vs-uv[data-u]').forEach(b=>{ if(b.dataset.u===u){ b.classList.toggle('low',v<1); b.textContent=v<=0?'🔇':v<1?'🔉':'🔊'; } });
+}
+function uvolNode(S,u){
+ const ctx=S._ac; S._ug=S._ug||{};
+ let g=S._ug[u]; if(!g||g.context!==ctx){ g=S._ug[u]=ctx.createGain(); g.gain.value=uvolGet(u); g.connect(ctx.destination); }
+ return g;
+}
 /* pemutar relay: jitter buffer adaptif, urutan paket, fade-in di awal bicara */
 function rlyPlay(X,m){
  const S=X.S, ctx=S._ac; if(!ctx||S.deaf||!m.d) return;
@@ -5538,7 +5595,7 @@ function rlyPlay(X,m){
   st.t=nowT+st.tg; fade=true;
  }else if(ahead>st.tg+0.25) rate=1.12;                                         /* antrean menumpuk: kejar dengan sedikit lebih cepat (tanpa memotong kata) */
  if(fade){ const f=Math.min(ch.length,80); for(let i=0;i<f;i++) ch[i]*=i/f; }
- const s2=ctx.createBufferSource(); s2.buffer=buf; if(rate!==1) s2.playbackRate.value=rate; s2.connect(ctx.destination);
+ const s2=ctx.createBufferSource(); s2.buffer=buf; if(rate!==1) s2.playbackRate.value=rate; s2.connect(uvolNode(S,m.from));
  s2.start(st.t); st.t+=buf.duration/rate; st.at=nowMs; S._rx[m.from]=nowMs;
  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
 }
@@ -5571,7 +5628,7 @@ function rtcMk(X,u){
   let a=document.getElementById(X.pre+u);
   if(!a){ a=document.createElement('audio'); a.id=X.pre+u; a.autoplay=true; a.playsInline=true; document.body.appendChild(a); }
   a.srcObject=(e.streams&&e.streams[0])||new MediaStream([e.track]);
-  a.muted=!!S.deaf;
+  a.muted=!!S.deaf; a.volume=uvolGet(u);
   const p=a.play(); if(p&&p.catch) p.catch(()=>{ if(!rtcBlocked.includes(a)) rtcBlocked.push(a); });
  };
  pc.onicecandidateerror=e=>console.warn('[voice] ICE error',e.errorCode,e.url,e.errorText);
@@ -5847,13 +5904,14 @@ function vsTileHTML(k,t){
  const media=(t.me&&t.kind==='scr')?'':t.me?`<video class="vs-vid${t.kind==='cam'?' mir':''}" muted playsinline autoplay></video>`:`<img class="vs-vid" alt=""${S._vf&&S._vf[t.key]?` src="${S._vf[t.key]}"`:''}>`;
  const inner=t.kind==='cam'?`<div class="vs-avwrap">${vcAvatar(t.u)}</div>`:(t.me?'<div class="vs-wait">🖥️ Layarmu sedang dibagikan</div>':'<div class="vs-wait">Memuat layar…</div>');
  const lbl=`<div class="vs-lbl"><span class="vs-name">${escapeHTML(t.u)}${(()=>{ const _u=vcUser(t.u); return _u&&_u.icName?' · '+escapeHTML(_u.icName):''; })()}${t.me?' (kamu)':''}${t.kind==='scr'?' · layar':''}</span>${t.kind==='scr'?'<span class="vs-live">LIVE</span>':''}${t.kind==='cam'&&t.muted?`<span class="vs-mi">${VIC.micoff}</span>`:''}${t.kind==='cam'&&t.deaf?`<span class="vs-mi">${VIC.headoff}</span>`:''}</div>`;
- return `<div class="vs-tile ${t.kind}${t.me?' mine':''}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}${t.kind==='scr'?`<button class="vs-tfs" data-a="tilefs" data-key="${escapeHTML(t.key)}" title="Perbesar / layar penuh">⛶</button>`:''}</div>`;
+ return `<div class="vs-tile ${t.kind}${t.me?' mine':''}" data-a="focus" data-key="${escapeHTML(t.key)}" style="--tc:${vsColor(t.u)}">${media}${inner}${lbl}${t.kind==='cam'?rtcBadge(k,t.u,cid):''}${(t.kind==='cam'&&!t.me&&t.u!=='SAAS MUSIC')?`<button class="vs-tfs vs-uv${uvolGet(t.u)<1?' low':''}" data-a="uvol" data-u="${escapeHTML(t.u)}" title="Atur volume ${escapeHTML(t.u)}">${uvolGet(t.u)<=0?'🔇':uvolGet(t.u)<1?'🔉':'🔊'}</button>`:''}${t.kind==='scr'?`<button class="vs-tfs" data-a="tilefs" data-key="${escapeHTML(t.key)}" title="Perbesar / layar penuh">⛶</button>`:''}</div>`;
 }
 function vsMount(k,host){
  const S=vsS(k); if(!host||!vsIn(k)) return;
  if(!S._stage){
   const st=S._stage=document.createElement('div'); st.className='vs'; S._sig='';
   st.addEventListener('click',e=>vsClick(k,e));
+  st.addEventListener('input',e=>{ const r=e.target.closest&&e.target.closest('input[data-uv]'); if(!r) return; const v=(+r.value)/100; uvolSet(r.dataset.uv,v); const l=st.querySelector('.uv-val'); if(l) l.textContent=Math.round(v*100)+'%'; });
   st.addEventListener('dblclick',e=>{ const t=e.target.closest('.vs-tile.scr'); if(t) vsBig(k,t.dataset.key); });
   if(window.ResizeObserver) new ResizeObserver(()=>vsFit(k)).observe(st);
  }
@@ -5875,12 +5933,13 @@ function vsUpdate(k){
  } else grid=`<div class="vs-grid">${tiles.map(t=>vsTileHTML(k,t)).join('')}</div>`;
  let pop='';
  if(S._pop==='mic') pop=`<div class="vs-pop"><div class="vs-pt">Mikrofon</div><button data-a="ns">🔕 Peredam noise: <b>${NS_NAMES[NS_LVL]}</b> (klik untuk ganti)</button></div>`;
+ else if(typeof S._pop==='string'&&S._pop.startsWith('uv:')){ const _u=S._pop.slice(3), _v=Math.round(uvolGet(_u)*100); pop=`<div class="vs-pop" data-a="uvolin"><div class="vs-pt">Volume · ${escapeHTML(_u)}</div><div style="display:flex;align-items:center;gap:8px;padding:4px 6px"><input type="range" min="0" max="100" value="${_v}" data-uv="${escapeHTML(_u)}" data-a="uvolin" style="flex:1"><b class="uv-val" style="min-width:42px;text-align:right">${_v}%</b></div><small>Hanya mengubah suara ${escapeHTML(_u)} di perangkatmu. Geser ke 0% untuk membisukannya.</small></div>`; }
  else if(S._pop==='cam') pop=`<div class="vs-pop"><div class="vs-pt">Kualitas kamera &amp; layar</div>${VID_NAMES.map((n,i)=>`<button data-a="vq" data-v="${i}">${i===VID_LVL?'✓ ':'&nbsp;&nbsp;&nbsp;'}${n}</button>`).join('')}<small>Video dikirim lewat server voice. Makin jernih = makin berat untuk internet semua orang.</small></div>`;
  st.innerHTML=`<div class="vs-top">${VIC.spk}<div><b>${escapeHTML(title)}</b><small>${rtcBadge(k,S.me,cid)}</small></div></div>${grid}
  <div class="vs-bar">${pop}
   <div class="vs-grp"><button class="vs-b ${S.muted?'off':''}" data-a="mic" title="${S.muted?'Unmute':'Mute'}">${S.muted?VIC.micoff:VIC.mic}</button><button class="vs-b vs-chev" data-a="pop-mic" title="Pengaturan mikrofon">${VIC.chev}</button>
    <button class="vs-b ${S.camOn?'on':''}" data-a="cam" title="${S.camOn?'Matikan kamera':'Nyalakan kamera'}">${S.camOn?VIC.cam:VIC.camoff}</button><button class="vs-b vs-chev" data-a="pop-cam" title="Kualitas video">${VIC.chev}</button></div>
-  <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button></div>
+  <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button><button class="vs-b ${saasFxOn()?'':'off'}" data-a="fx" title="${saasFxOn()?'Matikan efek suara masuk/keluar':'Nyalakan efek suara masuk/keluar'}">${saasFxOn()?'🔔':'🔕'}</button></div>
   <button class="vs-music ${S._mu&&S._mu.now?'on':''}" data-a="music" title="SAAS Music">🎵 ${S._mu&&S._mu.now?'MUSIC':'PUTAR MUSIC'}</button>
   <button class="vs-hang" data-a="hang" title="Keluar dari voice">${VIC.hang}</button>
   <button class="vs-b vs-fs" data-a="fs" title="Layar penuh">${VIC.fs}</button>
@@ -5931,6 +5990,8 @@ function vsClick(k,e){
   const key=b.dataset.key, cur=vsFocusKey(k,vsTiles(k));
   S._focus=(cur===key)?'-':key; vsUpdate(k); return;
  }
+ if(a==='uvolin') return;
+ if(a==='uvol'){ const p='uv:'+b.dataset.u; S._pop=S._pop===p?'':p; vsUpdate(k); return; }
  if(a==='tilefs'){ vsBig(k,b.dataset.key); return; }
  if(a==='music'){ S._pop=''; musToggle(k); vsUpdate(k); return; }
  if(a==='pop-mic'||a==='pop-cam'){ const p=a.slice(4); S._pop=S._pop===p?'':p; vsUpdate(k); return; }
@@ -5938,6 +5999,7 @@ function vsClick(k,e){
  S._pop='';
  if(a==='mic') k==='vc'?vcMute():gvMute();
  else if(a==='deaf') k==='vc'?vcDeaf():gvDeaf();
+ else if(a==='fx'){ saasFxToggle(); vsUpdate(k); }
  else if(a==='ns') rtcNoise(k);
  else if(a==='cam') vidToggle(k,'cam');
  else if(a==='scr') vidToggle(k,'scr');
@@ -6045,7 +6107,7 @@ const muS=k=>{ const S=vsS(k); return S._mu||(S._mu={now:null,queue:[],paused:fa
 function musInfo(k,c){ const S=vsS(k); const inHere=vsIn(k)&&(k==='vc'||GV.cur===c); if(inHere) return S._mu||null; return k==='vc'?(S._peek||null):((S._peek||{})[c]||null); }
 const musVol=()=>{ let v=0.8; try{ const x=parseFloat(localStorage.getItem('saas_mvol')); if(x>=0&&x<=1) v=x; }catch(_){} return v; };
 const fmtT=s=>{ s=Math.max(0,Math.floor(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-function musState(X,m){ const u=muS(X.k), was=!!u.now; u.now=m.now||null; try{ if(!was&&u.now) saasVoiceFx(MUSIC_BOT,true,X.S); else if(was&&!u.now) saasVoiceFx(MUSIC_BOT,false,X.S); }catch(_){} u.queue=m.queue||[]; u.paused=!!m.paused; u.stopped=!!m.stopped; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0;
+function musState(X,m){ const u=muS(X.k), was=!!u.now; u.now=m.now||null; u.queue=m.queue||[]; u.paused=!!m.paused; u.stopped=!!m.stopped; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0;
  if(!u.now||u.stopped){ const S=X.S; (S._msrc||[]).splice(0).forEach(s=>{ try{ s.stop(); }catch(_){} }); }   /* STOP / bot keluar: potong sisa suara yang sudah terjadwal supaya langsung diam */
  vsUpdate(X.k); musRender(); }
 function musMsg(X,m){ const u=muS(X.k); u.msg=m.text||''; if(document.getElementById('mu-panel')) musRender(); else if(typeof showToast==='function') showToast(u.msg); }
@@ -6178,7 +6240,7 @@ function vcRow(k,n,cid){
  const u=vcUser(n), ic=u&&u.icName;
  return `<div class="vc-user" title="@${escapeHTML(n)}">${vcAvatar(n)}<span><b>@${escapeHTML(n)}</b>${ic?` <small style="opacity:.75">· ${escapeHTML(ic)}</small>`:''}${rtcBadge(k,n,cid)}</span></div>`;
 }
-function vcEmptyMsg(joined){ return !voiceWsUrl()?'Server voice belum diatur (Admin → Server & Musik).':!joined?'⏳ Memuat daftar peserta…':'Belum ada yang bergabung.'; }
+function vcEmptyMsg(joined){ return !voiceWsUrl()?'Server voice belum diatur (Admin → Server & Musik).':VOICE_DOWN?'<b style="color:#ff2938;letter-spacing:.5px">🔧 '+VOICE_MAINT_MSG+'</b>':!joined?'⏳ Memuat daftar peserta…':'Belum ada yang bergabung.'; }
 function hubVoiceUI(body){
  if(!body) return;
  body.innerHTML=`<div class="card vc-card"><div class="vc-head"><div class="vc-ico">🔊</div><div class="vc-meta"><b>SAAS VOICE</b><small>Channel voice resmi SAAS · khusus member ber-role</small></div><div id="vc-actions"></div></div><div class="vc-sub"><span id="vc-count">0 di channel</span></div><div id="vc-roster" class="vc-roster"></div><div id="vc-audio"></div></div>`;
@@ -6216,7 +6278,7 @@ function vcConnect(){
  ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;}
   if(m.topic!==VC.topic) return;
   if(m.event==='phx_reply'&&!VC.joined){
-   if(m.payload?.status==='ok'){ VC.joined=true; if(VC.inCall) vcTrack(); }
+   if(m.payload?.status==='ok'){ VC.joined=true; voiceDown(false); if(VC.inCall) vcTrack(); }
    else { VC.ws=null; try{ws.close();}catch(_){} }
   }
   else if(m.event==='presence_state'){ VC.roster={}; Object.keys(m.payload||{}).forEach(k=>VC.roster[k]=rtcPick(m.payload[k])); vcRoster(); }
@@ -6227,7 +6289,7 @@ function vcConnect(){
   }
   else if(m.event==='broadcast'&&m.payload?.event==='sig'){ const p=m.payload.payload; if(p&&p.t==='mpeek'){ VC._peek=p.now?p:null; if(!VC.inCall) vcRoster(); } else vhandle(p); }
  };
- ws.onclose=()=>{ clearInterval(VC.hb); if(VC.ws===ws){ VC.ws=null; VC.joined=false; if(VC.inCall) leaveVoice(true); else { VC.roster={}; VC._peek=null; if(HUB.page==='voice') vcRoster(); } } };
+ ws.onclose=()=>{ clearInterval(VC.hb); if(VC.ws===ws){ VC.ws=null; VC.joined=false; voiceDown(true,VC.inCall); if(VC.inCall) leaveVoice(true); else { VC.roster={}; VC._peek=null; if(HUB.page==='voice') vcRoster(); } } };
  ws.onerror=()=>{ try{ws.close();}catch(_){} };
 }
 function vcTrack(){ if(VC.joined&&VC.inCall) vsend('presence',{type:'presence',event:'track',payload:rtcMeta(VC)}); }
@@ -6285,7 +6347,7 @@ async function joinVoice(){
   if(!VC.inCall){ clearInterval(waitJoin); return; }
   if(VC.joined){ clearInterval(waitJoin); vcTrack(); vsig({t:'hello',from:VC.me}); vcRoster(); saasVoiceFx(VC.me,true,VC); }
  },200);
- setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); leaveVoice(true); } },8000);
+ setTimeout(()=>{ clearInterval(waitJoin); if(VC.inCall&&!VC.joined){ voiceDown(true,true); leaveVoice(true); } },8000);
  vcActions(); vcRoster();
 }
 function vmk(u){ return rtcMk(VCX,u); }
@@ -6594,7 +6656,7 @@ function gvConnect(){
   if(!m.topic||!m.topic.startsWith('realtime:gvoice-')) return;
   const id=m.topic.slice('realtime:gvoice-'.length);
   if(m.event==='phx_reply'){
-   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; if(GV.cur===id){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); } }
+   if(m.payload?.status==='ok'&&GV.joined[id]==='pending'){ GV.joined[id]=true; voiceDown(false); if(GV.cur===id){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); } }
    else if(GV.joined[id]==='pending') delete GV.joined[id];
   }
   else if(m.event==='presence_state'){ GV.roster[id]={}; Object.keys(m.payload||{}).forEach(k=>GV.roster[id][k]=rtcPick(m.payload[k])); gvRender(); }
@@ -6607,7 +6669,7 @@ function gvConnect(){
   else if(m.event==='broadcast'&&m.payload?.event==='sig'&&m.payload.payload&&m.payload.payload.t==='mpeek'){ const p=m.payload.payload; (GV._peek=GV._peek||{})[id]=p.now?p:null; if(GV.cur!==id) gvRender(); }
   else if(m.event==='broadcast'&&m.payload?.event==='sig'&&id===GV.cur) gvHandle(m.payload.payload);
  };
- ws.onclose=()=>{ clearInterval(GV.hb); if(GV.ws===ws){ GV.ws=null; GV.joined={}; if(GV.cur) gvLeave(true); else { GV.roster={}; GV._peek={}; gvRender(); } } };
+ ws.onclose=()=>{ clearInterval(GV.hb); if(GV.ws===ws){ GV.ws=null; GV.joined={}; voiceDown(true,!!GV.cur); if(GV.cur) gvLeave(true); else { GV.roster={}; GV._peek={}; gvRender(); } } };
  ws.onerror=()=>{ try{ws.close();}catch(_){} };
 }
 /* gabung ke topic semua channel yang boleh dilihat (hanya untuk melihat peserta), lepas yang sudah tidak boleh */
@@ -6630,7 +6692,7 @@ async function gvJoin(id){
  gvConnect();
  if(GV.joined[id]===true){ gvTrack(); gvSig({t:'hello',from:GV.me}); saasVoiceFx(GV.me,true,GV); }
  else if(GV.ws&&GV.ws.readyState===1) gvSync();
- setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ alert('Gagal masuk voice (server voice belum aktif / tidak terjangkau?).'); gvLeave(true); } },8000);
+ setTimeout(()=>{ if(GV.cur===id&&GV.joined[id]!==true){ voiceDown(true,true); gvLeave(true); } },8000);
  gvRender();
 }
 function gvPeer(u){ return rtcMk(GVX,u); }

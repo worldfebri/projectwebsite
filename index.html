@@ -2432,9 +2432,63 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                 }
             }catch(_){}
         }
+
+        /* ===== PAKET EFEK SUARA HALLOWEEN (dibuat langsung di browser lewat Web Audio, tanpa file audio) =====
+           Ganti SAAS_FX_PACK ke 'klasik' untuk kembali ke bel + suara "masuk voice sayang" yang lama. */
+        const SAAS_FX_PACK='halloween';
+        function saasHw(kind){
+            try{
+                const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return 0;
+                if(!_fxAc) _fxAc=new AC(); const ac=_fxAc; if(ac.state==='suspended') ac.resume().catch(()=>{});
+                const t0=ac.currentTime+0.02;
+                const mst=ac.createGain(); mst.gain.value=0.6; const cmp=ac.createDynamicsCompressor(); mst.connect(cmp); cmp.connect(ac.destination);
+                const env=(g,t,a,v,d)=>{ g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+d); };
+                const tone=(type,f0,f1,t,d,v,o)=>{ o=o||{};
+                    const os=ac.createOscillator(), g=ac.createGain(); os.type=type;
+                    os.frequency.setValueAtTime(f0,t); os.frequency.exponentialRampToValueAtTime(f1,t+d);
+                    let node=os;
+                    if(o.lp){ const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=o.lp; os.connect(f); node=f; }
+                    if(o.vib){ const l=ac.createOscillator(), lg=ac.createGain(); l.frequency.value=o.vib; lg.gain.value=o.vd||f0*0.03; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t+d+0.05); }
+                    node.connect(g); g.connect(mst); env(g,t,o.a||0.02,v,d); os.start(t); os.stop(t+d+0.05);
+                };
+                const noise=(t,d,v,type,f0,f1,q)=>{
+                    const n=Math.max(1,Math.floor(ac.sampleRate*d)), b=ac.createBuffer(1,n,ac.sampleRate), x=b.getChannelData(0);
+                    for(let i=0;i<n;i++) x[i]=Math.random()*2-1;
+                    const s=ac.createBufferSource(); s.buffer=b;
+                    const f=ac.createBiquadFilter(); f.type=type; f.Q.value=q||1; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+d);
+                    const g=ac.createGain(); s.connect(f); f.connect(g); g.connect(mst); env(g,t,0.03,v,d); s.start(t);
+                };
+                const bell=(f,t,v)=>[1,2.76,5.4].forEach((m,i)=>tone('sine',f*m,f*m*0.997,t,1.2/(i+1),v/(i+1)));
+                if(kind==='join'){            /* pintu kayu berderit terbuka + hantu "uuuuu" naik + lonceng seram */
+                    noise(t0,0.5,0.35,'bandpass',300,950,9);
+                    tone('sawtooth',85,135,t0,0.5,0.12,{lp:700,vib:26,vd:10});
+                    tone('sine',392,587,t0+0.3,0.6,0.26,{vib:6,vd:12,a:0.12});
+                    bell(1318,t0+0.62,0.12);
+                }else if(kind==='leave'){     /* hantu meratap turun + pintu dibanting */
+                    tone('sine',587,196,t0,0.85,0.28,{vib:6,vd:14,a:0.08});
+                    noise(t0+0.6,0.3,0.7,'lowpass',500,70,1);
+                    tone('sine',95,38,t0+0.6,0.32,0.55);
+                }else if(kind==='mute'){      /* cicit kelelawar turun x2 */
+                    tone('sine',3000,1800,t0,0.07,0.14); tone('sine',2600,1500,t0+0.1,0.07,0.12);
+                }else if(kind==='unmute'){    /* cicit kelelawar naik x2 */
+                    tone('sine',1800,3000,t0,0.07,0.14); tone('sine',2100,3500,t0+0.1,0.08,0.14);
+                }else if(kind==='deaf'){      /* peti mati ditutup: gedebuk rendah + gemuruh + derit */
+                    tone('sine',110,38,t0,0.4,0.6);
+                    noise(t0,0.45,0.5,'lowpass',320,60,1);
+                    tone('sawtooth',70,48,t0+0.05,0.4,0.08,{lp:300,vib:18,vd:4});
+                }else if(kind==='undeaf'){    /* lonceng hantu + "uuu" naik */
+                    bell(988,t0,0.14);
+                    tone('sine',330,660,t0,0.45,0.2,{vib:7,vd:8,a:0.1});
+                }else return 0;
+                return 0.3;
+            }catch(_){ return 0; }
+        }
+        /* efek untuk aksi diri sendiri (mute / unmute / deafen / matikan deafen) */
+        function saasSelfFx(kind){ try{ if(SAAS_FX_PACK==='halloween' && saasFxOn()) saasHw(kind); }catch(_){} }
         function saasFxPlay(name,joined){
             try{
                 if(!saasFxOn() || document.hidden) return;
+                if(SAAS_FX_PACK==='halloween'){ saasHw(joined?'join':'leave'); return; }   /* paket Halloween: tanpa suara AI */
                 const delay=saasChime(joined);
                 setTimeout(()=>{
                     try{
@@ -5772,8 +5826,8 @@ setInterval(()=>{
   const row=el.closest('.vc-user,.vs-tile'); if(row) row.classList.toggle('speaking',t.indexOf('🔊')===0);
  });
 },400);
-function vcDeaf(){ rtcSetDeaf(VCX,!VC.deaf); vcTrack(); vcActions(); vcRoster(); }
-function gvDeaf(){ rtcSetDeaf(GVX,!GV.deaf); gvTrack(); gvRender(); }
+function vcDeaf(){ rtcSetDeaf(VCX,!VC.deaf); saasSelfFx(VC.deaf?'deaf':'undeaf'); vcTrack(); vcActions(); vcRoster(); }
+function gvDeaf(){ rtcSetDeaf(GVX,!GV.deaf); saasSelfFx(GV.deaf?'deaf':'undeaf'); gvTrack(); gvRender(); }
 
 /* ---------- PILIH MIKROFON (muncul setiap kali masuk voice) ----------
    Menampilkan daftar mikrofon + meter level untuk tes + opsi peredam gema.
@@ -5939,7 +5993,7 @@ function vsUpdate(k){
  <div class="vs-bar">${pop}
   <div class="vs-grp"><button class="vs-b ${S.muted?'off':''}" data-a="mic" title="${S.muted?'Unmute':'Mute'}">${S.muted?VIC.micoff:VIC.mic}</button><button class="vs-b vs-chev" data-a="pop-mic" title="Pengaturan mikrofon">${VIC.chev}</button>
    <button class="vs-b ${S.camOn?'on':''}" data-a="cam" title="${S.camOn?'Matikan kamera':'Nyalakan kamera'}">${S.camOn?VIC.cam:VIC.camoff}</button><button class="vs-b vs-chev" data-a="pop-cam" title="Kualitas video">${VIC.chev}</button></div>
-  <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button><button class="vs-b ${saasFxOn()?'':'off'}" data-a="fx" title="${saasFxOn()?'Matikan efek suara masuk/keluar':'Nyalakan efek suara masuk/keluar'}">${saasFxOn()?'🔔':'🔕'}</button></div>
+  <div class="vs-grp">${canShare?`<button class="vs-b ${S.scrOn?'on':''}" data-a="scr" title="${S.scrOn?'Berhenti share layar':'Share layar'}">${VIC.scr}</button>`:''}<button class="vs-b ${S.deaf?'off':''}" data-a="deaf" title="${S.deaf?'Nyalakan audio':'Matikan audio'}">${S.deaf?VIC.headoff:VIC.head}</button><button class="vs-b ${saasFxOn()?'':'off'}" data-a="fx" title="${saasFxOn()?'Matikan efek suara voice (masuk/keluar/mute/deafen)':'Nyalakan efek suara voice (masuk/keluar/mute/deafen)'}">${saasFxOn()?'🔔':'🔕'}</button></div>
   <button class="vs-music ${S._mu&&S._mu.now?'on':''}" data-a="music" title="SAAS Music">🎵 ${S._mu&&S._mu.now?'MUSIC':'PUTAR MUSIC'}</button>
   <button class="vs-hang" data-a="hang" title="Keluar dari voice">${VIC.hang}</button>
   <button class="vs-b vs-fs" data-a="fs" title="Layar penuh">${VIC.fs}</button>
@@ -6101,13 +6155,15 @@ function musCan(){
  const mine=(getUser(currentUser.username)?.roleIds)||[]; return r.some(x=>mine.includes(x));
 }
 const MUSIC_BOT='SAAS MUSIC';
+/* pengontrol bot = orang yang memutar musik (dikirim server lewat mstate.owner). Kosong = belum ada sesi, siapa saja yang boleh memutar. */
+function musOwn(k){ const u=muS(k), S=vsS(k); return !u.owner||String(u.owner).toLowerCase()===String(S.me).toLowerCase(); }
 let _mk='';
 const muS=k=>{ const S=vsS(k); return S._mu||(S._mu={now:null,queue:[],paused:false,stopped:false,pos:0,at:0,msg:'',pj:{t:0}}); };
 /* info bot musik untuk satu voice: kalau sedang di dalam voice itu -> state lengkap; kalau cuma mengintip -> info ringkas dari server */
 function musInfo(k,c){ const S=vsS(k); const inHere=vsIn(k)&&(k==='vc'||GV.cur===c); if(inHere) return S._mu||null; return k==='vc'?(S._peek||null):((S._peek||{})[c]||null); }
 const musVol=()=>{ let v=0.8; try{ const x=parseFloat(localStorage.getItem('saas_mvol')); if(x>=0&&x<=1) v=x; }catch(_){} return v; };
 const fmtT=s=>{ s=Math.max(0,Math.floor(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-function musState(X,m){ const u=muS(X.k), was=!!u.now; u.now=m.now||null; u.queue=m.queue||[]; u.paused=!!m.paused; u.stopped=!!m.stopped; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0;
+function musState(X,m){ const u=muS(X.k), was=!!u.now; u.now=m.now||null; u.queue=m.queue||[]; u.paused=!!m.paused; u.stopped=!!m.stopped; u.owner=m.owner||''; u.pos=m.pos||0; u.at=Date.now(); if(!u.now||u.paused) u.pj.t=0;
  if(!u.now||u.stopped){ const S=X.S; (S._msrc||[]).splice(0).forEach(s=>{ try{ s.stop(); }catch(_){} }); }   /* STOP / bot keluar: potong sisa suara yang sudah terjadwal supaya langsung diam */
  vsUpdate(X.k); musRender(); }
 function musMsg(X,m){ const u=muS(X.k); u.msg=m.text||''; if(document.getElementById('mu-panel')) musRender(); else if(typeof showToast==='function') showToast(u.msg); }
@@ -6124,7 +6180,8 @@ function musPlay(X,m){
  (S._msrc=S._msrc||[]).push(src); src.onended=()=>{ const i=(S._msrc||[]).indexOf(src); if(i>=0) S._msrc.splice(i,1); };
  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
 }
-function musSend(k,cmd,extra){ const S=vsS(k); if(!vsIn(k)) return; if(!musCan()) return alert('Role kamu tidak punya izin mengontrol musik.'); vsX(k).sig(Object.assign({t:'mcmd',from:S.me,cmd},extra||{})); }
+function musSend(k,cmd,extra){ const S=vsS(k); if(!vsIn(k)) return; if(!musCan()) return alert('Role kamu tidak punya izin mengontrol musik.');
+ if(cmd!=='play'&&!musOwn(k)) return alert('Hanya '+muS(k).owner+' (yang memutar musik) yang bisa mengontrol bot ini.'); vsX(k).sig(Object.assign({t:'mcmd',from:S.me,cmd},extra||{})); }
 function musToggle(k){
  const old=document.getElementById('mu-panel'); if(old){ old.remove(); _mk=''; return; }
  _mk=k;
@@ -6153,10 +6210,10 @@ function musToggle(k){
 }
 function musRender(){
  const p=document.getElementById('mu-panel'); if(!p||!_mk) return;
- const u=muS(_mk), can=musCan(), n=u.now;
+ const u=muS(_mk), can=musCan(), own=can&&musOwn(_mk), n=u.now;
  p.querySelector('#mu-st').textContent=u.msg||'';
- p.querySelector('#mu-body').innerHTML=(n?`<div class="mu-now"><b>${escapeHTML(n.title)}</b><small>${escapeHTML(n.artist||'')}${n.artist?' · ':''}diputar oleh ${escapeHTML(n.by||'')}</small><div class="mu-pg"><i id="mu-bar"></i></div><small id="mu-tm"></small>${can?`<div class="mu-ct">${u.stopped?'<button class="st" data-c="resume">▶ START</button>':`<button data-c="${u.paused?'resume':'pause'}">${u.paused?'▶ Lanjut':'⏸ Jeda'}</button>`}<button data-c="skip">⏭ Lewati</button>${u.stopped?'':'<button data-c="stop">⏹ STOP</button>'}<button class="kick" data-c="leave" title="Bot keluar dari voice & musik berhenti total">⏏ KELUARKAN BOT</button></div>${u.stopped?'<small>Musik dihentikan, bot masih standby di voice. Tekan START untuk menyalakan lagi untuk semua orang di voice.</small>':''}`:''}</div>`:'<small style="margin-top:12px">Belum ada musik yang diputar.</small>')
-  +(u.queue.length?`<div class="mu-q"><b>Antrian (${u.queue.length})</b>${u.queue.map(q=>`<div><span>${escapeHTML(q.title)}</span>${can?`<button data-c="rm" data-id="${escapeHTML(q.id)}">✕</button>`:''}</div>`).join('')}</div>`:'');
+ p.querySelector('#mu-body').innerHTML=(n?`<div class="mu-now"><b>${escapeHTML(n.title)}</b><small>${escapeHTML(n.artist||'')}${n.artist?' · ':''}diputar oleh ${escapeHTML(n.by||'')}</small><div class="mu-pg"><i id="mu-bar"></i></div><small id="mu-tm"></small>${own?`<div class="mu-ct">${u.stopped?'<button class="st" data-c="resume">▶ START</button>':`<button data-c="${u.paused?'resume':'pause'}">${u.paused?'▶ Lanjut':'⏸ Jeda'}</button>`}<button data-c="skip">⏭ Lewati</button>${u.stopped?'':'<button data-c="stop">⏹ STOP</button>'}<button class="kick" data-c="leave" title="Bot keluar dari voice & musik berhenti total">⏏ KELUARKAN BOT</button></div>${u.stopped?'<small>Musik dihentikan, bot masih standby di voice. Tekan START untuk menyalakan lagi untuk semua orang di voice.</small>':''}`:`<small>🔒 Hanya <b>${escapeHTML(u.owner||n.by||'pemutar')}</b> (yang memutar musik) yang bisa STOP / START / mengeluarkan bot.</small>`}</div>`:'<small style="margin-top:12px">Belum ada musik yang diputar.</small>')
+  +(u.queue.length?`<div class="mu-q"><b>Antrian (${u.queue.length})</b>${u.queue.map(q=>`<div><span>${escapeHTML(q.title)}</span>${own?`<button data-c="rm" data-id="${escapeHTML(q.id)}">✕</button>`:''}</div>`).join('')}</div>`:'');
  musTick();
 }
 function musTick(){
@@ -6353,7 +6410,7 @@ async function joinVoice(){
 function vmk(u){ return rtcMk(VCX,u); }
 function vdrop(u){ try{VC.peers[u]?.close();}catch(_){} delete VC.peers[u]; document.getElementById('va-'+u)?.remove(); vidDropUser('vc',u); }
 function vhandle(m){ rtcHandle(VCX,m); }
-function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); vcTrack(); vcActions(); vcRoster(); }
+function vcMute(){ VC.muted=!VC.muted; VC.stream?.getAudioTracks().forEach(t=>t.enabled=!VC.muted); saasSelfFx(VC.muted?'mute':'unmute'); vcTrack(); vcActions(); vcRoster(); }
 function leaveVoice(silent){
  saasVoiceClear('vc');
  if(VC.inCall) saasVoiceFx(VC.me,false,VC);
@@ -6698,7 +6755,7 @@ async function gvJoin(id){
 function gvPeer(u){ return rtcMk(GVX,u); }
 function gvDrop(u){ try{GV.peers[u]?.close();}catch(_){} delete GV.peers[u]; document.getElementById('ga-'+u)?.remove(); vidDropUser('gv',u); }
 function gvHandle(m){ rtcHandle(GVX,m); }
-function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); gvTrack(); gvRender(); }
+function gvMute(){ GV.muted=!GV.muted; GV.stream?.getAudioTracks().forEach(t=>t.enabled=!GV.muted); saasSelfFx(GV.muted?'mute':'unmute'); gvTrack(); gvRender(); }
 function gvLeave(silent){
  saasVoiceClear('gv');
  if(GV.cur) saasVoiceFx(GV.me,false,GV);

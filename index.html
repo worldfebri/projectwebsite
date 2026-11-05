@@ -2551,7 +2551,18 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         async function getGithubFile(fileKey){
             const key=GITHUB_DB_FILES[fileKey];
             try{
-                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=value`, {
+                /* PERF: cek dulu (kecil) apakah data berubah di server; kalau tidak, JANGAN unduh ulang seluruh database */
+                window.__ghStamp=window.__ghStamp||{};
+                if(window.__ghStamp[fileKey] && ghFileReady[fileKey]){
+                    try{
+                        const chk=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=updated_at`,{headers:supaHeaders()});
+                        if(chk.ok){
+                            const r0=await chk.json();
+                            if(r0.length && r0[0].updated_at===window.__ghStamp[fileKey]) return {status:'ok', data:null, unchanged:true};
+                        }
+                    }catch(_){}
+                }
+                const res=await fetch(`${sbConfig.url}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=value,updated_at`, {
                     headers: supaHeaders()
                 });
                 if(res.ok){
@@ -2559,6 +2570,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                     if(!rows.length) return {status:'missing'};
                     ghFileReady[fileKey]=true;
                     const parsed=rows[0].value;
+                    window.__ghStamp[fileKey]=rows[0].updated_at||'';
                     ghFileSnapshots[fileKey]=JSON.stringify(parsed);
                     return {status:'ok', data:parsed};
                 }
@@ -2842,6 +2854,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
         function getDatabaseSnapshot(){ return JSON.stringify(db); }
 
         async function fetchFromDB(silent=false) {
+            if(silent && document.hidden && githubDatabaseReady) return true;   /* PERF: tab tidak terlihat -> tidak perlu polling */
             githubLastFetchOk = false;
             if(!sbConfig.url || !sbConfig.key){
                 normalizeDB();
@@ -2903,6 +2916,7 @@ input[type=checkbox],input[type=radio]{accent-color:#0a3a9c}
                 if(res.ok){
                     ghFileReady[fileKey]=true;
                     ghFileSnapshots[fileKey]=JSON.stringify(value);
+                    if(window.__ghStamp) window.__ghStamp[fileKey]='';
                     return true;
                 }
                 githubLastError=supaErrorMessage(res.status, `Menulis ${key}`);
@@ -6519,15 +6533,17 @@ async function addRace(){
 async function delRace(id){ db.hub.race=db.hub.race.filter(r=>r.id!==id); await saveToDB(true); document.getElementById('hr-list').innerHTML=hubRaceAdminList(); }
 
 /* ---------- loop ---------- */
-setInterval(()=>{ normalizeHub(); updateHubNav(); checkAgendaNotice(); },3000);
+setInterval(()=>{ if(document.hidden) return; normalizeHub(); updateHubNav(); checkAgendaNotice(); },3000);
 setInterval(async()=>{
  if(!currentUser||!HUB.page||!['chat','high'].includes(HUB.page)||!canHub(HUB.page)) return;
  await fetchFromDB(true); hubMsgs(HUB.page==='chat'?'hubChat':'highRankChat');
 },4000);
 
-setInterval(()=>{ const p=document.getElementById('hub-prof'); if(!p) return;
+setInterval(()=>{ if(document.hidden) return; const p=document.getElementById('hub-prof'); if(!p) return;
  if(!currentUser){ p.classList.remove('show'); return; }
- p.classList.add('show'); p.innerHTML=`<div class="user-avatar">${getAvatarContent(currentUser.username)}</div>${escapeHTML(currentUser.username)}`; },3000);
+ p.classList.add('show');
+ const h=`<div class="user-avatar">${getAvatarContent(currentUser.username)}</div>${escapeHTML(currentUser.username)}`;
+ if(p._h!==h){ p._h=h; p.innerHTML=h; } },3000);   /* PERF: jangan bangun ulang DOM + dekode foto tiap 3 detik */
 
 
 /* ======================= TRACK OFFICIAL SAAS ======================= */
@@ -6595,7 +6611,7 @@ function trackCompress(file){
   const r=new FileReader();
   r.onerror=()=>rej(new Error('Gagal membaca file'));
   r.onload=()=>{ const im=new Image(); im.onerror=()=>rej(new Error('File bukan gambar valid'));
-   im.onload=()=>{ const M=1000, sc=Math.min(1,M/Math.max(im.width,im.height)); const cv=document.createElement('canvas'); cv.width=Math.round(im.width*sc); cv.height=Math.round(im.height*sc); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height); res(cv.toDataURL('image/jpeg',0.68)); };
+   im.onload=()=>{ const M=1000, sc=Math.min(1,M/Math.max(im.width,im.height)); const cv=document.createElement('canvas'); cv.width=Math.round(im.width*sc); cv.height=Math.round(im.height*sc); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height); res(saasEnc(cv,0.68)); };
    im.src=r.result; };
   r.readAsDataURL(file);
  });
@@ -6666,7 +6682,7 @@ async function trackMove(city,id,dir){
  await saveToDB(true);
  document.getElementById('tr-list').innerHTML=trackAdminListHTML(city);
 }
-setInterval(normalizeTrack,3000);
+setInterval(()=>{ if(!document.hidden) normalizeTrack(); },3000);
 normalizeTrack();
 
     
@@ -6960,7 +6976,7 @@ showPage=function(id){
    File otomatis diperkecil/dikompres lalu disimpan ke kolom yang sama, jadi link tetap bisa dipakai juga. */
 (function(){
   const RULES=[
-    {re:/^change-profile-pic$/,max:256,type:'jpeg',q:0.8},
+    {re:/^change-profile-pic$/,max:256,type:'jpeg',q:0.78},
     {re:/^(saas-event-logo|new-saas-event-club-logo|saas-event-club-logo-\d+)$/,max:800,type:'auto',q:0.8},
     {re:/^(edit-teri-img|race-bot-img|saas-top-img-\d+|saas-bottom-img-\d+|club-img-\d+|club-info-top-img-\d+-\d+|club-info-bot-img-\d+|new-club-img|new-info-top-img-\d+|new-info-bot-img)$/,max:1000,type:'jpeg',q:0.7}
   ];
@@ -6994,7 +7010,7 @@ showPage=function(id){
           let out=rule.type; if(out==='auto') out=(file.type==='image/jpeg')?'jpeg':'png';
           if(out==='jpeg'){ cx.fillStyle='#ffffff'; cx.fillRect(0,0,cv.width,cv.height); }
           cx.drawImage(im,0,0,cv.width,cv.height);
-          res(out==='jpeg'?cv.toDataURL('image/jpeg',rule.q||0.7):cv.toDataURL('image/png'));
+          res(out==='jpeg'?saasEnc(cv,rule.q||0.7):saasEnc(cv,rule.q||0.7,true));
         };
         im.src=r.result;
       };
@@ -7629,7 +7645,7 @@ body .btn-group .btn-red{border-radius:999px!important}
       const sc=Math.min(1,M/Math.max(im.width,im.height)), cv=document.createElement('canvas');
       cv.width=Math.round(im.width*sc); cv.height=Math.round(im.height*sc);
       cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
-      out=cv.toDataURL('image/jpeg',q);
+      out=saasEnc(cv,q);
       if(out.length<280000) break; M-=150; q-=.07;
      }
      res(out);
@@ -7811,5 +7827,97 @@ body .fu-wrap input.fu-in.fu-in.fu-in.fu-in:focus{border-color:var(--fx-sky2)!im
 
 </style>
 
+
+<style id="perf-patch">
+/* PERF: backdrop-filter pada header, nav, kartu & chat membuat scroll patah-patah (terutama di HP). Diganti latar lebih pekat. */
+body header,body > nav,body .card,body .social-panel,body .chat-panel-bg,body .profile-card,
+.pf-hero,.pf-card,body .hero-kicker,body .hero-topline,body .hero-stat,body .hero-side,
+body .chat-compose-wrapper,body .hub-send,body .admin-subnav,.fu-head,.upm-x,body .more-scrim{
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body header{background:rgba(6,26,77,.96)!important}
+body > nav{background:rgba(6,26,77,.97)!important}
+body .admin-subnav,body .chat-compose-wrapper,body .hub-send{background:rgba(6,26,77,.92)!important}
+body .more-scrim,body .guest-prompt{background:rgba(4,20,70,.8)!important}
+/* layar tidak terlihat / hemat gerak */
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<script id="perf-img-patch">
+/* ======================= KOMPRESI GAMBAR + PERBAIKAN PERFORMA =======================
+   - saasEnc: encode WebP (jauh lebih kecil dari JPEG), fallback JPEG kalau browser tidak mendukung.
+   - saasSlimDb: sebelum database disimpan, semua gambar base64 yang terlalu besar (foto profil, track, event, klub, dll)
+     otomatis diperkecil ulang, jadi database tidak membengkak walau data lama masih besar. */
+function saasEnc(cv,q,keepAlpha){
+  let o='';
+  try{ o=cv.toDataURL('image/webp',q); }catch(_){}
+  if(o.indexOf('data:image/webp')===0) return o;
+  return keepAlpha ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg',q);
+}
+(function(){
+  const LIMIT_PROFILE=24000, LIMIT_OTHER=90000;   /* panjang string base64 (~18 KB / ~67 KB) */
+  const memo=new Map(); let busy=null;
+  function shrink(src,max,q){
+    return new Promise(res=>{
+      const im=new Image();
+      im.onerror=()=>res(src);
+      im.onload=()=>{
+        try{
+          const w0=im.naturalWidth||im.width||1,h0=im.naturalHeight||im.height||1;
+          const sc=Math.min(1,max/Math.max(w0,h0));
+          const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(w0*sc)); cv.height=Math.max(1,Math.round(h0*sc));
+          const cx=cv.getContext('2d'); cx.drawImage(im,0,0,cv.width,cv.height);
+          let out=saasEnc(cv,q);
+          if(out.length>=src.length) out=src;
+          res(out);
+        }catch(_){ res(src); }
+      };
+      im.src=src;
+    });
+  }
+  function collect(node,list,seen,depth){
+    if(!node||typeof node!=='object'||seen.has(node)||depth>8) return; seen.add(node);
+    for(const k of Object.keys(node)){
+      const v=node[k];
+      if(typeof v==='string'){
+        if(v.length>LIMIT_PROFILE && /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(v)){
+          const lim=(k==='profilePic')?LIMIT_PROFILE:LIMIT_OTHER;
+          if(v.length>lim) list.push([node,k,v]);
+        }
+      } else if(v&&typeof v==='object') collect(v,list,seen,depth+1);
+    }
+  }
+  window.saasSlimDb=function(){
+    if(busy) return busy;
+    busy=(async()=>{
+      let changed=0;
+      try{
+        const list=[]; collect(db,list,new WeakSet(),0);
+        for(const [node,k,v] of list){
+          let out=memo.get(v);
+          if(out===undefined){
+            const isP=(k==='profilePic');
+            out=await shrink(v,isP?256:800,isP?0.75:0.7);
+            if(out.length>(isP?LIMIT_PROFILE:LIMIT_OTHER)) out=await shrink(out,isP?192:600,isP?0.65:0.6);
+            memo.set(v,out);
+          }
+          if(out!==v && node[k]===v){ node[k]=out; changed++; }
+        }
+      }catch(e){ console.warn('slim',e); }
+      busy=null; return changed;
+    })();
+    return busy;
+  };
+  const _save=saveToDB;
+  saveToDB=async function(silent){ try{ await saasSlimDb(); }catch(_){} return _save.call(this,silent); };
+  /* sekali setelah website terbuka: kalau pemilik/admin yang login, rapikan gambar lama yang besar */
+  let tried=false;
+  setInterval(async()=>{
+    if(tried||document.hidden||!githubDatabaseReady||!currentUser||!(currentUser.isOwner||adminAuthenticated)) return;
+    tried=true;
+    const n=await saasSlimDb();
+    if(n){ await saveToDB(true); try{ showToast('🗜️ '+n+' gambar lama dikompres otomatis agar database lebih ringan.',false,8000); }catch(_){} }
+  },6000);
+})();
+</script>
 </body>
 </html>
